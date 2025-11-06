@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PoeNinjaAPI = void 0;
+exports.searchItem = searchItem;
 const axios_1 = __importDefault(require("axios"));
 class PoeNinjaAPI {
     constructor() {
@@ -16,8 +17,28 @@ class PoeNinjaAPI {
     async searchItem(itemName, league) {
         const searchTerm = itemName.toLowerCase().trim();
         let allResults = [];
-        // Define the item crafting categories to search
-        const categories = this.getItemCraftingCategories();
+        // Define the categories to search
+        const categories = [
+            'UniqueWeapon',
+            'UniqueArmour',
+            'UniqueAccessory',
+            'UniqueFlask',
+            'UniqueJewel',
+            'UniqueMap',
+            'Gem',
+            'Currency',
+            'Fragment',
+            'Essence',
+            'DivinationCard',
+            'Prophecy',
+            'Oil',
+            'Incubator',
+            'Scarab',
+            'Fossil',
+            'Resonator',
+            'Beast',
+            'Vial'
+        ];
         // Search through each category
         for (const category of categories) {
             try {
@@ -25,8 +46,7 @@ class PoeNinjaAPI {
                 allResults = allResults.concat(categoryResults);
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                console.warn(`Failed to search category ${category}:`, errorMessage);
+                console.warn(`Failed to search category ${category}:`, error.message);
                 // Continue with other categories
             }
         }
@@ -70,7 +90,7 @@ class PoeNinjaAPI {
                 return [];
             }
             // Filter results that match the search term
-            return response.data.lines.filter((item) => {
+            return response.data.lines.filter(item => {
                 const name = item.name.toLowerCase();
                 const baseType = item.baseType ? item.baseType.toLowerCase() : '';
                 return name.includes(searchTerm) || baseType.includes(searchTerm);
@@ -80,82 +100,8 @@ class PoeNinjaAPI {
             if (error.code === 'ECONNABORTED') {
                 throw new Error(`Timeout searching ${category}`);
             }
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            throw new Error(`Failed to search ${category}: ${errorMessage}`);
+            throw new Error(`Failed to search ${category}: ${error.message}`);
         }
-    }
-    /**
-     * Search for map crafting items
-     */
-    async searchMapCrafting(itemName, league) {
-        const searchTerm = itemName.toLowerCase().trim();
-        let allResults = [];
-        // Define the map crafting categories to search
-        const categories = this.getMapCraftingCategories();
-        // Search through each category
-        for (const category of categories) {
-            try {
-                const categoryResults = await this.searchCategory(searchTerm, league, category);
-                allResults = allResults.concat(categoryResults);
-            }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                console.warn(`Failed to search category ${category}:`, errorMessage);
-                // Continue with other categories
-            }
-        }
-        // Filter and sort results
-        const filteredResults = allResults.filter(item => item.name.toLowerCase().includes(searchTerm) ||
-            (item.baseType && item.baseType.toLowerCase().includes(searchTerm)));
-        // Calculate statistics
-        const prices = filteredResults.map(item => item.chaosValue).filter(price => price > 0);
-        const totalListings = filteredResults.reduce((sum, item) => sum + (item.listingCount || item.count || 0), 0);
-        return {
-            itemName,
-            league,
-            results: filteredResults,
-            timestamp: new Date(),
-            minPrice: prices.length > 0 ? Math.min(...prices) : 0,
-            maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
-            medianPrice: this.calculateMedian(prices),
-            totalListings
-        };
-    }
-    /**
-     * Get item crafting categories
-     */
-    getItemCraftingCategories() {
-        return [
-            'UniqueWeapon',
-            'UniqueArmour',
-            'UniqueAccessory',
-            'UniqueFlask',
-            'UniqueJewel',
-            'Gem',
-            'Currency',
-            'Fragment',
-            'Essence',
-            'DivinationCard',
-            'Prophecy',
-            'Oil',
-            'Incubator',
-            'Fossil',
-            'Resonator',
-            'Beast',
-            'Vial'
-        ];
-    }
-    /**
-     * Get map crafting categories
-     */
-    getMapCraftingCategories() {
-        return [
-            'UniqueMap',
-            'Map',
-            'Scarab',
-            'Fragment',
-            'Currency' // Includes chisels, sextants, etc.
-        ];
     }
     /**
      * Get the correct endpoint for each category
@@ -181,12 +127,12 @@ class PoeNinjaAPI {
      */
     async getLeagues() {
         try {
-            // Known possible leagues to test
+            // Known possible leagues to test - ordered by recency (current league first)
             const leaguesToTest = [
-                'Settlers of Kalguur',
-                'Settlers',
                 'Keepers of the Flame',
                 'Keepers',
+                'Settlers of Kalguur',
+                'Settlers',
                 'Standard',
                 'Hardcore',
                 'SSF Standard',
@@ -259,47 +205,60 @@ class PoeNinjaAPI {
     }
     /**
      * Get items with best profit margins for crafting
-     * Compare item value to crafting material costs
+     * ONLY returns craftable base types (rare items), NOT drop-only uniques
      */
     async getProfitableItems(league, limit = 20) {
         const allItems = [];
-        // Focus on items that can be crafted
-        const categories = [
-            'UniqueWeapon',
-            'UniqueArmour',
-            'UniqueAccessory',
-            'UniqueJewel'
-        ];
-        for (const category of categories) {
-            try {
-                const items = await this.searchCategory('', league, category);
-                allItems.push(...items);
-            }
-            catch (error) {
-                console.warn(`Failed to fetch ${category}:`, error);
-            }
+        // ONLY use BaseType - these are craftable rare items
+        // Uniques like Headhunter/Mageblood are NOT craftable!
+        try {
+            const baseTypes = await this.searchCategory('', league, 'BaseType');
+            allItems.push(...baseTypes);
         }
-        // Calculate profit margins
+        catch (error) {
+            console.warn('Failed to fetch base types:', error);
+        }
+        // Calculate profit margins for craftable bases
         const profitableItems = allItems
-            .filter(item => item.chaosValue > 10 && item.listingCount && item.listingCount > 5)
+            .filter(item => {
+            // Must be valuable enough and have decent trading activity
+            return item.chaosValue > 20 && item.listingCount && item.listingCount > 3;
+        })
             .map(item => {
             const sellPrice = item.chaosValue;
             const listings = item.listingCount || 0;
-            // Estimate crafting cost (simplified - would need actual crafting data)
-            // Higher value items generally have higher crafting costs
-            const estimatedCraftCost = sellPrice * 0.3; // Rough estimate
+            // Estimate crafting cost based on item value
+            // Base cost + crafting materials (fossils/essences/chaos)
+            let estimatedCraftCost;
+            let craftingMethod;
+            if (sellPrice > 500) {
+                // High-value items: fossil/essence crafting
+                estimatedCraftCost = sellPrice * 0.4;
+                craftingMethod = 'Fossil/Essence';
+            }
+            else if (sellPrice > 100) {
+                // Medium-value: chaos spam or targeted crafting
+                estimatedCraftCost = sellPrice * 0.35;
+                craftingMethod = 'Chaos/Fossil';
+            }
+            else {
+                // Lower-value: alteration or chaos spam
+                estimatedCraftCost = sellPrice * 0.3;
+                craftingMethod = 'Alt/Chaos';
+            }
             const profitMargin = sellPrice - estimatedCraftCost;
             // Demand indicator based on listing count
             let demand = 'Low';
-            if (listings > 50)
+            if (listings > 30)
                 demand = 'High';
-            else if (listings > 20)
+            else if (listings > 10)
                 demand = 'Medium';
             return {
                 item,
                 profitMargin,
                 sellPrice,
-                demand
+                demand,
+                craftingMethod
             };
         })
             .sort((a, b) => b.profitMargin - a.profitMargin)
@@ -340,3 +299,11 @@ class PoeNinjaAPI {
     }
 }
 exports.PoeNinjaAPI = PoeNinjaAPI;
+/**
+ * Standalone helper function for searching items
+ * Creates a PoeNinjaAPI instance and calls searchItem
+ */
+async function searchItem(itemName, league) {
+    const api = new PoeNinjaAPI();
+    return api.searchItem(itemName, league);
+}

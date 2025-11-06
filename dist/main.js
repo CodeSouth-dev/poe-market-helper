@@ -87,8 +87,7 @@ electron_1.ipcMain.handle('search-item', async (event, itemName, league = 'Cruci
     }
     catch (error) {
         console.error('Search error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
+        return { success: false, error: error.message };
     }
 });
 electron_1.ipcMain.handle('get-favorites', async () => {
@@ -96,8 +95,7 @@ electron_1.ipcMain.handle('get-favorites', async () => {
         return { success: true, data: await favorites.getAll() };
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
+        return { success: false, error: error.message };
     }
 });
 electron_1.ipcMain.handle('add-favorite', async (event, item) => {
@@ -106,8 +104,7 @@ electron_1.ipcMain.handle('add-favorite', async (event, item) => {
         return { success: true };
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
+        return { success: false, error: error.message };
     }
 });
 electron_1.ipcMain.handle('remove-favorite', async (event, itemName) => {
@@ -116,21 +113,7 @@ electron_1.ipcMain.handle('remove-favorite', async (event, itemName) => {
         return { success: true };
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
-    }
-});
-electron_1.ipcMain.handle('search-map-crafting', async (event, itemName, league = 'Crucible') => {
-    try {
-        console.log(`Searching for map crafting item: ${itemName} in league: ${league}`);
-        const result = await poeAPI.searchMapCrafting(itemName, league);
-        await cache.set(`map-${league}-${itemName}`, result);
-        return { success: true, data: result };
-    }
-    catch (error) {
-        console.error('Map crafting search error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return { success: false, error: errorMessage };
+        return { success: false, error: error.message };
     }
 });
 // Crafting-related IPC handlers

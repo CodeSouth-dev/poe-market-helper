@@ -36,9 +36,6 @@ function createWindow(): void {
   }
 }
 
-// Fix GPU process crashes on Windows - must be called before app.whenReady()
-app.disableHardwareAcceleration();
-
 // App event listeners
 app.whenReady().then(createWindow);
 
