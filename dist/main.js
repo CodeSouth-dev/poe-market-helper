@@ -38,10 +38,14 @@ const path = __importStar(require("path"));
 const poeNinja_1 = require("./api/poeNinja");
 const cache_1 = require("./utils/cache");
 const favorites_1 = require("./utils/favorites");
+const craftingCalculator_1 = require("./api/craftingCalculator");
+const craftingData_1 = require("./api/craftingData");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
 const favorites = new favorites_1.FavoritesManager();
+const craftingCalculator = new craftingCalculator_1.CraftingCalculator();
+const craftingData = (0, craftingData_1.getCraftingDataLoader)();
 let mainWindow;
 function createWindow() {
     // Create the browser window
@@ -129,4 +133,95 @@ electron_1.ipcMain.handle('search-map-crafting', async (event, itemName, league 
         return { success: false, error: errorMessage };
     }
 });
-//# sourceMappingURL=main.js.map
+// Crafting-related IPC handlers
+electron_1.ipcMain.handle('initialize-crafting', async (event, league) => {
+    try {
+        console.log('Initializing crafting data...');
+        await craftingCalculator.initialize(league);
+        return { success: true, message: 'Crafting data loaded successfully' };
+    }
+    catch (error) {
+        console.error('Crafting initialization error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('calculate-crafting', async (event, params) => {
+    try {
+        console.log('Calculating crafting methods for:', params);
+        const result = await craftingCalculator.calculateBestMethod(params.desiredMods, params.baseItemName, params.itemClass, params.league);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Crafting calculation error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('search-mods', async (event, query, itemClass) => {
+    try {
+        if (!craftingData.isLoaded()) {
+            await craftingData.loadAll();
+        }
+        const results = craftingData.searchMods(query, itemClass);
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Mod search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('search-base-items', async (event, query) => {
+    try {
+        if (!craftingData.isLoaded()) {
+            await craftingData.loadAll();
+        }
+        const allItems = Array.from(craftingData['baseItems'].values());
+        const results = allItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) &&
+            item.drop_enabled).slice(0, 50);
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Base item search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Market analysis IPC handlers
+electron_1.ipcMain.handle('get-leagues', async () => {
+    try {
+        const leagues = await poeAPI.getLeagues();
+        return { success: true, data: leagues };
+    }
+    catch (error) {
+        console.error('Get leagues error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-popular-items', async (event, league, limit = 20) => {
+    try {
+        const items = await poeAPI.getPopularItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get popular items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-profitable-items', async (event, league, limit = 20) => {
+    try {
+        const items = await poeAPI.getProfitableItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get profitable items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-trending-items', async (event, league, limit = 10) => {
+    try {
+        const items = await poeAPI.getTrendingItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get trending items error:', error);
+        return { success: false, error: error.message };
+    }
+});

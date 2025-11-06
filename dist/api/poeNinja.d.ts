@@ -37,7 +37,7 @@ export declare class PoeNinjaAPI {
     /**
      * Search a specific category
      */
-    private searchCategory;
+    searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]>;
     /**
      * Search for map crafting items
      */
