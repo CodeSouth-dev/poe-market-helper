@@ -136,4 +136,3 @@ class PoeNinjaAPI {
     }
 }
 exports.PoeNinjaAPI = PoeNinjaAPI;
-//# sourceMappingURL=poeNinja.js.map

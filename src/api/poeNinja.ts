@@ -71,7 +71,7 @@ export class PoeNinjaAPI {
       try {
         const categoryResults = await this.searchCategory(searchTerm, league, category);
         allResults = allResults.concat(categoryResults);
-      } catch (error) {
+      } catch (error: any) {
         console.warn(`Failed to search category ${category}:`, error.message);
         // Continue with other categories
       }
@@ -102,7 +102,7 @@ export class PoeNinjaAPI {
   /**
    * Search a specific category
    */
-  private async searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]> {
+  public async searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]> {
     const endpoint = this.getCategoryEndpoint(category);
     const url = `${this.baseUrl}/${endpoint}`;
     
@@ -132,7 +132,7 @@ export class PoeNinjaAPI {
         return name.includes(searchTerm) || baseType.includes(searchTerm);
       });
 
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'ECONNABORTED') {
         throw new Error(`Timeout searching ${category}`);
       }

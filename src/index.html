@@ -41,6 +41,44 @@
             font-size: 1.1em;
         }
 
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 5px 5px 0 0;
+            color: #cccccc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.15);
+            color: #ffd700;
+        }
+
+        .tab.active {
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            border-bottom: 3px solid #ffd700;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .search-section {
             background: rgba(255,255,255,0.1);
             padding: 25px;
@@ -278,6 +316,149 @@
             color: white;
         }
 
+        /* Crafting UI Styles */
+        .crafting-input-section {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .mod-input-group {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .mod-inputs {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #218838);
+        }
+
+        .crafting-results {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .method-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .method-card.recommended {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+
+        .method-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .method-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .method-cost {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        .method-description {
+            color: #cccccc;
+            margin-bottom: 15px;
+        }
+
+        .method-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .method-stat {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .method-stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .method-stat-label {
+            font-size: 0.85em;
+            color: #999;
+        }
+
+        .crafting-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .crafting-steps li {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 5px;
+            border-radius: 5px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .recommended-badge {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .base-recommendation {
+            background: rgba(255,215,0,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .base-rec-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
         @media (max-width: 768px) {
             .search-form {
                 flex-direction: column;
@@ -310,6 +491,10 @@
             .results-table td {
                 padding: 8px;
             }
+
+            .mod-inputs {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -317,9 +502,15 @@
     <div class="container">
         <header>
             <h1>Path of Exile Market Helper</h1>
-            <p class="subtitle">Live market data from poe.ninja</p>
+            <p class="subtitle">Live market data & crafting predictions</p>
         </header>
 
+        <div class="tabs">
+            <button class="tab active" data-tab="market">Market Search</button>
+            <button class="tab" data-tab="crafting">Crafting Prediction</button>
+        </div>
+
+        <div id="marketTab" class="tab-content active">
         <section class="search-section">
             <form class="search-form" id="searchForm">
                 <div class="form-group">
@@ -405,6 +596,79 @@
                 No favorites added yet. Search for items and add them to your favorites!
             </div>
         </section>
+        </div> <!-- End Market Tab -->
+
+        <div id="craftingTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Prediction Calculator</h2>
+
+            <form id="craftingForm">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftBaseItem">Base Item:</label>
+                    <input type="text" id="craftBaseItem" placeholder="e.g., Vaal Regalia, Siege Axe, Steel Ring" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftItemClass">Item Class:</label>
+                    <select id="craftItemClass" required>
+                        <option value="">Select Item Class</option>
+                        <option value="Body Armour">Body Armour</option>
+                        <option value="Helmet">Helmet</option>
+                        <option value="Gloves">Gloves</option>
+                        <option value="Boots">Boots</option>
+                        <option value="Shield">Shield</option>
+                        <option value="One Hand Sword">One Hand Sword</option>
+                        <option value="Two Hand Sword">Two Hand Sword</option>
+                        <option value="One Hand Axe">One Hand Axe</option>
+                        <option value="Two Hand Axe">Two Hand Axe</option>
+                        <option value="One Hand Mace">One Hand Mace</option>
+                        <option value="Two Hand Mace">Two Hand Mace</option>
+                        <option value="Bow">Bow</option>
+                        <option value="Wand">Wand</option>
+                        <option value="Dagger">Dagger</option>
+                        <option value="Claw">Claw</option>
+                        <option value="Sceptre">Sceptre</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Ring">Ring</option>
+                        <option value="Amulet">Amulet</option>
+                        <option value="Belt">Belt</option>
+                        <option value="Quiver">Quiver</option>
+                        <option value="Jewel">Jewel</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftLeague">League:</label>
+                    <select id="craftLeague">
+                        <option value="Crucible">Crucible</option>
+                        <option value="Hardcore Crucible">Hardcore Crucible</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Hardcore">Hardcore</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px;">Desired Mods:</label>
+                    <div id="modsList"></div>
+                    <button type="button" id="addModBtn" class="btn-success" style="margin-top: 10px;">+ Add Mod</button>
+                </div>
+
+                <button type="submit" id="calculateBtn">Calculate Best Crafting Method</button>
+            </form>
+        </section>
+
+        <div id="craftingLoading" class="loading" style="display: none;">
+            🔮 Calculating crafting methods...
+        </div>
+
+        <div id="craftingError" class="error" style="display: none;"></div>
+
+        <section id="craftingResults" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Recommendations</h2>
+            <div id="craftingResultsContent"></div>
+        </section>
+        </div> <!-- End Crafting Tab -->
+
     </div>
 
     <script>
@@ -698,6 +962,245 @@
             // Simple auto-suggest could be added here
             // For now, just basic functionality
         });
+
+        // ===== TAB SWITCHING =====
+        const tabs = document.querySelectorAll('.tab');
+        const marketTab = document.getElementById('marketTab');
+        const craftingTab = document.getElementById('craftingTab');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Hide all tab contents
+                marketTab.classList.remove('active');
+                craftingTab.classList.remove('active');
+
+                // Show selected tab
+                if (tabName === 'market') {
+                    marketTab.classList.add('active');
+                } else if (tabName === 'crafting') {
+                    craftingTab.classList.add('active');
+                    initializeCrafting();
+                }
+            });
+        });
+
+        // ===== CRAFTING FUNCTIONALITY =====
+        let craftingInitialized = false;
+        let desiredMods = [];
+        let modCounter = 0;
+
+        const craftingForm = document.getElementById('craftingForm');
+        const modsList = document.getElementById('modsList');
+        const addModBtn = document.getElementById('addModBtn');
+        const craftingLoading = document.getElementById('craftingLoading');
+        const craftingError = document.getElementById('craftingError');
+        const craftingResults = document.getElementById('craftingResults');
+        const craftingResultsContent = document.getElementById('craftingResultsContent');
+
+        async function initializeCrafting() {
+            if (craftingInitialized) return;
+
+            try {
+                const league = document.getElementById('craftLeague').value;
+                const result = await ipcRenderer.invoke('initialize-crafting', league);
+                if (result.success) {
+                    console.log('Crafting data initialized');
+                    craftingInitialized = true;
+                } else {
+                    showCraftingError('Failed to initialize crafting data: ' + result.error);
+                }
+            } catch (err) {
+                console.error('Crafting initialization error:', err);
+            }
+        }
+
+        function addModInput() {
+            const modId = modCounter++;
+            const modDiv = document.createElement('div');
+            modDiv.className = 'mod-input-group';
+            modDiv.setAttribute('data-mod-id', modId);
+            modDiv.innerHTML = `
+                <div class="mod-inputs">
+                    <div class="form-group">
+                        <label>Mod Name:</label>
+                        <input type="text" class="mod-name" placeholder="e.g., increased Energy Shield, Life" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="mod-type" required>
+                            <option value="prefix">Prefix</option>
+                            <option value="suffix">Suffix</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-danger btn-small" onclick="removeMod(${modId})">Remove</button>
+                </div>
+            `;
+            modsList.appendChild(modDiv);
+        }
+
+        window.removeMod = function(modId) {
+            const modDiv = document.querySelector(`[data-mod-id="${modId}"]`);
+            if (modDiv) {
+                modDiv.remove();
+            }
+        };
+
+        addModBtn.addEventListener('click', addModInput);
+
+        // Add initial mod input
+        addModInput();
+
+        craftingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const baseItem = document.getElementById('craftBaseItem').value;
+            const itemClass = document.getElementById('craftItemClass').value;
+            const league = document.getElementById('craftLeague').value;
+
+            // Collect mods
+            const modInputs = document.querySelectorAll('.mod-input-group');
+            const desiredMods = [];
+
+            modInputs.forEach(modDiv => {
+                const name = modDiv.querySelector('.mod-name').value;
+                const type = modDiv.querySelector('.mod-type').value;
+                if (name) {
+                    desiredMods.push({ name, type });
+                }
+            });
+
+            if (desiredMods.length === 0) {
+                showCraftingError('Please add at least one desired mod');
+                return;
+            }
+
+            // Show loading
+            craftingLoading.style.display = 'block';
+            craftingError.style.display = 'none';
+            craftingResults.style.display = 'none';
+
+            try {
+                const result = await ipcRenderer.invoke('calculate-crafting', {
+                    desiredMods,
+                    baseItemName: baseItem,
+                    itemClass,
+                    league
+                });
+
+                craftingLoading.style.display = 'none';
+
+                if (result.success) {
+                    displayCraftingResults(result.data);
+                } else {
+                    showCraftingError(result.error);
+                }
+            } catch (err) {
+                craftingLoading.style.display = 'none';
+                showCraftingError('Calculation failed: ' + err.message);
+            }
+        });
+
+        function displayCraftingResults(data) {
+            craftingResults.style.display = 'block';
+
+            let html = '';
+
+            // Base recommendation
+            if (data.baseRecommendation) {
+                const base = data.baseRecommendation;
+                html += `
+                    <div class="base-recommendation">
+                        <div class="base-rec-title">💎 Recommended Base</div>
+                        <p><strong>Type:</strong> ${base.baseType.toUpperCase()}</p>
+                        <p><strong>Item:</strong> ${base.itemName}</p>
+                        <p><strong>Cost:</strong> ${formatPrice(base.averageCost, data.preferredCurrency)}</p>
+                        <p><strong>Reason:</strong> ${base.reason}</p>
+                    </div>
+                `;
+            }
+
+            // Total cost summary
+            html += `
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-value">${formatPrice(data.totalCostChaos, data.preferredCurrency)}</div>
+                        <div class="stat-label">Total Estimated Cost</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.methods.length}</div>
+                        <div class="stat-label">Methods Available</div>
+                    </div>
+                </div>
+            `;
+
+            // Methods
+            data.methods.forEach((method, index) => {
+                const isRecommended = index === 0;
+                html += `
+                    <div class="method-card ${isRecommended ? 'recommended' : ''}">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">${method.name}</span>
+                                ${isRecommended ? '<span class="recommended-badge">⭐ RECOMMENDED</span>' : ''}
+                            </div>
+                            <div class="method-cost">${formatPrice(method.averageCost, data.preferredCurrency)}</div>
+                        </div>
+                        <div class="method-description">${method.description}</div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${(method.probability * 100).toFixed(2)}%</div>
+                                <div class="method-stat-label">Success Rate</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${method.expectedAttempts}</div>
+                                <div class="method-stat-label">Avg. Attempts</div>
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: #ffd700;">Currency Needed:</strong>
+                            <ul class="crafting-steps" style="margin-top: 10px;">
+                                ${Object.entries(method.currencyUsed).map(([currency, amount]) =>
+                                    `<li>${Math.ceil(amount)}x ${currency}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <strong style="color: #ffd700;">Steps:</strong>
+                            <ol class="crafting-steps" style="margin-top: 10px;">
+                                ${method.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            });
+
+            craftingResultsContent.innerHTML = html;
+        }
+
+        function formatPrice(chaosValue, preferredCurrency = 'chaos') {
+            const divinePrice = 200; // This should be fetched from poe.ninja
+
+            if (preferredCurrency === 'divine' || chaosValue >= divinePrice * 2) {
+                const divineValue = chaosValue / divinePrice;
+                return `${divineValue.toFixed(2)} Divine`;
+            }
+
+            return `${chaosValue.toFixed(1)} Chaos`;
+        }
+
+        function showCraftingError(message) {
+            craftingError.textContent = message;
+            craftingError.style.display = 'block';
+            setTimeout(() => {
+                craftingError.style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
 </html>

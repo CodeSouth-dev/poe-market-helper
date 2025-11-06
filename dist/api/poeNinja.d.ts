@@ -37,7 +37,7 @@ export declare class PoeNinjaAPI {
     /**
      * Search a specific category
      */
-    private searchCategory;
+    searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]>;
     /**
      * Get the correct endpoint for each category
      */
