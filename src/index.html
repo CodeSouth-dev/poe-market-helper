@@ -523,6 +523,7 @@
             <button class="tab active" data-tab="market">Market Search</button>
             <button class="tab" data-tab="insights">Market Insights</button>
             <button class="tab" data-tab="crafting">Crafting Helper</button>
+            <button class="tab" data-tab="guide">Learn to Craft</button>
         </div>
 
         <div id="marketTab" class="tab-content active">
@@ -764,6 +765,50 @@
         </section>
         </div> <!-- End Crafting Tab -->
 
+        <div id="guideTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Learn to Craft This Item</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">Paste an item from Path of Exile to learn how to craft it yourself!</p>
+
+            <!-- Item Paste Area for Guide -->
+            <div style="background: rgba(255, 215, 0, 0.1); border: 2px dashed #ffd700; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+                <label for="guidePaste" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    📋 Paste Your Target Item (Ctrl+C in game):
+                </label>
+                <textarea
+                    id="guidePaste"
+                    placeholder="Paste the item you want to learn how to craft... (Copy from PoE with Ctrl+C)"
+                    style="width: 100%; min-height: 150px; background: rgba(30, 30, 40, 0.95); color: #ffffff; border: 2px solid #444; border-radius: 5px; padding: 10px; font-family: 'Courier New', monospace; font-size: 14px; resize: vertical;"
+                ></textarea>
+                <button type="button" id="analyzeItemBtn" style="margin-top: 10px;">Analyze Item & Generate Crafting Guide</button>
+            </div>
+
+            <!-- Analysis Results -->
+            <div id="guideLoading" class="loading" style="display: none;">
+                🔍 Analyzing item and generating crafting guide...
+            </div>
+
+            <div id="guideError" class="error" style="display: none;"></div>
+
+            <section id="guideResults" style="display: none;">
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Item Analysis</h3>
+                    <div id="guideItemInfo" style="color: #cccccc;"></div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Step-by-Step Crafting Guide</h3>
+                    <div id="guideCraftingSteps" style="color: #cccccc;"></div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">💡 Tips & Considerations</h3>
+                    <div id="guideTips" style="color: #cccccc;"></div>
+                </div>
+            </section>
+        </section>
+        </div> <!-- End Guide Tab -->
+
     </div>
 
     <script>
@@ -789,6 +834,198 @@
         // State
         let currentSearchResult = null;
         let favorites = [];
+
+        // Mod Database - Common mods by item class
+        const MOD_DATABASE = {
+            // Universal mods (work on most items)
+            universal: {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1-T5', ilvl: 44 },
+                    { name: '+# to maximum Mana', tier: 'T1-T5', ilvl: 2 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1-T5', ilvl: 12 },
+                    { name: '+# to Strength', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to Dexterity', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to Intelligence', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to all Attributes', tier: 'T1-T3', ilvl: 60 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Cold Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Chaos Resistance', tier: 'T1-T5', ilvl: 16 },
+                    { name: '+#% to all Elemental Resistances', tier: 'T1-T3', ilvl: 60 },
+                    { name: '#% increased Rarity of Items found', tier: 'T1-T5', ilvl: 20 }
+                ]
+            },
+            'Body Armour': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (100-109)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (175-200)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Evasion Rating', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Energy Shield', tier: 'T1-T10', ilvl: 12 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T6', ilvl: 50 },
+                    { name: '+# to Level of Socketed Gems', tier: 'T1-T2', ilvl: 50 }
+                ],
+                suffix: [
+                    { name: '+#% to all Elemental Resistances', tier: 'T1 (15-16%)', ilvl: 60 },
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Stun and Block Recovery', tier: 'T1-T6', ilvl: 18 }
+                ]
+            },
+            'Helmet': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (90-99)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (110-125)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 },
+                    { name: 'Nearby Enemies have -#% to Fire Resistance', tier: 'T1-T3', ilvl: 75 },
+                    { name: '+# to Level of Socketed Minion Gems', tier: 'T1-T3', ilvl: 50 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to Accuracy Rating', tier: 'T1-T8', ilvl: 20 }
+                ]
+            },
+            'Gloves': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (80-89)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (75-85)', ilvl: 82 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1 (16-19)', ilvl: 74 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (400-450)', ilvl: 74 },
+                    { name: '#% increased Attack Speed', tier: 'T1-T6', ilvl: 35 }
+                ]
+            },
+            'Boots': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (80-89)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (60-70)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Movement Speed', tier: 'T1 (30-35%)', ilvl: 55 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Stun and Block Recovery', tier: 'T1-T6', ilvl: 18 }
+                ]
+            },
+            'Ring': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (70-79)', ilvl: 82 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (60-65)', ilvl: 79 },
+                    { name: '+# to maximum Mana', tier: 'T1 (70-75)', ilvl: 80 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T8', ilvl: 44 },
+                    { name: '#% increased Elemental Damage with Attack Skills', tier: 'T1-T9', ilvl: 4 },
+                    { name: 'Curse Enemies with Level # Assassin\'s Mark on Hit', tier: 'T1-T8', ilvl: 38 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to all Attributes', tier: 'T1 (51-55)', ilvl: 85 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (400-450)', ilvl: 74 },
+                    { name: '#% increased Rarity of Items found', tier: 'T1-T8', ilvl: 20 }
+                ]
+            },
+            'Amulet': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (70-79)', ilvl: 82 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (55-62)', ilvl: 80 },
+                    { name: '#% increased Global Critical Strike Chance', tier: 'T1-T10', ilvl: 20 },
+                    { name: '+# to Level of all Skill Gems', tier: 'T1 (+2)', ilvl: 65 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T8', ilvl: 44 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to all Attributes', tier: 'T1 (51-55)', ilvl: 85 },
+                    { name: '#% to Global Critical Strike Multiplier', tier: 'T1-T10', ilvl: 20 }
+                ]
+            },
+            'Belt': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (90-99)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (50-60)', ilvl: 79 },
+                    { name: '#% increased Flask Life Recovery rate', tier: 'T1-T7', ilvl: 16 },
+                    { name: '#% increased Flask Mana Recovery rate', tier: 'T1-T7', ilvl: 16 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Flask Charges gained', tier: 'T1-T7', ilvl: 8 }
+                ]
+            },
+            'Weapon': {
+                prefix: [
+                    { name: '+# to Level of Socketed Gems', tier: 'T1 (+2)', ilvl: 55 },
+                    { name: 'Adds # to # Physical Damage', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Physical Damage', tier: 'T1-T10', ilvl: 11 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (500-600)', ilvl: 79 },
+                    { name: '#% increased Attack Speed', tier: 'T1-T10', ilvl: 2 },
+                    { name: '#% increased Critical Strike Chance', tier: 'T1-T10', ilvl: 20 }
+                ],
+                suffix: [
+                    { name: 'Adds # to # Fire Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: 'Adds # to # Cold Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: 'Adds # to # Lightning Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: '+#% to Global Critical Strike Multiplier', tier: 'T1-T10', ilvl: 20 },
+                    { name: '#% chance to gain Onslaught on Kill', tier: 'T1-T3', ilvl: 55 }
+                ]
+            }
+        };
+
+        // Get available mods for a specific item class
+        function getModsForItemClass(itemClass, modType) {
+            if (!itemClass) return [];
+
+            let mods = [];
+
+            // Add universal mods
+            if (MOD_DATABASE.universal[modType]) {
+                mods = mods.concat(MOD_DATABASE.universal[modType]);
+            }
+
+            // Add class-specific mods
+            if (MOD_DATABASE[itemClass] && MOD_DATABASE[itemClass][modType]) {
+                mods = mods.concat(MOD_DATABASE[itemClass][modType]);
+            }
+
+            // For weapon classes, add weapon mods
+            if (itemClass.includes('Sword') || itemClass.includes('Axe') ||
+                itemClass.includes('Mace') || itemClass.includes('Bow') ||
+                itemClass.includes('Wand') || itemClass.includes('Dagger') ||
+                itemClass.includes('Claw') || itemClass.includes('Sceptre') ||
+                itemClass.includes('Staff')) {
+                if (MOD_DATABASE.Weapon[modType]) {
+                    mods = mods.concat(MOD_DATABASE.Weapon[modType]);
+                }
+            }
+
+            // Remove duplicates
+            const uniqueMods = Array.from(new Set(mods.map(m => m.name)))
+                .map(name => mods.find(m => m.name === name));
+
+            return uniqueMods;
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
@@ -1178,23 +1415,82 @@
             const modDiv = document.createElement('div');
             modDiv.className = 'mod-input-group';
             modDiv.setAttribute('data-mod-id', modId);
+
+            // Get current item class
+            const itemClass = document.getElementById('craftItemClass').value;
+
             modDiv.innerHTML = `
                 <div class="mod-inputs">
                     <div class="form-group">
-                        <label>Mod Name:</label>
-                        <input type="text" class="mod-name" placeholder="e.g., increased Energy Shield, Life" required>
-                    </div>
-                    <div class="form-group">
                         <label>Type:</label>
-                        <select class="mod-type" required>
+                        <select class="mod-type" data-mod-id="${modId}" required>
+                            <option value="">Select Type First</option>
                             <option value="prefix">Prefix</option>
                             <option value="suffix">Suffix</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mod Name:</label>
+                        <select class="mod-name" data-mod-id="${modId}" required>
+                            <option value="">Select type first...</option>
                         </select>
                     </div>
                     <button type="button" class="btn-danger btn-small" onclick="removeMod(${modId})">Remove</button>
                 </div>
             `;
             modsList.appendChild(modDiv);
+
+            // Add event listener to mod type selector
+            const modTypeSelect = modDiv.querySelector('.mod-type');
+            const modNameSelect = modDiv.querySelector('.mod-name');
+
+            modTypeSelect.addEventListener('change', function() {
+                updateModNameOptions(modNameSelect, this.value, itemClass);
+            });
+        }
+
+        // Update mod name dropdown based on type and item class
+        function updateModNameOptions(selectElement, modType, itemClass) {
+            if (!modType) {
+                selectElement.innerHTML = '<option value="">Select type first...</option>';
+                return;
+            }
+
+            const mods = getModsForItemClass(itemClass, modType);
+
+            if (mods.length === 0) {
+                selectElement.innerHTML = '<option value="">No mods available</option>';
+                return;
+            }
+
+            selectElement.innerHTML = '<option value="">Choose a mod...</option>';
+            mods.forEach(mod => {
+                const option = document.createElement('option');
+                option.value = mod.name;
+                option.textContent = `${mod.name} (${mod.tier}, ilvl ${mod.ilvl}+)`;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Update all mod dropdowns when item class changes
+        function updateAllModDropdowns() {
+            const itemClass = document.getElementById('craftItemClass').value;
+            const modInputs = document.querySelectorAll('.mod-input-group');
+
+            modInputs.forEach(modInput => {
+                const modTypeSelect = modInput.querySelector('.mod-type');
+                const modNameSelect = modInput.querySelector('.mod-name');
+
+                if (modTypeSelect && modTypeSelect.value) {
+                    updateModNameOptions(modNameSelect, modTypeSelect.value, itemClass);
+                }
+            });
+        }
+
+        // Add event listener to item class selector
+        const craftItemClassSelect = document.getElementById('craftItemClass');
+        if (craftItemClassSelect) {
+            craftItemClassSelect.addEventListener('change', updateAllModDropdowns);
         }
 
         window.removeMod = function(modId) {
@@ -1466,6 +1762,222 @@
             craftingError.style.display = 'block';
             setTimeout(() => {
                 craftingError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ===== CRAFTING GUIDE (LEARN TO CRAFT) FUNCTIONALITY =====
+        const analyzeItemBtn = document.getElementById('analyzeItemBtn');
+        const guidePaste = document.getElementById('guidePaste');
+        const guideLoading = document.getElementById('guideLoading');
+        const guideError = document.getElementById('guideError');
+        const guideResults = document.getElementById('guideResults');
+        const guideItemInfo = document.getElementById('guideItemInfo');
+        const guideCraftingSteps = document.getElementById('guideCraftingSteps');
+        const guideTips = document.getElementById('guideTips');
+
+        if (analyzeItemBtn) {
+            analyzeItemBtn.addEventListener('click', function() {
+                const itemText = guidePaste.value.trim();
+
+                if (!itemText) {
+                    showGuideError('Please paste an item first!');
+                    return;
+                }
+
+                try {
+                    guideLoading.style.display = 'block';
+                    guideError.style.display = 'none';
+                    guideResults.style.display = 'none';
+
+                    // Parse the item
+                    const itemData = parsePoEItem(itemText);
+                    const modsOnItem = parseItemMods(itemText);
+
+                    setTimeout(() => {
+                        displayCraftingGuide(itemData, modsOnItem, itemText);
+                        guideLoading.style.display = 'none';
+                        guideResults.style.display = 'block';
+                    }, 500);
+
+                } catch (err) {
+                    guideLoading.style.display = 'none';
+                    showGuideError('Error analyzing item: ' + err.message);
+                }
+            });
+        }
+
+        function parseItemMods(itemText) {
+            const lines = itemText.split('\n').map(line => line.trim()).filter(line => line);
+            const mods = {
+                explicit: [],
+                implicit: [],
+                crafted: []
+            };
+
+            let inExplicitMods = false;
+            let inImplicitMods = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Skip header lines
+                if (line.startsWith('Rarity:') || line.startsWith('Item Level:') ||
+                    line.match(/Requirements?:|Sockets:|Quality:/i) || line === '--------') {
+                    if (line === '--------') {
+                        inExplicitMods = false;
+                        inImplicitMods = true;
+                    }
+                    continue;
+                }
+
+                // Detect explicit mods (after item base)
+                if (inImplicitMods && line && !line.match(/Requirements?:|Sockets:|Item Level:/i)) {
+                    if (line.match(/^\+|^\d|^#|increased|reduced|to maximum|Resistance|Damage|Adds/i)) {
+                        if (line.includes('(crafted)')) {
+                            mods.crafted.push(line.replace('(crafted)', '').trim());
+                        } else if (line.includes('(implicit)')) {
+                            mods.implicit.push(line.replace('(implicit)', '').trim());
+                        } else {
+                            mods.explicit.push(line);
+                        }
+                    }
+                }
+            }
+
+            return mods;
+        }
+
+        function displayCraftingGuide(itemData, modsOnItem, rawText) {
+            // Display item info
+            let infoHTML = `
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; margin-bottom: 10px;">
+                    <strong style="color: #ffd700; font-size: 18px;">${itemData.baseName || 'Unknown Item'}</strong><br>
+                    <span style="color: #aaa;">Item Level: ${itemData.itemLevel || '?'}</span><br>
+                    <span style="color: #aaa;">Item Class: ${itemData.itemClass || 'Unknown'}</span>
+                </div>
+            `;
+
+            if (modsOnItem.implicit.length > 0) {
+                infoHTML += `<div style="margin-bottom: 10px;"><strong style="color: #8888ff;">Implicit Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.implicit.forEach(mod => {
+                    infoHTML += `<li style="color: #aaf;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            if (modsOnItem.explicit.length > 0) {
+                infoHTML += `<div style="margin-bottom: 10px;"><strong style="color: #88ff88;">Explicit Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.explicit.forEach(mod => {
+                    infoHTML += `<li style="color: #afa;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            if (modsOnItem.crafted.length > 0) {
+                infoHTML += `<div><strong style="color: #ffaa00;">Crafted Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.crafted.forEach(mod => {
+                    infoHTML += `<li style="color: #fa0;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            guideItemInfo.innerHTML = infoHTML;
+
+            // Generate crafting steps based on mods
+            let stepsHTML = generateCraftingSteps(itemData, modsOnItem);
+            guideCraftingSteps.innerHTML = stepsHTML;
+
+            // Generate tips
+            let tipsHTML = generateCraftingTips(itemData, modsOnItem);
+            guideTips.innerHTML = tipsHTML;
+        }
+
+        function generateCraftingSteps(itemData, modsOnItem) {
+            const modCount = modsOnItem.explicit.length;
+            const hasLife = modsOnItem.explicit.some(m => m.includes('Life'));
+            const hasResists = modsOnItem.explicit.some(m => m.includes('Resistance'));
+            const hasES = modsOnItem.explicit.some(m => m.includes('Energy Shield'));
+
+            let stepsHTML = `<ol style="color: #ddd; line-height: 1.8;">`;
+
+            // Step 1: Acquire base
+            stepsHTML += `<li><strong style="color: #ffd700;">Acquire the Base Item</strong><br>
+                <span style="color: #aaa;">• Get a <strong>${itemData.baseName || 'base item'}</strong> with item level <strong>${itemData.itemLevel || '82-86'}</strong></span><br>
+                <span style="color: #aaa;">• Higher ilvl = better mod tiers (T1 mods usually need ilvl 82-86)</span>
+            </li>`;
+
+            // Step 2: Crafting method based on mod count
+            if (modCount <= 2) {
+                stepsHTML += `<li><strong style="color: #ffd700;">Alt-Regal Method (For 1-2 Mods)</strong><br>
+                    <span style="color: #aaa;">• Use <strong>Orbs of Alteration</strong> on a white (normal) base until you hit one of your desired mods</span><br>
+                    <span style="color: #aaa;">• Use an <strong>Orb of Augmentation</strong> to add a second mod if needed</span><br>
+                    <span style="color: #aaa;">• Use a <strong>Regal Orb</strong> to make it rare (adds one more random mod)</span><br>
+                    <span style="color: #aaa;">• Continue with crafting bench or other methods</span>
+                </li>`;
+            } else if (modCount <= 4) {
+                stepsHTML += `<li><strong style="color: #ffd700;">Chaos Spam Method (For 3-4 Mods)</strong><br>
+                    <span style="color: #aaa;">• Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</span><br>
+                    <span style="color: #aaa;">• Use <strong>Harvest crafts</strong> to improve bad mods if available</span><br>
+                    <span style="color: #aaa;">• Can be expensive but straightforward</span>
+                </li>`;
+            } else {
+                stepsHTML += `<li><strong style="color: #ffd700;">Essence or Fossil Crafting (For 5+ Mods)</strong><br>
+                    <span style="color: #aaa;">• Use <strong>Essences</strong> to guarantee one specific mod tier</span><br>
+                    <span style="color: #aaa;">• Or use <strong>Fossils + Resonators</strong> to weight specific mod types</span><br>
+                    <span style="color: #aaa;">• This is advanced crafting for multiple T1 mods</span>
+                </li>`;
+            }
+
+            // Step 3: Fine-tuning
+            stepsHTML += `<li><strong style="color: #ffd700;">Fine-Tune with Crafting Bench</strong><br>
+                <span style="color: #aaa;">• Visit your hideout crafting bench</span><br>
+                <span style="color: #aaa;">• Add missing resists or stats if you have an open affix</span><br>
+                <span style="color: #aaa;">• Craft "Prefixes Cannot Be Changed" or "Suffixes Cannot Be Changed" for advanced crafting</span>
+            </li>`;
+
+            // Step 4: Advanced techniques
+            stepsHTML += `<li><strong style="color: #ffd700;">Advanced Techniques (Optional)</strong><br>
+                <span style="color: #aaa;">• <strong>Harvest Reforge:</strong> Reroll with weighted mods (Life, Caster, etc.)</span><br>
+                <span style="color: #aaa;">• <strong>Veiled Chaos Orb:</strong> Reroll + add veiled mod</span><br>
+                <span style="color: #aaa;">• <strong>Eldritch Crafting:</strong> For influenced items (Eldritch Chaos/Exalt/Annul)</span>
+            </li>`;
+
+            stepsHTML += `</ol>`;
+
+            return stepsHTML;
+        }
+
+        function generateCraftingTips(itemData, modsOnItem) {
+            let tipsHTML = `<ul style="color: #ddd; line-height: 1.8;">`;
+
+            tipsHTML += `<li>💰 <strong>Cost Estimate:</strong> Expect to spend 10-100+ chaos orbs depending on mod rarity and your luck</li>`;
+            tipsHTML += `<li>🎲 <strong>RNG Warning:</strong> Crafting is gambling! Budget accordingly and don't spend your last currency</li>`;
+            tipsHTML += `<li>📊 <strong>Use Craft of Exile:</strong> Visit <a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">craftofexile.com</a> for exact probabilities</li>`;
+            tipsHTML += `<li>🔍 <strong>Check poe.trade First:</strong> Sometimes it's cheaper to buy than craft!</li>`;
+
+            if (itemData.itemLevel && itemData.itemLevel >= 86) {
+                tipsHTML += `<li>✨ <strong>Great ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll T1 mods on most slots</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel >= 82) {
+                tipsHTML += `<li>✅ <strong>Good ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll most T1 mods</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel < 82) {
+                tipsHTML += `<li>⚠️ <strong>Low ilvl:</strong> ilvl ${itemData.itemLevel} may not be able to roll T1 mods (need 82-86)</li>`;
+            }
+
+            const modCount = modsOnItem.explicit.length;
+            if (modCount >= 5) {
+                tipsHTML += `<li>🎯 <strong>Complex Item:</strong> With ${modCount} mods, this will be expensive to replicate. Consider Harvest or Fossil crafting.</li>`;
+            }
+
+            tipsHTML += `</ul>`;
+
+            return tipsHTML;
+        }
+
+        function showGuideError(message) {
+            guideError.textContent = message;
+            guideError.style.display = 'block';
+            setTimeout(() => {
+                guideError.style.display = 'none';
             }, 5000);
         }
 
