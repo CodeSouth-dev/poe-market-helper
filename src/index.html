@@ -1069,13 +1069,22 @@
 
             leagueSelectors.forEach(selector => {
                 if (selector) {
+                    const currentValue = selector.value; // Save current selection
                     selector.innerHTML = '';
-                    availableLeagues.forEach(league => {
+                    availableLeagues.forEach((league, index) => {
                         const option = document.createElement('option');
                         option.value = league;
                         option.textContent = league;
+                        // Set first league (current league) as default if no previous selection
+                        if (index === 0 && !currentValue) {
+                            option.selected = true;
+                        }
                         selector.appendChild(option);
                     });
+                    // Restore previous selection if it still exists
+                    if (currentValue && availableLeagues.includes(currentValue)) {
+                        selector.value = currentValue;
+                    }
                 }
             });
         }

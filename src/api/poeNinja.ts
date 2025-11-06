@@ -167,12 +167,12 @@ export class PoeNinjaAPI {
    */
   async getLeagues(): Promise<string[]> {
     try {
-      // Known possible leagues to test
+      // Known possible leagues to test - ordered by recency (current league first)
       const leaguesToTest = [
-        'Settlers of Kalguur',
-        'Settlers',
         'Keepers of the Flame',
         'Keepers',
+        'Settlers of Kalguur',
+        'Settlers',
         'Standard',
         'Hardcore',
         'SSF Standard',
