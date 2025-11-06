@@ -116,4 +116,17 @@ electron_1.ipcMain.handle('remove-favorite', async (event, itemName) => {
         return { success: false, error: errorMessage };
     }
 });
+electron_1.ipcMain.handle('search-map-crafting', async (event, itemName, league = 'Crucible') => {
+    try {
+        console.log(`Searching for map crafting item: ${itemName} in league: ${league}`);
+        const result = await poeAPI.searchMapCrafting(itemName, league);
+        await cache.set(`map-${league}-${itemName}`, result);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Map crafting search error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
+    }
+});
 //# sourceMappingURL=main.js.map

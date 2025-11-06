@@ -43,28 +43,8 @@ export class PoeNinjaAPI {
     const searchTerm = itemName.toLowerCase().trim();
     let allResults: PoeNinjaItem[] = [];
 
-    // Define the categories to search
-    const categories = [
-      'UniqueWeapon',
-      'UniqueArmour',
-      'UniqueAccessory',
-      'UniqueFlask',
-      'UniqueJewel',
-      'UniqueMap',
-      'Gem',
-      'Currency',
-      'Fragment',
-      'Essence',
-      'DivinationCard',
-      'Prophecy',
-      'Oil',
-      'Incubator',
-      'Scarab',
-      'Fossil',
-      'Resonator',
-      'Beast',
-      'Vial'
-    ];
+    // Define the item crafting categories to search
+    const categories = this.getItemCraftingCategories();
 
     // Search through each category
     for (const category of categories) {
@@ -140,6 +120,88 @@ export class PoeNinjaAPI {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to search ${category}: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Search for map crafting items
+   */
+  async searchMapCrafting(itemName: string, league: string): Promise<SearchResult> {
+    const searchTerm = itemName.toLowerCase().trim();
+    let allResults: PoeNinjaItem[] = [];
+
+    // Define the map crafting categories to search
+    const categories = this.getMapCraftingCategories();
+
+    // Search through each category
+    for (const category of categories) {
+      try {
+        const categoryResults = await this.searchCategory(searchTerm, league, category);
+        allResults = allResults.concat(categoryResults);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.warn(`Failed to search category ${category}:`, errorMessage);
+        // Continue with other categories
+      }
+    }
+
+    // Filter and sort results
+    const filteredResults = allResults.filter(item =>
+      item.name.toLowerCase().includes(searchTerm) ||
+      (item.baseType && item.baseType.toLowerCase().includes(searchTerm))
+    );
+
+    // Calculate statistics
+    const prices = filteredResults.map(item => item.chaosValue).filter(price => price > 0);
+    const totalListings = filteredResults.reduce((sum, item) => sum + (item.listingCount || item.count || 0), 0);
+
+    return {
+      itemName,
+      league,
+      results: filteredResults,
+      timestamp: new Date(),
+      minPrice: prices.length > 0 ? Math.min(...prices) : 0,
+      maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
+      medianPrice: this.calculateMedian(prices),
+      totalListings
+    };
+  }
+
+  /**
+   * Get item crafting categories
+   */
+  private getItemCraftingCategories(): string[] {
+    return [
+      'UniqueWeapon',
+      'UniqueArmour',
+      'UniqueAccessory',
+      'UniqueFlask',
+      'UniqueJewel',
+      'Gem',
+      'Currency',
+      'Fragment',
+      'Essence',
+      'DivinationCard',
+      'Prophecy',
+      'Oil',
+      'Incubator',
+      'Fossil',
+      'Resonator',
+      'Beast',
+      'Vial'
+    ];
+  }
+
+  /**
+   * Get map crafting categories
+   */
+  private getMapCraftingCategories(): string[] {
+    return [
+      'UniqueMap',
+      'Map',
+      'Scarab',
+      'Fragment',
+      'Currency' // Includes chisels, sextants, etc.
+    ];
   }
 
   /**
