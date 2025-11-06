@@ -5,6 +5,8 @@ import { CacheManager } from './utils/cache';
 import { FavoritesManager } from './utils/favorites';
 import { analyzeProfitability, createCraftingMethod } from './utils/craftingCalculator';
 import { CraftingMethodType } from './types/crafting';
+import { buildCraftingChain, getAdvancedTactics } from './utils/craftingCalculatorEnhanced';
+import { ItemBase, TargetMod, CRAFTING_CONCEPTS } from './types/craftingEnhanced';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -135,6 +137,66 @@ ipcMain.handle('calculate-crafting', async (event, data: {
     return { success: true, data: analysis };
   } catch (error) {
     console.error('Crafting calculation error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('build-crafting-chain', async (event, data: {
+  baseItem: string;
+  ilvl: number;
+  strategy: string;
+  league: string;
+}) => {
+  try {
+    console.log(`Building crafting chain for ${data.baseItem} (ilvl ${data.ilvl}) using ${data.strategy}`);
+
+    // Create ItemBase object
+    const itemBase: ItemBase = {
+      name: data.baseItem,
+      baseType: 'unknown', // Would need to determine from base name
+      ilvl: data.ilvl,
+      influenceType: 'none',
+    };
+
+    // Create some default target mods (in a real app, user would specify these)
+    const targetMods: TargetMod[] = [
+      {
+        modName: 'High Life',
+        tier: 1,
+        type: 'prefix',
+        isRequired: true,
+        ilvlRequired: 86,
+        weight: 100,
+        tags: ['life'],
+      },
+    ];
+
+    const chain = await buildCraftingChain(itemBase, targetMods, data.strategy, data.league);
+
+    console.log(`Crafting chain built successfully. Total cost: ${chain.totalCost} chaos`);
+
+    return { success: true, data: chain };
+  } catch (error) {
+    console.error('Crafting chain build error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-advanced-tactics', async () => {
+  try {
+    const tactics = getAdvancedTactics();
+    return { success: true, data: tactics };
+  } catch (error) {
+    console.error('Failed to get advanced tactics:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-crafting-education', async () => {
+  try {
+    return { success: true, data: CRAFTING_CONCEPTS };
+  } catch (error) {
+    console.error('Failed to get crafting education:', error);
     return { success: false, error: error.message };
   }
 });

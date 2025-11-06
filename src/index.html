@@ -348,9 +348,108 @@
 
         <div id="error" class="error" style="display: none;"></div>
 
+        <!-- Advanced Crafting Chain Builder -->
+        <section class="search-section">
+            <h2 style="color: #ffd700; margin-bottom: 15px;">🎓 Advanced Crafting Chain Builder</h2>
+            <p style="color: #ccc; margin-bottom: 15px; font-size: 0.9em;">
+                Learn crafting step-by-step with ilvl requirements, mod probabilities, and advanced tactics
+            </p>
+
+            <div class="search-form" style="display: block;">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label for="chainBaseItem">Base Item:</label>
+                        <input type="text" id="chainBaseItem" placeholder="e.g., Stygian Vise, Vaal Regalia">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chainIlvl">Item Level (ilvl):</label>
+                        <select id="chainIlvl">
+                            <option value="50">ilvl 50 (Low tier)</option>
+                            <option value="64">ilvl 64 (T4 mods)</option>
+                            <option value="73">ilvl 73 (T3 mods)</option>
+                            <option value="81">ilvl 81 (T2 mods)</option>
+                            <option value="86" selected>ilvl 86 (T1 mods)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chainStrategy">Crafting Strategy:</label>
+                        <select id="chainStrategy">
+                            <option value="alt_regal_multimod">Alt-Regal-Multimod (Beginner)</option>
+                            <option value="essence_spam">Essence Spam (Beginner)</option>
+                            <option value="fossil_spam">Fossil Spam (Beginner)</option>
+                            <option value="alt_regal_annul">Alt-Regal-Annul (Intermediate)</option>
+                            <option value="harvest_reforge">Harvest Reforge (Intermediate)</option>
+                            <option value="alt_regal_recombinator">Alt-Recombinator (Advanced)</option>
+                            <option value="eldritch_crafting">Eldritch Crafting (Advanced)</option>
+                            <option value="metacraft_exalt">Metacraft-Exalt (Expert)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chainLeague">League:</label>
+                        <select id="chainLeague">
+                            <option value="Crucible">Crucible</option>
+                            <option value="Hardcore Crucible">Hardcore Crucible</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Hardcore">Hardcore</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" id="buildChainBtn">Build Crafting Chain</button>
+                    <button type="button" id="showTacticsBtn">Show Advanced Tactics</button>
+                    <button type="button" id="showEducationBtn">Crafting Guide</button>
+                </div>
+            </div>
+
+            <!-- Crafting Chain Results -->
+            <div id="craftingChainResults" style="display: none; margin-top: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 10px;">📋 Crafting Chain Steps</h3>
+                <div id="chainStepsList" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px;">
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255,215,0,0.1); border-radius: 5px; border-left: 3px solid #ffd700;">
+                    <h4 style="color: #ffd700; margin-bottom: 10px;">💡 Educational Notes</h4>
+                    <div id="educationalNotes"></div>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div class="stat-card" style="flex: 1; min-width: 150px;">
+                        <div class="stat-value" id="chainTotalCost">-</div>
+                        <div class="stat-label">Total Expected Cost</div>
+                    </div>
+                    <div class="stat-card" style="flex: 1; min-width: 150px;">
+                        <div class="stat-value" id="chainSuccessRate">-</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                    <div class="stat-card" style="flex: 1; min-width: 150px;">
+                        <div class="stat-value" id="chainDifficulty">-</div>
+                        <div class="stat-label">Difficulty</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Tactics Modal -->
+            <div id="tacticsModal" style="display: none; margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 10px;">
+                <h3 style="color: #ffd700; margin-bottom: 15px;">⚔️ Advanced Crafting Tactics</h3>
+                <div id="tacticsList"></div>
+                <button type="button" id="closeTacticsBtn" style="margin-top: 15px;">Close</button>
+            </div>
+
+            <!-- Crafting Education Modal -->
+            <div id="educationModal" style="display: none; margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 10px;">
+                <h3 style="color: #ffd700; margin-bottom: 15px;">📚 Crafting Concepts & Guide</h3>
+                <div id="educationContent"></div>
+                <button type="button" id="closeEducationBtn" style="margin-top: 15px;">Close</button>
+            </div>
+        </section>
+
         <!-- Crafting Profitability Calculator -->
         <section class="search-section">
-            <h2 style="color: #ffd700; margin-bottom: 15px;">Crafting Profitability Calculator</h2>
+            <h2 style="color: #ffd700; margin-bottom: 15px;">💰 Simple Crafting Profitability Calculator</h2>
             <form class="search-form" id="craftingForm">
                 <div class="form-group">
                     <label for="targetItem">Target Item:</label>
@@ -1020,6 +1119,225 @@
 
         // Initialize crafting methods display
         displayCraftingMethods();
+
+        // ===== ADVANCED CRAFTING CHAIN BUILDER =====
+
+        const buildChainBtn = document.getElementById('buildChainBtn');
+        const showTacticsBtn = document.getElementById('showTacticsBtn');
+        const showEducationBtn = document.getElementById('showEducationBtn');
+        const closeTacticsBtn = document.getElementById('closeTacticsBtn');
+        const closeEducationBtn = document.getElementById('closeEducationBtn');
+
+        const craftingChainResults = document.getElementById('craftingChainResults');
+        const chainStepsList = document.getElementById('chainStepsList');
+        const educationalNotes = document.getElementById('educationalNotes');
+        const tacticsModal = document.getElementById('tacticsModal');
+        const educationModal = document.getElementById('educationModal');
+
+        // Build crafting chain
+        buildChainBtn.addEventListener('click', async () => {
+            const baseItem = document.getElementById('chainBaseItem').value.trim();
+            const ilvl = parseInt(document.getElementById('chainIlvl').value);
+            const strategy = document.getElementById('chainStrategy').value;
+            const league = document.getElementById('chainLeague').value;
+
+            if (!baseItem) {
+                alert('Please enter a base item name');
+                return;
+            }
+
+            try {
+                buildChainBtn.disabled = true;
+                buildChainBtn.textContent = 'Building chain...';
+
+                const result = await ipcRenderer.invoke('build-crafting-chain', {
+                    baseItem,
+                    ilvl,
+                    strategy,
+                    league
+                });
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                displayCraftingChain(result.data);
+            } catch (err) {
+                alert(`Failed to build chain: ${err.message}`);
+            } finally {
+                buildChainBtn.disabled = false;
+                buildChainBtn.textContent = 'Build Crafting Chain';
+            }
+        });
+
+        // Show advanced tactics
+        showTacticsBtn.addEventListener('click', async () => {
+            try {
+                const result = await ipcRenderer.invoke('get-advanced-tactics');
+                if (result.success) {
+                    displayAdvancedTactics(result.data);
+                    tacticsModal.style.display = 'block';
+                }
+            } catch (err) {
+                alert(`Failed to load tactics: ${err.message}`);
+            }
+        });
+
+        // Show education guide
+        showEducationBtn.addEventListener('click', async () => {
+            try {
+                const result = await ipcRenderer.invoke('get-crafting-education');
+                if (result.success) {
+                    displayEducationContent(result.data);
+                    educationModal.style.display = 'block';
+                }
+            } catch (err) {
+                alert(`Failed to load guide: ${err.message}`);
+            }
+        });
+
+        // Close modals
+        closeTacticsBtn.addEventListener('click', () => {
+            tacticsModal.style.display = 'none';
+        });
+
+        closeEducationBtn.addEventListener('click', () => {
+            educationModal.style.display = 'none';
+        });
+
+        function displayCraftingChain(chain) {
+            // Display steps
+            chainStepsList.innerHTML = chain.steps.map(step => `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px; border-left: 3px solid #ffd700;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <h4 style="color: #ffd700; margin: 0;">
+                            Step ${step.stepNumber}: ${step.method.replace(/_/g, ' ').toUpperCase()}
+                        </h4>
+                        <span style="background: rgba(255,215,0,0.2); padding: 3px 8px; border-radius: 3px; font-size: 0.8em; color: #ffd700;">
+                            ${step.expectedAttempts} attempts
+                        </span>
+                    </div>
+
+                    <p style="color: #fff; margin-bottom: 10px;">${step.explanation}</p>
+
+                    <div style="color: #ccc; font-size: 0.9em; margin-bottom: 10px;">
+                        <strong>Materials:</strong> ${step.materials.map(m =>
+                            `${m.quantity}x ${m.name}`
+                        ).join(', ')}
+                    </div>
+
+                    ${step.tips && step.tips.length > 0 ? `
+                        <details style="margin-top: 10px;">
+                            <summary style="color: #90EE90; cursor: pointer; font-size: 0.9em;">💡 Tips & Tricks</summary>
+                            <ul style="margin-top: 8px; padding-left: 20px; color: #ccc; font-size: 0.85em;">
+                                ${step.tips.map(tip => `<li>${tip}</li>`).join('')}
+                            </ul>
+                        </details>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            // Display educational notes
+            educationalNotes.innerHTML = chain.educationalNotes.map(note =>
+                `<p style="color: #fff; margin-bottom: 8px;">• ${note}</p>`
+            ).join('');
+
+            // Display stats
+            document.getElementById('chainTotalCost').textContent = `${chain.totalCost.toFixed(0)}c`;
+            document.getElementById('chainSuccessRate').textContent = `${(chain.totalSuccessRate * 100).toFixed(1)}%`;
+
+            const difficultyEl = document.getElementById('chainDifficulty');
+            difficultyEl.textContent = chain.difficulty.toUpperCase();
+            difficultyEl.style.color = getDifficultyColor(chain.difficulty);
+
+            craftingChainResults.style.display = 'block';
+        }
+
+        function displayAdvancedTactics(tactics) {
+            const tacticsList = document.getElementById('tacticsList');
+            tacticsList.innerHTML = tactics.map(tactic => `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: #ffd700; margin: 0;">${tactic.name}</h4>
+                        <span style="background: ${getDifficultyBg(tactic.difficulty)}; padding: 3px 10px; border-radius: 3px; font-size: 0.8em; color: #fff;">
+                            ${tactic.difficulty}
+                        </span>
+                    </div>
+
+                    <p style="color: #ccc; margin-bottom: 10px;">${tactic.description}</p>
+
+                    <p style="color: #90EE90; font-size: 0.9em; margin-bottom: 10px;">
+                        <strong>When to use:</strong> ${tactic.whenToUse}
+                    </p>
+
+                    <details>
+                        <summary style="color: #ffd700; cursor: pointer; margin-bottom: 5px;">📝 Steps</summary>
+                        <ol style="margin-top: 8px; padding-left: 20px; color: #ccc; font-size: 0.9em;">
+                            ${tactic.steps.map(step => `<li>${step}</li>`).join('')}
+                        </ol>
+                    </details>
+
+                    <details style="margin-top: 10px;">
+                        <summary style="color: #ffd700; cursor: pointer;">💰 Estimated Cost</summary>
+                        <p style="color: #ccc; font-size: 0.9em; margin-top: 5px;">
+                            Min: ${tactic.estimatedCost.min}c | Avg: ${tactic.estimatedCost.average}c | Max: ${tactic.estimatedCost.max}c
+                        </p>
+                    </details>
+
+                    ${tactic.examples && tactic.examples.length > 0 ? `
+                        <details style="margin-top: 10px;">
+                            <summary style="color: #ffd700; cursor: pointer;">📚 Examples</summary>
+                            <ul style="margin-top: 8px; padding-left: 20px; color: #ccc; font-size: 0.85em;">
+                                ${tactic.examples.map(ex => `<li>${ex}</li>`).join('')}
+                            </ul>
+                        </details>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayEducationContent(concepts) {
+            const educationContent = document.getElementById('educationContent');
+            educationContent.innerHTML = concepts.map(concept => `
+                <div style="margin-bottom: 25px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px; border-left: 3px solid ${getDifficultyColor(concept.difficulty)};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: #ffd700; margin: 0;">${concept.concept}</h4>
+                        <span style="background: ${getDifficultyBg(concept.difficulty)}; padding: 3px 10px; border-radius: 3px; font-size: 0.8em; color: #fff;">
+                            ${concept.difficulty}
+                        </span>
+                    </div>
+
+                    <p style="color: #fff; margin-bottom: 15px; line-height: 1.6;">${concept.explanation}</p>
+
+                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                        <p style="color: #90EE90; font-weight: bold; margin-bottom: 8px;">Examples:</p>
+                        <ul style="padding-left: 20px; color: #ccc; font-size: 0.9em; line-height: 1.5;">
+                            ${concept.examples.map(ex => `<li>${ex}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getDifficultyColor(difficulty) {
+            const colors = {
+                beginner: '#90EE90',
+                intermediate: '#ffd700',
+                advanced: '#ff9500',
+                expert: '#ff4444'
+            };
+            return colors[difficulty] || '#ccc';
+        }
+
+        function getDifficultyBg(difficulty) {
+            const colors = {
+                beginner: 'rgba(144, 238, 144, 0.3)',
+                intermediate: 'rgba(255, 215, 0, 0.3)',
+                advanced: 'rgba(255, 149, 0, 0.3)',
+                expert: 'rgba(255, 68, 68, 0.3)'
+            };
+            return colors[difficulty] || 'rgba(255,255,255,0.1)';
+        }
     </script>
 </body>
 </html>
