@@ -6,10 +6,6 @@ import { FavoritesManager } from './utils/favorites';
 import { CraftingCalculator } from './api/craftingCalculator';
 import { getCraftingDataLoader } from './api/craftingData';
 
-// Fix GPU process crashes on Windows
-// This disables hardware acceleration to prevent GPU errors
-app.disableHardwareAcceleration();
-
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
 const cache = new CacheManager();
@@ -39,6 +35,9 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
   }
 }
+
+// Fix GPU process crashes on Windows - must be called before app.whenReady()
+app.disableHardwareAcceleration();
 
 // App event listeners
 app.whenReady().then(createWindow);
