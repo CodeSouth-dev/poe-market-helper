@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PoeNinjaAPI = void 0;
+exports.searchItem = searchItem;
 const axios_1 = __importDefault(require("axios"));
 class PoeNinjaAPI {
     constructor() {
@@ -136,4 +137,13 @@ class PoeNinjaAPI {
     }
 }
 exports.PoeNinjaAPI = PoeNinjaAPI;
+// Singleton instance for use in other modules
+const poeNinjaAPI = new PoeNinjaAPI();
+/**
+ * Standalone function to search for items
+ * Can be used by other modules without creating a new instance
+ */
+async function searchItem(itemName, league = 'Crucible') {
+    return poeNinjaAPI.searchItem(itemName, league);
+}
 //# sourceMappingURL=poeNinja.js.map

@@ -3,6 +3,8 @@ import * as path from 'path';
 import { PoeNinjaAPI } from './api/poeNinja';
 import { CacheManager } from './utils/cache';
 import { FavoritesManager } from './utils/favorites';
+import { analyzeProfitability, createCraftingMethod } from './utils/craftingCalculator';
+import { CraftingMethodType } from './types/crafting';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -82,6 +84,57 @@ ipcMain.handle('remove-favorite', async (event, itemName: string) => {
     await favorites.remove(itemName);
     return { success: true };
   } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('calculate-crafting', async (event, data: {
+  targetItem: string;
+  baseItem: string;
+  league: string;
+  methods: Array<{
+    type: string;
+    name: string;
+    attempts: number;
+    materials: Array<{ name: string; quantity: number }>;
+  }>;
+}) => {
+  try {
+    console.log(`Calculating profitability for ${data.targetItem} in ${data.league}`);
+
+    // Get base item cost
+    const baseItemResult = await poeAPI.searchItem(data.baseItem, data.league);
+    const baseItemCost = baseItemResult.results.length > 0
+      ? baseItemResult.results[0].chaosValue
+      : 0;
+
+    console.log(`Base item cost: ${baseItemCost} chaos`);
+
+    // Convert methods from UI format to calculator format
+    const craftingMethods = data.methods.map(method => {
+      const methodType = method.type as CraftingMethodType;
+      const craftingMethod = createCraftingMethod(
+        methodType,
+        method.materials,
+        method.attempts,
+        method.name
+      );
+      return { method: craftingMethod, type: methodType };
+    });
+
+    // Analyze profitability
+    const analysis = await analyzeProfitability(
+      data.targetItem,
+      craftingMethods,
+      baseItemCost,
+      data.league
+    );
+
+    console.log(`Profitability analysis complete. Profit: ${analysis.profit} chaos`);
+
+    return { success: true, data: analysis };
+  } catch (error) {
+    console.error('Crafting calculation error:', error);
     return { success: false, error: error.message };
   }
 });

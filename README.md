@@ -8,6 +8,8 @@ A standalone desktop application for live Path of Exile market data and crafting
 ✅ **Multiple Leagues**: Support for all current PoE leagues
 ✅ **Favorites System**: Save and quickly recheck items
 ✅ **Price Statistics**: Min, max, median prices with listing counts
+✅ **Crafting Profitability Calculator**: Compare crafting costs vs buying finished items
+✅ **Multiple Crafting Methods**: Alt spam, essence, fossil, chaos spam, recombinator, harvest
 ✅ **Caching**: Reduces API calls with intelligent caching
 ✅ **Professional UI**: Clean, game-themed interface
 
@@ -44,11 +46,24 @@ npm start
 
 ## Usage
 
+### Market Search
 1. **Search Items**: Type any PoE item name (e.g., "Tabula Rasa", "Divine Orb")
 2. **Select League**: Choose your current league
 3. **View Results**: See real-time prices, statistics, and listings
 4. **Add Favorites**: Save frequently checked items
 5. **Refresh**: Update prices with one click
+
+### Crafting Profitability Calculator
+1. **Enter Target Item**: The finished item you want to craft (e.g., "Stygian Vise with +100 life")
+2. **Enter Base Item**: The base item needed (e.g., "Stygian Vise")
+3. **Add Crafting Methods**: Click "Add Crafting Method" and select:
+   - Alt Spam: Spam Alterations for specific mods
+   - Essence Spam: Use essences to guarantee mods
+   - Fossil Crafting: Use fossils and resonators
+   - Chaos Spam: Spam Chaos Orbs
+   - Recombinator: Combine two items
+   - Harvest Reforge: Use Harvest crafts
+4. **Calculate**: See which method is cheapest and if it's profitable vs buying
 
 ### Example Searches
 - `Tabula Rasa` - Popular leveling unique
@@ -62,16 +77,19 @@ npm start
 ```
 poe-market-helper/
 ├── src/
-│   ├── main.ts           # Electron main process
-│   ├── index.html        # UI interface
+│   ├── main.ts                    # Electron main process & IPC handlers
+│   ├── index.html                 # UI interface (search + crafting calculator)
 │   ├── api/
-│   │   └── poeNinja.ts   # API wrapper
+│   │   └── poeNinja.ts            # poe.ninja API wrapper
+│   ├── types/
+│   │   └── crafting.ts            # Crafting data structures & types
 │   └── utils/
-│       ├── cache.ts      # Caching system
-│       └── favorites.ts  # Favorites management
-├── data/                 # Runtime data storage
-├── package.json          # Dependencies
-└── tsconfig.json         # TypeScript config
+│       ├── cache.ts               # Caching system
+│       ├── favorites.ts           # Favorites management
+│       └── craftingCalculator.ts  # Crafting profitability engine
+├── data/                          # Runtime data storage
+├── package.json                   # Dependencies
+└── tsconfig.json                  # TypeScript config
 ```
 
 ## How It Works
@@ -121,10 +139,12 @@ Built with:
 ### Future Enhancements
 - [ ] Craft of Exile integration
 - [ ] Price history graphs
-- [ ] Profit calculations
+- [x] Profit calculations (Crafting Profitability Calculator)
 - [ ] Auto-refresh timers
 - [ ] Export/import favorites
 - [ ] Multiple language support
+- [ ] Save crafting recipes for later use
+- [ ] Bulk crafting profitability analysis
 
 ## License
 

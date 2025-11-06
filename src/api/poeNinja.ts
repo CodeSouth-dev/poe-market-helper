@@ -175,3 +175,14 @@ export class PoeNinjaAPI {
     }
   }
 }
+
+// Singleton instance for use in other modules
+const poeNinjaAPI = new PoeNinjaAPI();
+
+/**
+ * Standalone function to search for items
+ * Can be used by other modules without creating a new instance
+ */
+export async function searchItem(itemName: string, league: string = 'Crucible'): Promise<SearchResult> {
+  return poeNinjaAPI.searchItem(itemName, league);
+}

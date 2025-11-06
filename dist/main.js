@@ -38,6 +38,7 @@ const path = __importStar(require("path"));
 const poeNinja_1 = require("./api/poeNinja");
 const cache_1 = require("./utils/cache");
 const favorites_1 = require("./utils/favorites");
+const craftingCalculator_1 = require("./utils/craftingCalculator");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -109,6 +110,31 @@ electron_1.ipcMain.handle('remove-favorite', async (event, itemName) => {
         return { success: true };
     }
     catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('calculate-crafting', async (event, data) => {
+    try {
+        console.log(`Calculating profitability for ${data.targetItem} in ${data.league}`);
+        // Get base item cost
+        const baseItemResult = await poeAPI.searchItem(data.baseItem, data.league);
+        const baseItemCost = baseItemResult.results.length > 0
+            ? baseItemResult.results[0].chaosValue
+            : 0;
+        console.log(`Base item cost: ${baseItemCost} chaos`);
+        // Convert methods from UI format to calculator format
+        const craftingMethods = data.methods.map(method => {
+            const methodType = method.type;
+            const craftingMethod = (0, craftingCalculator_1.createCraftingMethod)(methodType, method.materials, method.attempts, method.name);
+            return { method: craftingMethod, type: methodType };
+        });
+        // Analyze profitability
+        const analysis = await (0, craftingCalculator_1.analyzeProfitability)(data.targetItem, craftingMethods, baseItemCost, data.league);
+        console.log(`Profitability analysis complete. Profit: ${analysis.profit} chaos`);
+        return { success: true, data: analysis };
+    }
+    catch (error) {
+        console.error('Crafting calculation error:', error);
         return { success: false, error: error.message };
     }
 });

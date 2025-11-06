@@ -348,6 +348,88 @@
 
         <div id="error" class="error" style="display: none;"></div>
 
+        <!-- Crafting Profitability Calculator -->
+        <section class="search-section">
+            <h2 style="color: #ffd700; margin-bottom: 15px;">Crafting Profitability Calculator</h2>
+            <form class="search-form" id="craftingForm">
+                <div class="form-group">
+                    <label for="targetItem">Target Item:</label>
+                    <input type="text" id="targetItem" placeholder="e.g., Stygian Vise with +100 life" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="baseItem">Base Item Name:</label>
+                    <input type="text" id="baseItem" placeholder="e.g., Stygian Vise" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="craftLeague">League:</label>
+                    <select id="craftLeague">
+                        <option value="Crucible">Crucible</option>
+                        <option value="Hardcore Crucible">Hardcore Crucible</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Hardcore">Hardcore</option>
+                    </select>
+                </div>
+
+                <button type="button" id="addMethodBtn">Add Crafting Method</button>
+                <button type="submit" id="calculateBtn">Calculate Profitability</button>
+            </form>
+
+            <div id="craftingMethods" style="margin-top: 20px;">
+                <h3 style="color: #ffd700; font-size: 1.1em; margin-bottom: 10px;">Crafting Methods:</h3>
+                <div id="methodsList"></div>
+            </div>
+        </section>
+
+        <div id="craftingLoading" class="loading" style="display: none;">
+            Calculating profitability...
+        </div>
+
+        <div id="craftingError" class="error" style="display: none;"></div>
+
+        <!-- Crafting Results -->
+        <section id="craftingResults" class="results-section" style="display: none;">
+            <div class="results-header">
+                <h2 class="results-title">Profitability Analysis</h2>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="craftMarketPrice">-</div>
+                    <div class="stat-label">Market Price</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="craftBestCost">-</div>
+                    <div class="stat-label">Best Craft Cost</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="craftProfit" style="color: #90EE90;">-</div>
+                    <div class="stat-label">Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="craftRecommendation">-</div>
+                    <div class="stat-label">Recommendation</div>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto; margin-top: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 10px;">Method Comparison:</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Crafting Method</th>
+                            <th>Total Cost (Chaos)</th>
+                            <th>Expected Attempts</th>
+                            <th>Materials</th>
+                        </tr>
+                    </thead>
+                    <tbody id="craftingMethodsTable">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="resultsSection" class="results-section" style="display: none;">
             <div class="results-header">
                 <h2 class="results-title" id="resultsTitle">Search Results</h2>
@@ -698,6 +780,246 @@
             // Simple auto-suggest could be added here
             // For now, just basic functionality
         });
+
+        // ===== CRAFTING PROFITABILITY CALCULATOR =====
+
+        let craftingMethodsList = [];
+
+        const craftingForm = document.getElementById('craftingForm');
+        const addMethodBtn = document.getElementById('addMethodBtn');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const methodsList = document.getElementById('methodsList');
+        const craftingLoading = document.getElementById('craftingLoading');
+        const craftingError = document.getElementById('craftingError');
+        const craftingResults = document.getElementById('craftingResults');
+
+        // Add crafting method button
+        addMethodBtn.addEventListener('click', () => {
+            showAddMethodDialog();
+        });
+
+        // Calculate profitability
+        craftingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await calculateProfitability();
+        });
+
+        function showAddMethodDialog() {
+            const methodType = prompt(
+                'Select crafting method:\n\n' +
+                '1. Alt Spam\n' +
+                '2. Essence Spam\n' +
+                '3. Fossil Crafting\n' +
+                '4. Chaos Spam\n' +
+                '5. Recombinator\n' +
+                '6. Harvest Reforge\n\n' +
+                'Enter number (1-6):'
+            );
+
+            if (!methodType || methodType < 1 || methodType > 6) {
+                return;
+            }
+
+            const attempts = parseInt(prompt('Average attempts needed:', '10'));
+            if (!attempts || attempts < 1) {
+                return;
+            }
+
+            let method = null;
+
+            switch(methodType) {
+                case '1':
+                    method = {
+                        type: 'alt_spam',
+                        name: 'Alteration Spam',
+                        attempts,
+                        materials: [
+                            { name: 'Orb of Alteration', quantity: 1 },
+                            { name: 'Orb of Augmentation', quantity: 0.5 }
+                        ]
+                    };
+                    break;
+                case '2':
+                    const essenceName = prompt('Essence name:', 'Deafening Essence of Greed');
+                    method = {
+                        type: 'essence',
+                        name: 'Essence Spam',
+                        attempts,
+                        materials: [{ name: essenceName, quantity: 1 }]
+                    };
+                    break;
+                case '3':
+                    const fossilNames = prompt('Fossil names (comma-separated):', 'Pristine Fossil, Serrated Fossil');
+                    const resonator = prompt('Resonator name:', 'Primitive Chaotic Resonator');
+                    const fossils = fossilNames.split(',').map(f => ({ name: f.trim(), quantity: 1 }));
+                    method = {
+                        type: 'fossil',
+                        name: 'Fossil Crafting',
+                        attempts,
+                        materials: [...fossils, { name: resonator, quantity: 1 }]
+                    };
+                    break;
+                case '4':
+                    method = {
+                        type: 'chaos_spam',
+                        name: 'Chaos Spam',
+                        attempts,
+                        materials: [{ name: 'Chaos Orb', quantity: 1 }]
+                    };
+                    break;
+                case '5':
+                    method = {
+                        type: 'recombinator',
+                        name: 'Recombinator',
+                        attempts: 1,
+                        materials: [
+                            { name: 'Orb of Scouring', quantity: 2 },
+                            { name: 'Orb of Alchemy', quantity: 2 }
+                        ]
+                    };
+                    break;
+                case '6':
+                    const lifeforce = prompt('Lifeforce type:', 'Sacred Crystallised Lifeforce');
+                    const lifeforceAmount = parseInt(prompt('Lifeforce per attempt:', '100'));
+                    method = {
+                        type: 'harvest',
+                        name: 'Harvest Reforge',
+                        attempts,
+                        materials: [{ name: lifeforce, quantity: lifeforceAmount }]
+                    };
+                    break;
+            }
+
+            if (method) {
+                craftingMethodsList.push(method);
+                displayCraftingMethods();
+            }
+        }
+
+        function displayCraftingMethods() {
+            if (craftingMethodsList.length === 0) {
+                methodsList.innerHTML = '<p style="color: #ccc; font-style: italic;">No methods added yet</p>';
+                return;
+            }
+
+            methodsList.innerHTML = craftingMethodsList.map((method, index) => `
+                <div class="favorite-item" style="margin-bottom: 10px;">
+                    <div class="favorite-info">
+                        <div class="favorite-name">${escapeHtml(method.name)}</div>
+                        <div class="favorite-meta">
+                            Attempts: ${method.attempts} |
+                            Materials: ${method.materials.map(m => `${m.quantity}x ${m.name}`).join(', ')}
+                        </div>
+                    </div>
+                    <div class="favorite-actions">
+                        <button class="btn-small btn-danger" onclick="removeCraftingMethod(${index})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.removeCraftingMethod = function(index) {
+            craftingMethodsList.splice(index, 1);
+            displayCraftingMethods();
+        };
+
+        async function calculateProfitability() {
+            const targetItem = document.getElementById('targetItem').value.trim();
+            const baseItem = document.getElementById('baseItem').value.trim();
+            const league = document.getElementById('craftLeague').value;
+
+            if (!targetItem || !baseItem) {
+                showCraftingError('Please fill in all required fields');
+                return;
+            }
+
+            if (craftingMethodsList.length === 0) {
+                showCraftingError('Please add at least one crafting method');
+                return;
+            }
+
+            try {
+                craftingLoading.style.display = 'block';
+                craftingError.style.display = 'none';
+                craftingResults.style.display = 'none';
+                calculateBtn.disabled = true;
+                calculateBtn.textContent = 'Calculating...';
+
+                const result = await ipcRenderer.invoke('calculate-crafting', {
+                    targetItem,
+                    baseItem,
+                    league,
+                    methods: craftingMethodsList
+                });
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                displayCraftingResults(result.data);
+            } catch (err) {
+                showCraftingError(`Calculation failed: ${err.message}`);
+            } finally {
+                craftingLoading.style.display = 'none';
+                calculateBtn.disabled = false;
+                calculateBtn.textContent = 'Calculate Profitability';
+            }
+        }
+
+        function displayCraftingResults(analysis) {
+            const {
+                targetItem,
+                marketPrice,
+                bestCraftingMethod,
+                allMethods,
+                profit,
+                profitPercentage,
+                isProfitable,
+                recommendation
+            } = analysis;
+
+            // Update stats
+            document.getElementById('craftMarketPrice').textContent = `${marketPrice.toFixed(2)}c`;
+            document.getElementById('craftBestCost').textContent = `${bestCraftingMethod.totalCost.toFixed(2)}c`;
+
+            const profitEl = document.getElementById('craftProfit');
+            profitEl.textContent = `${profit.toFixed(2)}c (${profitPercentage.toFixed(1)}%)`;
+            profitEl.style.color = isProfitable ? '#90EE90' : '#ff6666';
+
+            const recommendationEl = document.getElementById('craftRecommendation');
+            recommendationEl.textContent = recommendation.toUpperCase();
+            recommendationEl.style.color = recommendation === 'craft' ? '#90EE90' : '#ffaa00';
+
+            // Populate methods table
+            const tableBody = document.getElementById('craftingMethodsTable');
+            tableBody.innerHTML = allMethods.map(method => {
+                const materials = method.breakdown.materialCosts
+                    .map(m => `${m.quantity.toFixed(0)}x ${m.material} (${m.totalCost.toFixed(2)}c)`)
+                    .join(', ');
+
+                const isBest = method.methodName === bestCraftingMethod.methodName;
+                const rowStyle = isBest ? 'background: rgba(144, 238, 144, 0.1); border-left: 3px solid #90EE90;' : '';
+
+                return `
+                    <tr style="${rowStyle}">
+                        <td>${escapeHtml(method.methodName)}${isBest ? ' ⭐' : ''}</td>
+                        <td class="price">${method.totalCost.toFixed(2)}</td>
+                        <td>${method.expectedAttempts || 1}</td>
+                        <td style="font-size: 0.9em;">${materials}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            craftingResults.style.display = 'block';
+        }
+
+        function showCraftingError(message) {
+            craftingError.textContent = message;
+            craftingError.style.display = 'block';
+        }
+
+        // Initialize crafting methods display
+        displayCraftingMethods();
     </script>
 </body>
 </html>

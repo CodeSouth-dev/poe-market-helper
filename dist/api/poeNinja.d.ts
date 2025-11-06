@@ -51,3 +51,8 @@ export declare class PoeNinjaAPI {
      */
     getLeagues(): Promise<string[]>;
 }
+/**
+ * Standalone function to search for items
+ * Can be used by other modules without creating a new instance
+ */
+export declare function searchItem(itemName: string, league?: string): Promise<SearchResult>;
