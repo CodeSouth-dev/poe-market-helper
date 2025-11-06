@@ -1411,6 +1411,9 @@
 
             let html = '';
             insightsData.popular.forEach((item, index) => {
+                const formattedPrice = formatPriceForDisplay(item.chaosValue);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
                 html += `
                     <div class="method-card">
                         <div class="method-header">
@@ -1418,7 +1421,7 @@
                                 <span class="method-name">#${index + 1} ${item.name}</span>
                                 ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
                             </div>
-                            <div class="method-cost">${item.chaosValue.toFixed(1)} Chaos</div>
+                            <div class="method-cost">${formattedPrice}</div>
                         </div>
                         <div class="method-stats">
                             <div class="method-stat">
@@ -1426,8 +1429,8 @@
                                 <div class="method-stat-label">Listings</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${item.baseType || 'N/A'}</div>
-                                <div class="method-stat-label">Base Type</div>
+                                <div class="method-stat-value">${readableBaseType}</div>
+                                <div class="method-stat-label">Type</div>
                             </div>
                             ${item.links ? `
                             <div class="method-stat">
@@ -1456,6 +1459,10 @@
             insightsData.profitable.forEach((data, index) => {
                 const item = data.item;
                 const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
+                const formattedSellPrice = formatPriceForDisplay(data.sellPrice);
+                const formattedProfit = formatPriceForDisplay(data.profitMargin);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
                 html += `
                     <div class="method-card">
                         <div class="method-header">
@@ -1466,12 +1473,12 @@
                                     ✓ Craftable
                                 </span>
                             </div>
-                            <div class="method-cost">+${data.profitMargin.toFixed(0)} Profit</div>
+                            <div class="method-cost">${formattedProfit} Profit</div>
                         </div>
                         <div class="method-stats">
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.sellPrice.toFixed(0)}</div>
-                                <div class="method-stat-label">Sell Price (Chaos)</div>
+                                <div class="method-stat-value">${formattedSellPrice}</div>
+                                <div class="method-stat-label">Market Price</div>
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${data.craftingMethod}</div>
@@ -1479,7 +1486,7 @@
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${data.demand}</div>
-                                <div class="method-stat-label">Market Demand</div>
+                                <div class="method-stat-label">Demand</div>
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${item.listingCount || 0}</div>
@@ -1488,10 +1495,10 @@
                         </div>
                         <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
                             <p style="color: #4ade80; margin: 0;">
-                                💰 <strong>Profit:</strong> ${data.profitMargin.toFixed(0)} Chaos (${profitPercent}% margin)
+                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%)
                             </p>
                             <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
-                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${item.baseType || 'Base Type'}
+                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType}
                             </p>
                         </div>
                     </div>
@@ -1509,6 +1516,9 @@
 
             let html = '';
             insightsData.trending.forEach((item, index) => {
+                const formattedPrice = formatPriceForDisplay(item.chaosValue);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
                 html += `
                     <div class="method-card">
                         <div class="method-header">
@@ -1516,7 +1526,7 @@
                                 <span class="method-name">#${index + 1} ${item.name}</span>
                                 ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
                             </div>
-                            <div class="method-cost">${item.chaosValue.toFixed(1)} Chaos</div>
+                            <div class="method-cost">${formattedPrice}</div>
                         </div>
                         <div class="method-stats">
                             <div class="method-stat">
@@ -1524,8 +1534,8 @@
                                 <div class="method-stat-label">Listings</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${item.baseType || 'N/A'}</div>
-                                <div class="method-stat-label">Base Type</div>
+                                <div class="method-stat-value">${readableBaseType}</div>
+                                <div class="method-stat-label">Type</div>
                             </div>
                         </div>
                         <p style="color: #ffd700; margin-top: 10px;">
@@ -1535,6 +1545,49 @@
                 `;
             });
             container.innerHTML = html;
+        }
+
+        // Helper function to format prices (Chaos vs Divine)
+        function formatPriceForDisplay(chaosValue) {
+            const divinePrice = 200; // Approximate Divine Orb price in Chaos
+
+            if (chaosValue >= divinePrice) {
+                const divineValue = (chaosValue / divinePrice).toFixed(2);
+                return `${divineValue} Divine`;
+            } else if (chaosValue >= 10) {
+                return `${Math.round(chaosValue)} Chaos`;
+            } else {
+                return `${chaosValue.toFixed(1)} Chaos`;
+            }
+        }
+
+        // Helper function to format base type names for readability
+        function formatBaseType(baseType) {
+            if (!baseType || baseType === 'N/A') return 'Base Item';
+
+            // Remove common prefixes that make names too long
+            let formatted = baseType
+                .replace(/^(Metadata\/Items\/)/i, '')
+                .replace(/^(Currency\/)/i, '')
+                .replace(/^(UniqueItems\/)/i, '');
+
+            // Handle camelCase and PascalCase - add spaces
+            formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+            // Handle underscores
+            formatted = formatted.replace(/_/g, ' ');
+
+            // Capitalize first letter of each word
+            formatted = formatted.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+
+            // Truncate if too long
+            if (formatted.length > 25) {
+                formatted = formatted.substring(0, 22) + '...';
+            }
+
+            return formatted;
         }
 
         refreshInsightsBtn.addEventListener('click', loadMarketInsights);
