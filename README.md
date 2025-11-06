@@ -4,14 +4,38 @@ A standalone desktop application for live Path of Exile market data and crafting
 
 ## Features
 
+### Market Analysis
 ✅ **Live Market Search**: Real-time price data from poe.ninja
 ✅ **Multiple Leagues**: Support for all current PoE leagues
 ✅ **Favorites System**: Save and quickly recheck items
 ✅ **Price Statistics**: Min, max, median prices with listing counts
-✅ **Crafting Profitability Calculator**: Compare crafting costs vs buying finished items
-✅ **Multiple Crafting Methods**: Alt spam, essence, fossil, chaos spam, recombinator, harvest
 ✅ **Caching**: Reduces API calls with intelligent caching
-✅ **Professional UI**: Clean, game-themed interface
+
+### Crafting Tools
+🎓 **Advanced Crafting Chain Builder**: Educational step-by-step crafting guides
+- **Item Level (ilvl) Support**: Track ilvl requirements for mod tiers (T1-T5)
+- **8 Crafting Strategies**: From beginner to expert level
+- **Probability Calculations**: Success rates and expected attempts
+- **Cost Analysis**: Real-time material cost calculation per step
+- **Educational Explanations**: Learn what each step does and why
+
+⚔️ **Advanced Tactics Library**:
+- Mod Blocking strategies
+- Metacrafting techniques (Cannot Roll Attack/Caster)
+- Imprint Alt-Spam methods
+- Awakener's Orb combinations
+- Fracture Fossil strategies
+
+📚 **Crafting Education System**:
+- Item level and mod tier concepts
+- Mod weighting and probabilities
+- Prefix vs Suffix explained
+- Blocking mods techniques
+- Multi-step crafting chains
+
+💰 **Simple Profitability Calculator**: Quick craft vs buy comparison
+
+✅ **Professional UI**: Clean, game-themed interface with collapsible tips
 
 ## Quick Start
 
@@ -53,16 +77,37 @@ npm start
 4. **Add Favorites**: Save frequently checked items
 5. **Refresh**: Update prices with one click
 
-### Crafting Profitability Calculator
-1. **Enter Target Item**: The finished item you want to craft (e.g., "Stygian Vise with +100 life")
-2. **Enter Base Item**: The base item needed (e.g., "Stygian Vise")
-3. **Add Crafting Methods**: Click "Add Crafting Method" and select:
-   - Alt Spam: Spam Alterations for specific mods
-   - Essence Spam: Use essences to guarantee mods
-   - Fossil Crafting: Use fossils and resonators
-   - Chaos Spam: Spam Chaos Orbs
-   - Recombinator: Combine two items
-   - Harvest Reforge: Use Harvest crafts
+### Advanced Crafting Chain Builder
+1. **Enter Base Item**: The item you want to craft (e.g., "Vaal Regalia", "Stygian Vise")
+2. **Select Item Level (ilvl)**: Choose from 50, 64, 73, 81, or 86
+   - ilvl 86 = Can roll T1 mods (highest tier)
+   - ilvl 81 = Can roll T2 mods
+   - ilvl 73 = Can roll T3 mods
+   - Lower ilvls = Lower tier mods available
+3. **Choose Crafting Strategy**:
+   - **Beginner**: Alt-Regal-Multimod, Essence Spam, Fossil Spam
+   - **Intermediate**: Alt-Regal-Annul, Harvest Reforge
+   - **Advanced**: Alt-Recombinator, Eldritch Crafting
+   - **Expert**: Metacraft-Exalt
+4. **Build Chain**: See step-by-step instructions with:
+   - Material requirements per step
+   - Expected attempts and success rates
+   - Cost breakdown
+   - Educational tips and explanations
+5. **Learn Advanced Tactics**: Click "Show Advanced Tactics" for:
+   - Mod blocking techniques
+   - Metacrafting strategies
+   - Cost-effective crafting methods
+6. **Study Crafting Guide**: Click "Crafting Guide" to learn:
+   - How ilvl affects available mods
+   - Mod weighting and probabilities
+   - Prefix vs Suffix mechanics
+   - Multi-step crafting processes
+
+### Simple Profitability Calculator
+1. **Enter Target Item**: The finished item you want to craft
+2. **Enter Base Item**: The base item needed
+3. **Add Crafting Methods**: Click "Add Crafting Method"
 4. **Calculate**: See which method is cheapest and if it's profitable vs buying
 
 ### Example Searches
