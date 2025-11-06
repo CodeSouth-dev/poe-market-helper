@@ -2104,29 +2104,35 @@
             if (explicitModCount >= 2) {
                 stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
                     <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method ${methodNum}: Recombinator Method (VERY COST-EFFECTIVE)</h4>
+                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Available in Kingsmarch (PoE1) or Expedition (PoE2).</p>
                     <ol style="color: #ddd; line-height: 1.8; margin: 0;">
-                        <li><strong style="color: #ffd700;">Prepare Base A:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
+                        <li><strong style="color: #ffd700;">Prepare Item 1:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
                             <ul style="margin-top: 5px;">
-                                <li>Cost: ~5-20 Alterations per mod (very cheap!)</li>
-                                <li>Regal it when you hit the mod</li>
+                                <li>Cost: ~10-50 Alterations (1-5c total)</li>
+                                <li>Regal it to make rare when you hit the mod</li>
                             </ul>
                         </li>
-                        <li><strong style="color: #ffd700;">Prepare Base B:</strong> Alt-spam another identical base until you hit a <strong>different desired mod</strong>
+                        <li><strong style="color: #ffd700;">Prepare Item 2:</strong> Alt-spam another <strong>identical base</strong> (same item type!) until you hit a <strong>different desired mod</strong>
                             <ul style="margin-top: 5px;">
+                                <li>Cost: ~10-50 Alterations (1-5c total)</li>
                                 <li>Regal it as well</li>
                             </ul>
                         </li>
-                        <li><strong style="color: #ffd700;">Use Recombinator:</strong> Combine both items with a Recombinator
+                        <li><strong style="color: #ffd700;">Recombine:</strong> Use the Recombinator in Kingsmarch or Expedition
                             <ul style="margin-top: 5px;">
-                                <li>~50% chance to get both mods on one item</li>
-                                <li>If it fails, repeat from step 1</li>
-                                <li>Recombinators cost ~5-15c each</li>
+                                <li><strong>PoE1 (Kingsmarch):</strong> Costs Gold + Thaumaturgic Dust (not chaos orbs!)</li>
+                                <li><strong>PoE2 (Expedition):</strong> Costs Expedition Artifacts</li>
+                                <li>Select which mods you want to keep from each item</li>
+                                <li>Success chance varies based on mods selected (fewer mods = higher chance)</li>
+                                <li>⚠️ <strong>If it fails, BOTH items are destroyed!</strong></li>
                             </ul>
                         </li>
-                        <li>Fill remaining mods with bench crafts or continue alt-spamming + recombing</li>
+                        <li><strong style="color: #ffd700;">Repeat if needed:</strong> If recombination fails, craft two new bases and try again</li>
+                        <li>Fill remaining affixes with bench crafts or continue recombining more mods</li>
                     </ol>
-                    <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Alt-spamming is VERY cheap (alterations are 0.1-0.2c each). Way cheaper than chaos spam (1c each)!</p>
-                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Note:</strong> Recombinators are league-specific. Check if available in current league!</p>
+                    <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Main cost is just alterations (0.1-0.2c each) + base items. Total ~5-20c per attempt, way cheaper than chaos spam!</p>
+                    <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>Pro tip:</strong> Start with 1:1 recombination (1 mod from each item) for best success rate. Can do 2:1 or 3:1 for more mods but lower success.</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Availability:</strong> Check if Recombinator is in current league (Kingsmarch or Expedition).</p>
                 </div>`;
                 methodNum++;
             }
@@ -2233,14 +2239,21 @@
 
             // Recombinator tip
             if (explicitModCount >= 2) {
-                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If available, this is THE most cost-effective method! Alt-spam for single mods (very cheap), then combine. Even with 50% failure rate, still way cheaper than chaos spam.</li>`;
+                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If available (Kingsmarch/Expedition), this is THE most cost-effective method! Prepare two bases with desired mods using cheap alterations, then recombine. Costs Gold+Dust or Artifacts (NOT chaos orbs). Even with risk of failure, way cheaper than chaos spam!</li>`;
             }
 
             // RNG warning
             tipsHTML += `<li>🎲 <strong>RNG Warning:</strong> Crafting is gambling! Set a budget before you start and STOP if you hit it. Don't spend your last chaos!</li>`;
 
-            // Craft of Exile
-            tipsHTML += `<li>📊 <strong>Calculate Exact Odds:</strong> Visit <a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">craftofexile.com</a> to see exact probability for hitting your mods. Very useful!</li>`;
+            // Resource links
+            tipsHTML += `<li>📊 <strong>Essential Crafting Resources:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">Craft of Exile</a> - Calculate exact probabilities for crafting methods</li>
+                    <li><a href="https://poedb.tw/us/mod.php" target="_blank" style="color: #ffd700;">PoEDB Mods Database</a> - Look up all mods, tiers, and ilvl requirements</li>
+                    <li><a href="https://www.pathofexile.com/trade" target="_blank" style="color: #ffd700;">Official Trade Site</a> - Always check market prices first!</li>
+                    <li><a href="https://poedb.tw/us/Crafting_Bench" target="_blank" style="color: #ffd700;">Crafting Bench Mods</a> - All available bench crafts</li>
+                </ul>
+            </li>`;
 
             // ilvl specific tips
             if (itemData.itemLevel && itemData.itemLevel >= 86) {
