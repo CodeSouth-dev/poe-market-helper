@@ -2230,8 +2230,7 @@
 
             // Method X: Chaos spam (only show in specific situations)
             // Only recommend chaos spam for jewelry or when other methods aren't viable
-            const itemClass = (itemData.itemClass || '').toLowerCase();
-            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+            // Note: itemClass already declared at top of function
             const isInfluenced = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
                 m.includes('Shaper') || m.includes('Elder') || m.includes('Crusader') ||
                 m.includes('Hunter') || m.includes('Warlord') || m.includes('Redeemer')
