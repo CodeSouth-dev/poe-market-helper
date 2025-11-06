@@ -1950,6 +1950,110 @@
             guideTips.innerHTML = tipsHTML;
         }
 
+        function detectVendorRecipes(itemData, modsOnItem) {
+            const recipes = [];
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const baseName = (itemData.baseName || '').toLowerCase();
+
+            // Check for weapon types
+            const isWand = itemClass.includes('wand') || baseName.includes('wand');
+            const isSceptre = itemClass.includes('sceptre') || baseName.includes('sceptre');
+            const isStaff = itemClass.includes('staff') || baseName.includes('staff');
+            const isBow = itemClass.includes('bow') || baseName.includes('bow');
+            const isCaster = isWand || isSceptre || isStaff;
+
+            // Check for gem level mods
+            const hasFireGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Fire\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Fire\s+Skill/i)
+            );
+            const hasColdGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Cold\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Cold\s+Skill/i)
+            );
+            const hasLightningGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Lightning\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Lightning\s+Skill/i)
+            );
+            const hasChaosGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Chaos\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Chaos\s+Skill/i)
+            );
+
+            // Caster weapon +1 gem recipes
+            if (isCaster && (hasFireGems || hasColdGems || hasLightningGems || hasChaosGems)) {
+                if (hasFireGems) {
+                    recipes.push({
+                        name: '+1 to Fire Gems Recipe',
+                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Ruby Ring', 'Orb of Alteration'],
+                        result: '+1 to Level of all Fire Spell Skill Gems',
+                        cost: '~1c (cost of magic base + ruby ring)',
+                        tip: 'Start with this recipe, then craft further with other methods'
+                    });
+                }
+                if (hasColdGems) {
+                    recipes.push({
+                        name: '+1 to Cold Gems Recipe',
+                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Sapphire Ring', 'Orb of Alteration'],
+                        result: '+1 to Level of all Cold Spell Skill Gems',
+                        cost: '~1c (cost of magic base + sapphire ring)',
+                        tip: 'Start with this recipe, then craft further with other methods'
+                    });
+                }
+                if (hasLightningGems) {
+                    recipes.push({
+                        name: '+1 to Lightning Gems Recipe',
+                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Topaz Ring', 'Orb of Alteration'],
+                        result: '+1 to Level of all Lightning Spell Skill Gems',
+                        cost: '~1c (cost of magic base + topaz ring)',
+                        tip: 'Start with this recipe, then craft further with other methods'
+                    });
+                }
+                if (hasChaosGems) {
+                    recipes.push({
+                        name: '+1 to Chaos Gems Recipe',
+                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Amethyst Ring', 'Orb of Alteration'],
+                        result: '+1 to Level of all Chaos Spell Skill Gems',
+                        cost: '~1c (cost of magic base + amethyst ring)',
+                        tip: 'Start with this recipe, then craft further with other methods'
+                    });
+                }
+            }
+
+            // Bow +2 gem recipes
+            if (isBow && (hasFireGems || hasColdGems || hasLightningGems)) {
+                if (hasFireGems) {
+                    recipes.push({
+                        name: '+2 to Fire Bow Gems Recipe',
+                        items: [itemData.baseName || 'bow', 'Ruby Ring (any rarity)'],
+                        result: 'Magic bow with +2 to Level of Fire Bow Gems',
+                        cost: '~0.5c (cost of base + ruby ring)',
+                        tip: 'VERY cheap starting point for bow crafting!'
+                    });
+                }
+                if (hasColdGems) {
+                    recipes.push({
+                        name: '+2 to Cold Bow Gems Recipe',
+                        items: [itemData.baseName || 'bow', 'Sapphire Ring (any rarity)'],
+                        result: 'Magic bow with +2 to Level of Cold Bow Gems',
+                        cost: '~0.5c (cost of base + sapphire ring)',
+                        tip: 'VERY cheap starting point for bow crafting!'
+                    });
+                }
+                if (hasLightningGems) {
+                    recipes.push({
+                        name: '+2 to Lightning Bow Gems Recipe',
+                        items: [itemData.baseName || 'bow', 'Topaz Ring (any rarity)'],
+                        result: 'Magic bow with +2 to Level of Lightning Bow Gems',
+                        cost: '~0.5c (cost of base + topaz ring)',
+                        tip: 'VERY cheap starting point for bow crafting!'
+                    });
+                }
+            }
+
+            return recipes;
+        }
+
         function generateCraftingSteps(itemData, modsOnItem) {
             const explicitModCount = modsOnItem.explicit.length;
             const craftedModCount = modsOnItem.crafted.length;
@@ -1958,6 +2062,9 @@
             const hasLife = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Life'));
             const hasResists = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Resistance'));
             const hasES = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Energy Shield'));
+
+            // Detect applicable vendor recipes
+            const vendorRecipes = detectVendorRecipes(itemData, modsOnItem);
 
             let stepsHTML = `<div style="margin-bottom: 20px;">
                 <h3 style="color: #ffd700; margin-bottom: 10px;">💰 Recommended Crafting Methods (Cheapest First)</h3>
@@ -1975,10 +2082,28 @@
                 <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Someone else already took the RNG risk. Often 10x cheaper than crafting!</p>
             </div>`;
 
-            // Method 2: Recombinators (for 2+ explicit mods)
+            // Method 2: Vendor Recipes (if applicable)
+            if (vendorRecipes.length > 0) {
+                vendorRecipes.forEach((recipe, index) => {
+                    stepsHTML += `<div style="background: rgba(0,255,127,0.1); padding: 15px; border-left: 4px solid #00ff7f; margin-bottom: 15px;">
+                        <h4 style="color: #00ff7f; margin: 0 0 10px 0;">⭐ Method 2: Vendor Recipe - ${recipe.name}</h4>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Recipe:</strong></p>
+                        <ul style="color: #ddd; line-height: 1.8; margin: 0 0 10px 0;">
+                            ${recipe.items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Result:</strong> ${recipe.result}</p>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Cost:</strong> ${recipe.cost}</p>
+                        <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Tip:</strong> ${recipe.tip}</p>
+                        <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>How to use:</strong> Sell all items listed above to ANY vendor at the same time to get the result!</p>
+                    </div>`;
+                });
+            }
+
+            // Method 3: Recombinators (for 2+ explicit mods)
+            let methodNum = vendorRecipes.length > 0 ? 3 : 2;
             if (explicitModCount >= 2) {
                 stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
-                    <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method 2: Recombinator Method (VERY COST-EFFECTIVE)</h4>
+                    <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method ${methodNum}: Recombinator Method (VERY COST-EFFECTIVE)</h4>
                     <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                         <li><strong style="color: #ffd700;">Prepare Base A:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
                             <ul style="margin-top: 5px;">
@@ -2003,12 +2128,13 @@
                     <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Alt-spamming is VERY cheap (alterations are 0.1-0.2c each). Way cheaper than chaos spam (1c each)!</p>
                     <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Note:</strong> Recombinators are league-specific. Check if available in current league!</p>
                 </div>`;
+                methodNum++;
             }
 
-            // Method 3: Alt-Regal for simple items
+            // Method X: Alt-Regal for simple items
             if (explicitModCount <= 3) {
                 stepsHTML += `<div style="background: rgba(0,150,200,0.1); padding: 15px; border-left: 4px solid #0096c8; margin-bottom: 15px;">
-                    <h4 style="color: #0096c8; margin: 0 0 10px 0;">Method 3: Alt-Regal (For Simple Items)</h4>
+                    <h4 style="color: #0096c8; margin: 0 0 10px 0;">Method ${methodNum}: Alt-Regal (For Simple Items)</h4>
                     <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                         <li>Use <strong>Orbs of Alteration</strong> on white base until you hit 1-2 desired mods</li>
                         <li>Use <strong>Orb of Augmentation</strong> to add a 2nd mod if needed</li>
@@ -2017,11 +2143,12 @@
                     </ol>
                     <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> ~20-100 Alterations + 1 Regal = ~5-20 chaos total</p>
                 </div>`;
+                methodNum++;
             }
 
-            // Method 4: Essence crafting (for guaranteed mods)
+            // Method X: Essence crafting (for guaranteed mods)
             stepsHTML += `<div style="background: rgba(200,100,0,0.1); padding: 15px; border-left: 4px solid #c86400; margin-bottom: 15px;">
-                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method 4: Essence Crafting (Guaranteed Mods)</h4>
+                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method ${methodNum}: Essence Crafting (Guaranteed Mods)</h4>
                 <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                     <li>Find the <strong>Essence</strong> that gives you the most important mod (e.g., Essence of Greed for Life)</li>
                     <li>Spam the essence on your base until you hit 1-2 additional desired mods</li>
@@ -2030,10 +2157,11 @@
                 <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Depends on essence tier. High-tier essences can be 5-20c each</p>
                 <p style="color: #afa; margin: 5px 0 0 0;">✅ <strong>Good for:</strong> Items where you need one specific high-tier mod guaranteed</p>
             </div>`;
+            methodNum++;
 
-            // Method 5: Harvest Reforge (if available)
+            // Method X: Harvest Reforge (if available)
             stepsHTML += `<div style="background: rgba(100,200,100,0.1); padding: 15px; border-left: 4px solid #64c864; margin-bottom: 15px;">
-                <h4 style="color: #64c864; margin: 0 0 10px 0;">Method 5: Harvest Reforge (If Available)</h4>
+                <h4 style="color: #64c864; margin: 0 0 10px 0;">Method ${methodNum}: Harvest Reforge (If Available)</h4>
                 <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                     <li>Get a base with any mods (doesn't matter what)</li>
                     <li>Use <strong>Harvest "Reforge with [type] mods"</strong> crafts:`;
@@ -2047,17 +2175,30 @@
                 </ol>
                 <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Harvest crafts vary. "Reforge more common" can be 10-50c</p>
             </div>`;
+            methodNum++;
 
-            // Method 6: Chaos spam (LAST RESORT - expensive)
-            stepsHTML += `<div style="background: rgba(200,0,0,0.1); padding: 15px; border-left: 4px solid #c80000; margin-bottom: 15px;">
-                <h4 style="color: #f88; margin: 0 0 10px 0;">Method 6: Chaos Spam (NOT RECOMMENDED - Expensive)</h4>
-                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
-                    <li>Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</li>
-                    <li>Finish with bench craft</li>
-                </ol>
-                <p style="color: #f88; margin: 10px 0 0 0;">❌ <strong>Why NOT recommended:</strong> Chaos orbs are 1c each. For ${totalModCount} mods, you might need 100-1000 chaos = very expensive!</p>
-                <p style="color: #ddd; margin: 5px 0 0 0;">⚠️ Only use if you have lots of currency and are lazy. Usually cheaper to buy from market!</p>
-            </div>`;
+            // Method X: Chaos spam (only show in specific situations)
+            // Only recommend chaos spam for jewelry or when other methods aren't viable
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+            const isInfluenced = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.includes('Shaper') || m.includes('Elder') || m.includes('Crusader') ||
+                m.includes('Hunter') || m.includes('Warlord') || m.includes('Redeemer')
+            );
+            const showChaosSplam = (isJewelry && explicitModCount >= 4) || (isInfluenced && explicitModCount >= 5);
+
+            if (showChaosSplam) {
+                stepsHTML += `<div style="background: rgba(200,0,0,0.1); padding: 15px; border-left: 4px solid #c80000; margin-bottom: 15px;">
+                    <h4 style="color: #f88; margin: 0 0 10px 0;">Method ${methodNum}: Chaos Spam (USE WITH CAUTION)</h4>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li>Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</li>
+                        <li>Finish with bench craft or harvest</li>
+                    </ol>
+                    <p style="color: #ffa; margin: 10px 0 0 0;">⚠️ <strong>When to use:</strong> ${isJewelry ? 'Jewelry has smaller mod pools, making chaos spam more viable than on armor/weapons.' : 'Influenced items with many mods where other methods are difficult.'}</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">❌ <strong>Cost Warning:</strong> Expect to use 100-500+ chaos orbs. ONLY do this in late league or if you're wealthy!</p>
+                    <p style="color: #ddd; margin: 5px 0 0 0;">💡 <strong>Better alternative:</strong> Buy from market or use Harvest/Essence crafting instead!</p>
+                </div>`;
+            }
 
             // Bench crafts section
             if (craftedModCount > 0) {
