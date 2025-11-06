@@ -1,6 +1,17 @@
 # PoE Market Helper - TODO & Progress
 
+**Last Updated:** 2025-11-07
+**Current Branch:** `claude/getting-error-011CUr2HoEJYBid7rHcfXJiY`
+**App Status:** ✅ Working - loads and runs properly
+
+---
+
 ## ✅ Recently Completed
+
+### Critical Bug Fixes
+- [x] **Fixed app loading issue** - Removed duplicate `itemClass` declaration (line 2233) that caused SyntaxError
+- [x] **App now loads and tabs switch properly** - JavaScript executes without errors
+- [x] Temporarily removed GPU fix (was causing issues, can re-add later if needed)
 
 ### Learn to Craft Tab Improvements
 - [x] Fixed bench craft detection - properly recognizes `(crafted)` mods
@@ -31,7 +42,9 @@
 - [x] Added Craft of Exile link
 - [x] Added official trade site link
 
-## 🔄 In Progress
+---
+
+## 🔄 High Priority - In Progress
 
 ### Show ONLY Cheapest Method
 **Status**: Partially implemented
@@ -90,16 +103,20 @@
 
 ## 🐛 Known Issues
 
-### GPU Process Error (Low Priority - Cosmetic)
+### GPU Process Error (Optional - Won't Fix for Now)
+**Status**: Temporarily ignored
 **Error**: `GPU process exited unexpectedly: exit_code=-1073740791`
-**Impact**: App still works, just console warnings
-**Cause**: Electron GPU acceleration issues on Windows
-**Fix Options**:
-1. Add `--disable-gpu` flag to Electron launch
-2. Add `--disable-software-rasterizer` flag
-3. Add to main.ts: `app.disableHardwareAcceleration()`
+**What Happened**:
+- Tried adding `app.disableHardwareAcceleration()` but it caused loading issues
+- Removed the fix to prioritize app functionality
+- Error is cosmetic only - app works fine despite the warnings
 
-**File**: `src/main.ts` - add flag before app creation
+**If You Want to Fix It Later**:
+1. Add `app.disableHardwareAcceleration()` BEFORE any other app code
+2. Test thoroughly to ensure it doesn't break loading
+3. Alternative: Add `--disable-gpu` as command line flag when launching Electron
+
+**File**: `src/main.ts` - currently has no GPU fix applied
 
 ## 🎯 Future Enhancements
 
@@ -149,13 +166,46 @@ Incorrect recipes don't work in-game, causing user frustration. Must use documen
 - [Craft of Exile](https://www.craftofexile.com)
 - [Essence List](https://poedb.tw/us/Essence)
 
-## 📝 Notes for Next Session
+## 📝 Quick Start Guide for Next Session
 
-When continuing work:
-1. **Main focus**: Complete "show only cheapest method" refactor
-2. **Test**: Vendor recipes with real items from PoE
-3. **Quick win**: Fix GPU error by adding hardware acceleration disable
-4. **Nice to have**: Essence mapping for better recommendations
+### What to Say to Start
+**Option 1 (Continue Work):**
+"Continue working on the Learn to Craft tab based on TODO.md - specifically complete the 'show only cheapest method' refactor"
 
-Last updated: 2025-11-07
-Branch: `claude/getting-error-011CUr2HoEJYBid7rHcfXJiY`
+**Option 2 (Test Features):**
+"I want to test the vendor recipes and crafting suggestions. Here's an item: [paste item from PoE]"
+
+**Option 3 (Fix Issues):**
+"Fix [specific issue from Outstanding Issues section]"
+
+### Current State Summary
+✅ **What Works:**
+- App loads and runs without errors
+- All tabs are functional
+- Budget tier selection works
+- Vendor recipe detection implemented
+- Learn to Craft tab shows crafting methods
+
+❌ **What Needs Work:**
+1. **Show only cheapest method** - Currently shows ALL methods, should show only 1-2 best options
+2. **Essence recommendations** - Generic, needs mod-to-essence mapping
+3. **Budget filtering** - Budget selector exists but doesn't filter method display yet
+4. **Test vendor recipes** - Need to verify they work with real PoE items
+
+### File Locations
+- Main UI/Learn to Craft: `src/index.html` (lines 808-2400)
+- Vendor recipe detection: `src/index.html` (lines 1967-2039)
+- Method selection logic: `src/index.html` (lines 2041-2086)
+- Main process: `src/main.ts`
+
+### Important Functions
+- `detectVendorRecipes()` - Finds applicable vendor recipes
+- `determineBestCraftingMethod()` - Chooses cheapest method (NOT YET USED IN DISPLAY)
+- `generateCraftingSteps()` - Renders the crafting guide (SHOWS ALL METHODS, NEEDS REFACTOR)
+- `generateCraftingTips()` - Shows pro tips
+
+---
+
+**Last updated:** 2025-11-07
+**Branch:** `claude/getting-error-011CUr2HoEJYBid7rHcfXJiY`
+**Git Status:** All changes committed and pushed
