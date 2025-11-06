@@ -263,6 +263,45 @@
             gap: 10px;
         }
 
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .tab-button {
+            padding: 12px 30px;
+            background: rgba(255,255,255,0.05);
+            color: #cccccc;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+        }
+
+        .tab-button.active {
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            border-bottom-color: #ffd700;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .btn-small {
             padding: 5px 10px;
             font-size: 0.8em;
@@ -320,27 +359,61 @@
             <p class="subtitle">Live market data from poe.ninja</p>
         </header>
 
-        <section class="search-section">
-            <form class="search-form" id="searchForm">
-                <div class="form-group">
-                    <label for="itemName">Item Name:</label>
-                    <input type="text" id="itemName" placeholder="e.g., Tabula Rasa, Divine Orb, Shaper's Touch" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="league">League:</label>
-                    <select id="league">
-                        <option value="Crucible">Crucible</option>
-                        <option value="Hardcore Crucible">Hardcore Crucible</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Hardcore">Hardcore</option>
-                    </select>
-                </div>
-                
-                <button type="submit" id="searchBtn">Search</button>
-                <button type="button" id="favoriteBtn" style="display: none;">Add to Favorites</button>
-            </form>
-        </section>
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="item-crafting">Item Crafting</button>
+            <button class="tab-button" data-tab="map-crafting">Map Crafting</button>
+        </div>
+
+        <!-- Item Crafting Tab -->
+        <div id="item-crafting" class="tab-content active">
+            <section class="search-section">
+                <form class="search-form" id="searchForm">
+                    <div class="form-group">
+                        <label for="itemName">Item Name:</label>
+                        <input type="text" id="itemName" placeholder="e.g., Tabula Rasa, Divine Orb, Fossil, Essence" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="league">League:</label>
+                        <select id="league">
+                            <option value="Crucible">Crucible</option>
+                            <option value="Hardcore Crucible">Hardcore Crucible</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Hardcore">Hardcore</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="searchBtn">Search Items</button>
+                    <button type="button" id="favoriteBtn" style="display: none;">Add to Favorites</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Map Crafting Tab -->
+        <div id="map-crafting" class="tab-content">
+            <section class="search-section">
+                <form class="search-form" id="mapSearchForm">
+                    <div class="form-group">
+                        <label for="mapItemName">Map Item Name:</label>
+                        <input type="text" id="mapItemName" placeholder="e.g., Scarab, Chisel, Sextant, Unique Map" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mapLeague">League:</label>
+                        <select id="mapLeague">
+                            <option value="Crucible">Crucible</option>
+                            <option value="Hardcore Crucible">Hardcore Crucible</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Hardcore">Hardcore</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="mapSearchBtn">Search Map Items</button>
+                    <button type="button" id="mapFavoriteBtn" style="display: none;">Add to Favorites</button>
+                </form>
+            </section>
+        </div>
 
         <div id="loading" class="loading" style="display: none;">
             🔍 Searching poe.ninja...
@@ -409,13 +482,22 @@
 
     <script>
         const { ipcRenderer } = require('electron');
-        
-        // DOM elements
+
+        // DOM elements - Item Crafting
         const searchForm = document.getElementById('searchForm');
         const itemNameInput = document.getElementById('itemName');
         const leagueSelect = document.getElementById('league');
         const searchBtn = document.getElementById('searchBtn');
         const favoriteBtn = document.getElementById('favoriteBtn');
+
+        // DOM elements - Map Crafting
+        const mapSearchForm = document.getElementById('mapSearchForm');
+        const mapItemNameInput = document.getElementById('mapItemName');
+        const mapLeagueSelect = document.getElementById('mapLeague');
+        const mapSearchBtn = document.getElementById('mapSearchBtn');
+        const mapFavoriteBtn = document.getElementById('mapFavoriteBtn');
+
+        // DOM elements - Shared
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
         const resultsSection = document.getElementById('resultsSection');
@@ -430,19 +512,46 @@
         // State
         let currentSearchResult = null;
         let favorites = [];
+        let currentTab = 'item-crafting';
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
             loadFavorites();
+            initializeTabs();
         });
 
-        // Search form handler
+        // Tab switching functionality
+        function initializeTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+
+                    // Update active states
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    button.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+
+                    currentTab = tabId;
+
+                    // Clear results when switching tabs
+                    hideResults();
+                    hideError();
+                });
+            });
+        }
+
+        // Item crafting search form handler
         searchForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const itemName = itemNameInput.value.trim();
             const league = leagueSelect.value;
-            
+
             if (!itemName) {
                 showError('Please enter an item name');
                 return;
@@ -451,14 +560,29 @@
             await searchItem(itemName, league);
         });
 
-        // Add to favorites handler
+        // Map crafting search form handler
+        mapSearchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const itemName = mapItemNameInput.value.trim();
+            const league = mapLeagueSelect.value;
+
+            if (!itemName) {
+                showError('Please enter a map item name');
+                return;
+            }
+
+            await searchMapCrafting(itemName, league);
+        });
+
+        // Add to favorites handler - Item Crafting
         favoriteBtn.addEventListener('click', async () => {
             if (!currentSearchResult) return;
 
             try {
                 const itemName = itemNameInput.value.trim();
                 const league = leagueSelect.value;
-                
+
                 await ipcRenderer.invoke('add-favorite', {
                     name: itemName,
                     league: league
@@ -466,6 +590,27 @@
 
                 showSuccess('Added to favorites!');
                 favoriteBtn.style.display = 'none';
+                await loadFavorites();
+            } catch (err) {
+                showError(`Failed to add to favorites: ${err.message}`);
+            }
+        });
+
+        // Add to favorites handler - Map Crafting
+        mapFavoriteBtn.addEventListener('click', async () => {
+            if (!currentSearchResult) return;
+
+            try {
+                const itemName = mapItemNameInput.value.trim();
+                const league = mapLeagueSelect.value;
+
+                await ipcRenderer.invoke('add-favorite', {
+                    name: itemName,
+                    league: league
+                });
+
+                showSuccess('Added to favorites!');
+                mapFavoriteBtn.style.display = 'none';
                 await loadFavorites();
             } catch (err) {
                 showError(`Failed to add to favorites: ${err.message}`);
@@ -502,13 +647,13 @@
                 searchBtn.textContent = 'Searching...';
 
                 const result = await ipcRenderer.invoke('search-item', itemName, league);
-                
+
                 if (!result.success) {
                     throw new Error(result.error);
                 }
 
                 currentSearchResult = result.data;
-                
+
                 if (showUI) {
                     displayResults(result.data);
                     updateFavoriteButton(itemName, league);
@@ -523,7 +668,44 @@
                     hideLoading();
                 }
                 searchBtn.disabled = false;
-                searchBtn.textContent = 'Search';
+                searchBtn.textContent = 'Search Items';
+            }
+        }
+
+        async function searchMapCrafting(itemName, league, showUI = true) {
+            try {
+                if (showUI) {
+                    showLoading();
+                    hideError();
+                    hideResults();
+                }
+
+                mapSearchBtn.disabled = true;
+                mapSearchBtn.textContent = 'Searching...';
+
+                const result = await ipcRenderer.invoke('search-map-crafting', itemName, league);
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                currentSearchResult = result.data;
+
+                if (showUI) {
+                    displayResults(result.data);
+                    updateMapFavoriteButton(itemName, league);
+                }
+            } catch (err) {
+                if (showUI) {
+                    showError(`Map search failed: ${err.message}`);
+                }
+                console.error('Map search error:', err);
+            } finally {
+                if (showUI) {
+                    hideLoading();
+                }
+                mapSearchBtn.disabled = false;
+                mapSearchBtn.textContent = 'Search Map Items';
             }
         }
 
@@ -634,12 +816,21 @@
         }
 
         function updateFavoriteButton(itemName, league) {
-            const isFavorite = favorites.some(fav => 
-                fav.name.toLowerCase() === itemName.toLowerCase() && 
+            const isFavorite = favorites.some(fav =>
+                fav.name.toLowerCase() === itemName.toLowerCase() &&
                 fav.league === league
             );
-            
+
             favoriteBtn.style.display = currentSearchResult && !isFavorite ? 'inline-block' : 'none';
+        }
+
+        function updateMapFavoriteButton(itemName, league) {
+            const isFavorite = favorites.some(fav =>
+                fav.name.toLowerCase() === itemName.toLowerCase() &&
+                fav.league === league
+            );
+
+            mapFavoriteBtn.style.display = currentSearchResult && !isFavorite ? 'inline-block' : 'none';
         }
 
         function showLoading() {

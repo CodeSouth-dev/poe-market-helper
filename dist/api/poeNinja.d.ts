@@ -39,6 +39,18 @@ export declare class PoeNinjaAPI {
      */
     private searchCategory;
     /**
+     * Search for map crafting items
+     */
+    searchMapCrafting(itemName: string, league: string): Promise<SearchResult>;
+    /**
+     * Get item crafting categories
+     */
+    private getItemCraftingCategories;
+    /**
+     * Get map crafting categories
+     */
+    private getMapCraftingCategories;
+    /**
      * Get the correct endpoint for each category
      */
     private getCategoryEndpoint;
