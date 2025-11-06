@@ -38,6 +38,7 @@ const path = __importStar(require("path"));
 const poeNinja_1 = require("./api/poeNinja");
 const cache_1 = require("./utils/cache");
 const favorites_1 = require("./utils/favorites");
+const itemParser_1 = require("./utils/itemParser");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -125,6 +126,41 @@ electron_1.ipcMain.handle('search-map-crafting', async (event, itemName, league 
     }
     catch (error) {
         console.error('Map crafting search error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
+    }
+});
+electron_1.ipcMain.handle('parse-item', async (event, itemText) => {
+    try {
+        console.log('Parsing item text...');
+        // Validate item text
+        if (!itemParser_1.ItemParser.isValidItemText(itemText)) {
+            return {
+                success: false,
+                error: 'Invalid item text. Please copy an item from Path of Exile.'
+            };
+        }
+        // Parse item
+        const parsedData = itemParser_1.ItemParser.parseItemText(itemText);
+        if (!parsedData) {
+            return {
+                success: false,
+                error: 'Failed to parse item text. Please ensure you copied the complete item.'
+            };
+        }
+        // Get search term
+        const searchTerm = itemParser_1.ItemParser.getSearchTerm(parsedData);
+        console.log(`Parsed item: ${parsedData.name} (${parsedData.baseType}) - Search term: ${searchTerm}`);
+        return {
+            success: true,
+            data: {
+                parsedData,
+                searchTerm
+            }
+        };
+    }
+    catch (error) {
+        console.error('Item parsing error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
     }

@@ -317,6 +317,127 @@
             color: white;
         }
 
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            color: #ffd700;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .modal-body textarea:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .modal-body textarea::placeholder {
+            color: #888;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .modal-info {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            color: #cccccc;
+            font-size: 0.9em;
+            border-left: 3px solid #ffd700;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .import-btn-container {
+            margin-bottom: 15px;
+        }
+
         @media (max-width: 768px) {
             .search-form {
                 flex-direction: column;
@@ -349,6 +470,19 @@
             .results-table td {
                 padding: 8px;
             }
+
+            .modal {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .modal-footer button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -368,6 +502,9 @@
         <!-- Item Crafting Tab -->
         <div id="item-crafting" class="tab-content active">
             <section class="search-section">
+                <div class="import-btn-container">
+                    <button type="button" id="importItemBtn">Import Item from Clipboard</button>
+                </div>
                 <form class="search-form" id="searchForm">
                     <div class="form-group">
                         <label for="itemName">Item Name:</label>
@@ -480,6 +617,30 @@
         </section>
     </div>
 
+    <!-- Import Item Modal -->
+    <div id="importModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Import Item</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info">
+                    Copy an item in-game (Ctrl+C), then paste it here (Ctrl/⌘+V) or click "Paste from Clipboard".
+                </div>
+                <textarea
+                    id="itemTextArea"
+                    placeholder="Paste item text here...&#10;&#10;Example:&#10;Rarity: Unique&#10;Tabula Rasa&#10;Simple Robe&#10;--------&#10;..."
+                ></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="pasteClipboardBtn" class="btn-secondary">Paste from Clipboard</button>
+                <button type="button" id="cancelImportBtn" class="btn-secondary">Cancel</button>
+                <button type="button" id="importBtn">Import & Search</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const { ipcRenderer } = require('electron');
 
@@ -509,10 +670,119 @@
         const noFavorites = document.getElementById('noFavorites');
         const refreshFavoritesBtn = document.getElementById('refreshFavoritesBtn');
 
+        // DOM elements - Import Modal
+        const importItemBtn = document.getElementById('importItemBtn');
+        const importModal = document.getElementById('importModal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelImportBtn = document.getElementById('cancelImportBtn');
+        const itemTextArea = document.getElementById('itemTextArea');
+        const pasteClipboardBtn = document.getElementById('pasteClipboardBtn');
+        const importBtn = document.getElementById('importBtn');
+
         // State
         let currentSearchResult = null;
         let favorites = [];
         let currentTab = 'item-crafting';
+
+        // Import Item Modal handlers
+        importItemBtn.addEventListener('click', () => {
+            openImportModal();
+        });
+
+        closeModal.addEventListener('click', () => {
+            closeImportModal();
+        });
+
+        cancelImportBtn.addEventListener('click', () => {
+            closeImportModal();
+        });
+
+        // Close modal when clicking outside
+        importModal.addEventListener('click', (e) => {
+            if (e.target === importModal) {
+                closeImportModal();
+            }
+        });
+
+        // Paste from clipboard button
+        pasteClipboardBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                itemTextArea.value = text;
+                itemTextArea.focus();
+            } catch (err) {
+                showError('Failed to read from clipboard. Please paste manually with Ctrl/⌘+V');
+            }
+        });
+
+        // Import and search button
+        importBtn.addEventListener('click', async () => {
+            const itemText = itemTextArea.value.trim();
+
+            if (!itemText) {
+                showError('Please paste item text first');
+                return;
+            }
+
+            try {
+                const parsedItem = await ipcRenderer.invoke('parse-item', itemText);
+
+                if (!parsedItem.success) {
+                    throw new Error(parsedItem.error);
+                }
+
+                const { searchTerm, parsedData } = parsedItem.data;
+
+                // Close modal
+                closeImportModal();
+
+                // Fill in the search form
+                itemNameInput.value = searchTerm;
+
+                // Perform search
+                await searchItem(searchTerm, leagueSelect.value);
+
+                showSuccess(`Imported: ${parsedData.name || searchTerm}`);
+            } catch (err) {
+                showError(`Failed to import item: ${err.message}`);
+            }
+        });
+
+        // Keyboard shortcuts for modal
+        document.addEventListener('keydown', async (e) => {
+            // Escape to close modal
+            if (e.key === 'Escape' && importModal.classList.contains('active')) {
+                closeImportModal();
+            }
+
+            // Ctrl/Cmd+V when modal is open and textarea is focused
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v' && importModal.classList.contains('active')) {
+                // Let the default paste work, but also try clipboard API as fallback
+                setTimeout(async () => {
+                    if (!itemTextArea.value && document.activeElement === itemTextArea) {
+                        try {
+                            const text = await navigator.clipboard.readText();
+                            if (text) {
+                                itemTextArea.value = text;
+                            }
+                        } catch (err) {
+                            // Silent fail - native paste should work
+                        }
+                    }
+                }, 10);
+            }
+        });
+
+        function openImportModal() {
+            importModal.classList.add('active');
+            itemTextArea.value = '';
+            itemTextArea.focus();
+        }
+
+        function closeImportModal() {
+            importModal.classList.remove('active');
+            itemTextArea.value = '';
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
