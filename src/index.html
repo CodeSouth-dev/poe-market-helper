@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path of Exile Market Helper</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #ffd700;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            color: #cccccc;
+            font-size: 1.1em;
+        }
+
+        .search-section {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #ffd700;
+            font-size: 0.9em;
+        }
+
+        input[type="text"], select {
+            padding: 12px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(255,215,0,0.3);
+        }
+
+        button {
+            padding: 12px 25px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .error {
+            background: rgba(255,0,0,0.2);
+            color: #ffcccc;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ff0000;
+        }
+
+        .results-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .results-title {
+            color: #ffd700;
+            font-size: 1.5em;
+        }
+
+        .results-meta {
+            color: #cccccc;
+            font-size: 0.9em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #cccccc;
+            margin-top: 5px;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .results-table th {
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        .results-table tr:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .price {
+            font-weight: bold;
+            color: #90EE90;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #cccccc;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .favorites-section {
+            margin-top: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .favorites-header {
+            color: #ffd700;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .favorite-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .favorite-info {
+            flex-grow: 1;
+        }
+
+        .favorite-name {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .favorite-meta {
+            font-size: 0.8em;
+            color: #cccccc;
+        }
+
+        .favorite-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff4444, #cc0000);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(45deg, #4444ff, #0000cc);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-group {
+                width: 100%;
+            }
+
+            input[type="text"], select {
+                min-width: unset;
+                width: 100%;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .results-table {
+                font-size: 0.9em;
+            }
+
+            .results-table th,
+            .results-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Path of Exile Market Helper</h1>
+            <p class="subtitle">Live market data from poe.ninja</p>
+        </header>
+
+        <section class="search-section">
+            <form class="search-form" id="searchForm">
+                <div class="form-group">
+                    <label for="itemName">Item Name:</label>
+                    <input type="text" id="itemName" placeholder="e.g., Tabula Rasa, Divine Orb, Shaper's Touch" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="league">League:</label>
+                    <select id="league">
+                        <option value="Crucible">Crucible</option>
+                        <option value="Hardcore Crucible">Hardcore Crucible</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Hardcore">Hardcore</option>
+                    </select>
+                </div>
+                
+                <button type="submit" id="searchBtn">Search</button>
+                <button type="button" id="favoriteBtn" style="display: none;">Add to Favorites</button>
+            </form>
+        </section>
+
+        <div id="loading" class="loading" style="display: none;">
+            🔍 Searching poe.ninja...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <section id="resultsSection" class="results-section" style="display: none;">
+            <div class="results-header">
+                <h2 class="results-title" id="resultsTitle">Search Results</h2>
+                <div class="results-meta" id="resultsMeta"></div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="minPrice">-</div>
+                    <div class="stat-label">Min Price (Chaos)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="medianPrice">-</div>
+                    <div class="stat-label">Median Price (Chaos)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="maxPrice">-</div>
+                    <div class="stat-label">Max Price (Chaos)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalListings">-</div>
+                    <div class="stat-label">Total Listings</div>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Base Type</th>
+                            <th>Chaos Value</th>
+                            <th>Listings</th>
+                            <th>Links</th>
+                            <th>Variant</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noResults" class="no-results" style="display: none;">
+                No items found matching your search.
+            </div>
+        </section>
+
+        <section class="favorites-section">
+            <div class="favorites-header">
+                <span>Favorites</span>
+                <button type="button" id="refreshFavoritesBtn" class="btn-small">Refresh All</button>
+            </div>
+            <div id="favoritesList"></div>
+            <div id="noFavorites" class="no-results" style="display: none;">
+                No favorites added yet. Search for items and add them to your favorites!
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // DOM elements
+        const searchForm = document.getElementById('searchForm');
+        const itemNameInput = document.getElementById('itemName');
+        const leagueSelect = document.getElementById('league');
+        const searchBtn = document.getElementById('searchBtn');
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const resultsMeta = document.getElementById('resultsMeta');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const noResults = document.getElementById('noResults');
+        const favoritesList = document.getElementById('favoritesList');
+        const noFavorites = document.getElementById('noFavorites');
+        const refreshFavoritesBtn = document.getElementById('refreshFavoritesBtn');
+
+        // State
+        let currentSearchResult = null;
+        let favorites = [];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFavorites();
+        });
+
+        // Search form handler
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const itemName = itemNameInput.value.trim();
+            const league = leagueSelect.value;
+            
+            if (!itemName) {
+                showError('Please enter an item name');
+                return;
+            }
+
+            await searchItem(itemName, league);
+        });
+
+        // Add to favorites handler
+        favoriteBtn.addEventListener('click', async () => {
+            if (!currentSearchResult) return;
+
+            try {
+                const itemName = itemNameInput.value.trim();
+                const league = leagueSelect.value;
+                
+                await ipcRenderer.invoke('add-favorite', {
+                    name: itemName,
+                    league: league
+                });
+
+                showSuccess('Added to favorites!');
+                favoriteBtn.style.display = 'none';
+                await loadFavorites();
+            } catch (err) {
+                showError(`Failed to add to favorites: ${err.message}`);
+            }
+        });
+
+        // Refresh favorites handler
+        refreshFavoritesBtn.addEventListener('click', async () => {
+            refreshFavoritesBtn.disabled = true;
+            refreshFavoritesBtn.textContent = 'Refreshing...';
+            
+            try {
+                for (const favorite of favorites) {
+                    await searchItem(favorite.name, favorite.league, false);
+                }
+                showSuccess('All favorites refreshed!');
+            } catch (err) {
+                showError(`Failed to refresh favorites: ${err.message}`);
+            } finally {
+                refreshFavoritesBtn.disabled = false;
+                refreshFavoritesBtn.textContent = 'Refresh All';
+            }
+        });
+
+        async function searchItem(itemName, league, showUI = true) {
+            try {
+                if (showUI) {
+                    showLoading();
+                    hideError();
+                    hideResults();
+                }
+
+                searchBtn.disabled = true;
+                searchBtn.textContent = 'Searching...';
+
+                const result = await ipcRenderer.invoke('search-item', itemName, league);
+                
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                currentSearchResult = result.data;
+                
+                if (showUI) {
+                    displayResults(result.data);
+                    updateFavoriteButton(itemName, league);
+                }
+            } catch (err) {
+                if (showUI) {
+                    showError(`Search failed: ${err.message}`);
+                }
+                console.error('Search error:', err);
+            } finally {
+                if (showUI) {
+                    hideLoading();
+                }
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+            }
+        }
+
+        function displayResults(searchResult) {
+            const { itemName, league, results, timestamp, minPrice, maxPrice, medianPrice, totalListings } = searchResult;
+            
+            resultsTitle.textContent = `Results for "${itemName}"`;
+            resultsMeta.textContent = `League: ${league} | Updated: ${new Date(timestamp).toLocaleString()}`;
+            
+            // Update stats
+            document.getElementById('minPrice').textContent = minPrice.toFixed(2);
+            document.getElementById('medianPrice').textContent = medianPrice.toFixed(2);
+            document.getElementById('maxPrice').textContent = maxPrice.toFixed(2);
+            document.getElementById('totalListings').textContent = totalListings;
+            
+            // Clear previous results
+            resultsTableBody.innerHTML = '';
+            
+            if (results.length === 0) {
+                noResults.style.display = 'block';
+                resultsSection.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            
+            // Populate table
+            results.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(item.name)}</td>
+                    <td>${escapeHtml(item.baseType || '-')}</td>
+                    <td class="price">${item.chaosValue.toFixed(2)}</td>
+                    <td>${item.listingCount || item.count || '-'}</td>
+                    <td>${item.links || '-'}</td>
+                    <td>${escapeHtml(item.variant || '-')}</td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+            
+            resultsSection.style.display = 'block';
+        }
+
+        async function loadFavorites() {
+            try {
+                const result = await ipcRenderer.invoke('get-favorites');
+                if (result.success) {
+                    favorites = result.data;
+                    displayFavorites();
+                }
+            } catch (err) {
+                console.error('Failed to load favorites:', err);
+            }
+        }
+
+        function displayFavorites() {
+            favoritesList.innerHTML = '';
+            
+            if (favorites.length === 0) {
+                noFavorites.style.display = 'block';
+                return;
+            }
+            
+            noFavorites.style.display = 'none';
+            
+            favorites.forEach(favorite => {
+                const favoriteDiv = document.createElement('div');
+                favoriteDiv.className = 'favorite-item';
+                
+                favoriteDiv.innerHTML = `
+                    <div class="favorite-info">
+                        <div class="favorite-name">${escapeHtml(favorite.name)}</div>
+                        <div class="favorite-meta">
+                            League: ${escapeHtml(favorite.league)} | 
+                            Added: ${new Date(favorite.addedAt).toLocaleDateString()}
+                            ${favorite.lastPrice ? ` | Last Price: ${favorite.lastPrice.toFixed(2)} chaos` : ''}
+                        </div>
+                    </div>
+                    <div class="favorite-actions">
+                        <button class="btn-small btn-info" onclick="searchFavorite('${escapeHtml(favorite.name)}', '${escapeHtml(favorite.league)}')">
+                            Search
+                        </button>
+                        <button class="btn-small btn-danger" onclick="removeFavorite('${escapeHtml(favorite.name)}', '${escapeHtml(favorite.league)}')">
+                            Remove
+                        </button>
+                    </div>
+                `;
+                
+                favoritesList.appendChild(favoriteDiv);
+            });
+        }
+
+        async function searchFavorite(name, league) {
+            itemNameInput.value = name;
+            leagueSelect.value = league;
+            await searchItem(name, league);
+        }
+
+        async function removeFavorite(name, league) {
+            try {
+                await ipcRenderer.invoke('remove-favorite', name);
+                showSuccess('Removed from favorites!');
+                await loadFavorites();
+                updateFavoriteButton(itemNameInput.value.trim(), leagueSelect.value);
+            } catch (err) {
+                showError(`Failed to remove favorite: ${err.message}`);
+            }
+        }
+
+        function updateFavoriteButton(itemName, league) {
+            const isFavorite = favorites.some(fav => 
+                fav.name.toLowerCase() === itemName.toLowerCase() && 
+                fav.league === league
+            );
+            
+            favoriteBtn.style.display = currentSearchResult && !isFavorite ? 'inline-block' : 'none';
+        }
+
+        function showLoading() {
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+
+        function hideError() {
+            error.style.display = 'none';
+        }
+
+        function hideResults() {
+            resultsSection.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            // Create temporary success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'error'; // Reuse error styling but green
+            successDiv.style.background = 'rgba(0,255,0,0.2)';
+            successDiv.style.color = '#ccffcc';
+            successDiv.style.borderColor = '#00ff00';
+            successDiv.textContent = message;
+            
+            error.parentNode.insertBefore(successDiv, error.nextSibling);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-complete functionality (simple implementation)
+        const commonItems = [
+            'Tabula Rasa', 'Divine Orb', 'Chaos Orb', 'Exalted Orb', 'Ancient Orb',
+            'Shaper\'s Touch', 'Goldrim', 'Wanderlust', 'Meginord\'s Girdle',
+            'The Baron', 'Belly of the Beast', 'Shavronne\'s Wrappings',
+            'Atziri\'s Promise', 'Taste of Hate', 'Dying Sun', 'The Wise Oak'
+        ];
+
+        itemNameInput.addEventListener('input', (e) => {
+            // Simple auto-suggest could be added here
+            // For now, just basic functionality
+        });
+    </script>
+</body>
+</html>
