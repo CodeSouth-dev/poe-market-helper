@@ -1858,32 +1858,46 @@
                 crafted: []
             };
 
-            let inExplicitMods = false;
-            let inImplicitMods = false;
+            let separatorCount = 0;
+            let pastHeader = false;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
 
-                // Skip header lines
-                if (line.startsWith('Rarity:') || line.startsWith('Item Level:') ||
-                    line.match(/Requirements?:|Sockets:|Quality:/i) || line === '--------') {
-                    if (line === '--------') {
-                        inExplicitMods = false;
-                        inImplicitMods = true;
-                    }
+                // Track separators
+                if (line === '--------') {
+                    separatorCount++;
+                    pastHeader = true;
                     continue;
                 }
 
-                // Detect explicit mods (after item base)
-                if (inImplicitMods && line && !line.match(/Requirements?:|Sockets:|Item Level:/i)) {
-                    if (line.match(/^\+|^\d|^#|increased|reduced|to maximum|Resistance|Damage|Adds/i)) {
-                        if (line.includes('(crafted)')) {
-                            mods.crafted.push(line.replace('(crafted)', '').trim());
-                        } else if (line.includes('(implicit)')) {
-                            mods.implicit.push(line.replace('(implicit)', '').trim());
-                        } else {
-                            mods.explicit.push(line);
-                        }
+                // Skip non-mod lines
+                if (line.startsWith('Rarity:') ||
+                    line.startsWith('Item Level:') ||
+                    line.match(/^Requirements?:/i) ||
+                    line.match(/^Sockets:/i) ||
+                    line.match(/^Quality:/i) ||
+                    line.match(/^Corrupted$/i) ||
+                    line.match(/^Mirrored$/i)) {
+                    continue;
+                }
+
+                // Skip the item base name (comes right after rarity line)
+                if (!pastHeader) continue;
+
+                // Detect mod lines (they usually start with numbers, +, or certain keywords)
+                if (line.match(/^\+|^\d|^#|increased|reduced|to maximum|Resistance|Damage|Adds|Additional|Cannot|Regenerate|Leeched|Skills|Accuracy|Critical|Attack Speed|Cast Speed|Movement Speed|Attribute|Armour|Evasion|Energy Shield|Life|Mana/i)) {
+                    // Check for crafted mod
+                    if (line.includes('(crafted)') || line.includes(' (crafted)')) {
+                        mods.crafted.push(line.replace(/\(crafted\)/g, '').trim());
+                    }
+                    // Check for implicit mod
+                    else if (line.includes('(implicit)') || separatorCount === 1) {
+                        mods.implicit.push(line.replace(/\(implicit\)/g, '').trim());
+                    }
+                    // Explicit mods come after first separator
+                    else if (separatorCount >= 1) {
+                        mods.explicit.push(line);
                     }
                 }
             }
@@ -1937,80 +1951,192 @@
         }
 
         function generateCraftingSteps(itemData, modsOnItem) {
-            const modCount = modsOnItem.explicit.length;
-            const hasLife = modsOnItem.explicit.some(m => m.includes('Life'));
-            const hasResists = modsOnItem.explicit.some(m => m.includes('Resistance'));
-            const hasES = modsOnItem.explicit.some(m => m.includes('Energy Shield'));
+            const explicitModCount = modsOnItem.explicit.length;
+            const craftedModCount = modsOnItem.crafted.length;
+            const totalModCount = explicitModCount + craftedModCount;
 
-            let stepsHTML = `<ol style="color: #ddd; line-height: 1.8;">`;
+            const hasLife = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Life'));
+            const hasResists = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Resistance'));
+            const hasES = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Energy Shield'));
 
-            // Step 1: Acquire base
-            stepsHTML += `<li><strong style="color: #ffd700;">Acquire the Base Item</strong><br>
-                <span style="color: #aaa;">• Get a <strong>${itemData.baseName || 'base item'}</strong> with item level <strong>${itemData.itemLevel || '82-86'}</strong></span><br>
-                <span style="color: #aaa;">• Higher ilvl = better mod tiers (T1 mods usually need ilvl 82-86)</span>
-            </li>`;
+            let stepsHTML = `<div style="margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 10px;">💰 Recommended Crafting Methods (Cheapest First)</h3>
+            </div>`;
 
-            // Step 2: Crafting method based on mod count
-            if (modCount <= 2) {
-                stepsHTML += `<li><strong style="color: #ffd700;">Alt-Regal Method (For 1-2 Mods)</strong><br>
-                    <span style="color: #aaa;">• Use <strong>Orbs of Alteration</strong> on a white (normal) base until you hit one of your desired mods</span><br>
-                    <span style="color: #aaa;">• Use an <strong>Orb of Augmentation</strong> to add a second mod if needed</span><br>
-                    <span style="color: #aaa;">• Use a <strong>Regal Orb</strong> to make it rare (adds one more random mod)</span><br>
-                    <span style="color: #aaa;">• Continue with crafting bench or other methods</span>
-                </li>`;
-            } else if (modCount <= 4) {
-                stepsHTML += `<li><strong style="color: #ffd700;">Chaos Spam Method (For 3-4 Mods)</strong><br>
-                    <span style="color: #aaa;">• Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</span><br>
-                    <span style="color: #aaa;">• Use <strong>Harvest crafts</strong> to improve bad mods if available</span><br>
-                    <span style="color: #aaa;">• Can be expensive but straightforward</span>
-                </li>`;
-            } else {
-                stepsHTML += `<li><strong style="color: #ffd700;">Essence or Fossil Crafting (For 5+ Mods)</strong><br>
-                    <span style="color: #aaa;">• Use <strong>Essences</strong> to guarantee one specific mod tier</span><br>
-                    <span style="color: #aaa;">• Or use <strong>Fossils + Resonators</strong> to weight specific mod types</span><br>
-                    <span style="color: #aaa;">• This is advanced crafting for multiple T1 mods</span>
-                </li>`;
+            // Method 1: Check market first (ALWAYS recommend this)
+            stepsHTML += `<div style="background: rgba(255,215,0,0.1); padding: 15px; border-left: 4px solid #ffd700; margin-bottom: 15px;">
+                <h4 style="color: #ffd700; margin: 0 0 10px 0;">⭐ Method 1: Buy from Market (CHEAPEST)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Search <strong style="color: #ffd700;">poe.trade</strong> or <strong style="color: #ffd700;">pathofexile.com/trade</strong> for this exact item</li>
+                    <li>Look for items with similar mods (at least ${Math.max(2, explicitModCount - 1)} out of ${explicitModCount} mods)</li>
+                    <li>Compare prices - if it's less than ${totalModCount * 20}c, BUY IT instead of crafting!</li>
+                    <li>You can finish the item with bench crafts or harvest</li>
+                </ol>
+                <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Someone else already took the RNG risk. Often 10x cheaper than crafting!</p>
+            </div>`;
+
+            // Method 2: Recombinators (for 2+ explicit mods)
+            if (explicitModCount >= 2) {
+                stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
+                    <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method 2: Recombinator Method (VERY COST-EFFECTIVE)</h4>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li><strong style="color: #ffd700;">Prepare Base A:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>Cost: ~5-20 Alterations per mod (very cheap!)</li>
+                                <li>Regal it when you hit the mod</li>
+                            </ul>
+                        </li>
+                        <li><strong style="color: #ffd700;">Prepare Base B:</strong> Alt-spam another identical base until you hit a <strong>different desired mod</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>Regal it as well</li>
+                            </ul>
+                        </li>
+                        <li><strong style="color: #ffd700;">Use Recombinator:</strong> Combine both items with a Recombinator
+                            <ul style="margin-top: 5px;">
+                                <li>~50% chance to get both mods on one item</li>
+                                <li>If it fails, repeat from step 1</li>
+                                <li>Recombinators cost ~5-15c each</li>
+                            </ul>
+                        </li>
+                        <li>Fill remaining mods with bench crafts or continue alt-spamming + recombing</li>
+                    </ol>
+                    <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Alt-spamming is VERY cheap (alterations are 0.1-0.2c each). Way cheaper than chaos spam (1c each)!</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Note:</strong> Recombinators are league-specific. Check if available in current league!</p>
+                </div>`;
             }
 
-            // Step 3: Fine-tuning
-            stepsHTML += `<li><strong style="color: #ffd700;">Fine-Tune with Crafting Bench</strong><br>
-                <span style="color: #aaa;">• Visit your hideout crafting bench</span><br>
-                <span style="color: #aaa;">• Add missing resists or stats if you have an open affix</span><br>
-                <span style="color: #aaa;">• Craft "Prefixes Cannot Be Changed" or "Suffixes Cannot Be Changed" for advanced crafting</span>
-            </li>`;
+            // Method 3: Alt-Regal for simple items
+            if (explicitModCount <= 3) {
+                stepsHTML += `<div style="background: rgba(0,150,200,0.1); padding: 15px; border-left: 4px solid #0096c8; margin-bottom: 15px;">
+                    <h4 style="color: #0096c8; margin: 0 0 10px 0;">Method 3: Alt-Regal (For Simple Items)</h4>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li>Use <strong>Orbs of Alteration</strong> on white base until you hit 1-2 desired mods</li>
+                        <li>Use <strong>Orb of Augmentation</strong> to add a 2nd mod if needed</li>
+                        <li>Use <strong>Regal Orb</strong> to make it rare (adds 1 random mod)</li>
+                        <li>Finish with crafting bench for missing mods</li>
+                    </ol>
+                    <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> ~20-100 Alterations + 1 Regal = ~5-20 chaos total</p>
+                </div>`;
+            }
 
-            // Step 4: Advanced techniques
-            stepsHTML += `<li><strong style="color: #ffd700;">Advanced Techniques (Optional)</strong><br>
-                <span style="color: #aaa;">• <strong>Harvest Reforge:</strong> Reroll with weighted mods (Life, Caster, etc.)</span><br>
-                <span style="color: #aaa;">• <strong>Veiled Chaos Orb:</strong> Reroll + add veiled mod</span><br>
-                <span style="color: #aaa;">• <strong>Eldritch Crafting:</strong> For influenced items (Eldritch Chaos/Exalt/Annul)</span>
-            </li>`;
+            // Method 4: Essence crafting (for guaranteed mods)
+            stepsHTML += `<div style="background: rgba(200,100,0,0.1); padding: 15px; border-left: 4px solid #c86400; margin-bottom: 15px;">
+                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method 4: Essence Crafting (Guaranteed Mods)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Find the <strong>Essence</strong> that gives you the most important mod (e.g., Essence of Greed for Life)</li>
+                    <li>Spam the essence on your base until you hit 1-2 additional desired mods</li>
+                    <li>Finish with bench crafts or Harvest</li>
+                </ol>
+                <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Depends on essence tier. High-tier essences can be 5-20c each</p>
+                <p style="color: #afa; margin: 5px 0 0 0;">✅ <strong>Good for:</strong> Items where you need one specific high-tier mod guaranteed</p>
+            </div>`;
 
-            stepsHTML += `</ol>`;
+            // Method 5: Harvest Reforge (if available)
+            stepsHTML += `<div style="background: rgba(100,200,100,0.1); padding: 15px; border-left: 4px solid #64c864; margin-bottom: 15px;">
+                <h4 style="color: #64c864; margin: 0 0 10px 0;">Method 5: Harvest Reforge (If Available)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Get a base with any mods (doesn't matter what)</li>
+                    <li>Use <strong>Harvest "Reforge with [type] mods"</strong> crafts:`;
+
+            if (hasLife) stepsHTML += `<br><span style="color: #f88;">• "Reforge with Life mods" for life builds</span>`;
+            if (hasResists) stepsHTML += `<br><span style="color: #88f;">• "Reforge with Cold/Fire/Lightning" for resists</span>`;
+            if (hasES) stepsHTML += `<br><span style="color: #8af;">• "Reforge with Caster mods" for ES</span>`;
+
+            stepsHTML += `</li>
+                    <li>Repeat until you hit 2+ desired mods, then bench craft or continue</li>
+                </ol>
+                <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Harvest crafts vary. "Reforge more common" can be 10-50c</p>
+            </div>`;
+
+            // Method 6: Chaos spam (LAST RESORT - expensive)
+            stepsHTML += `<div style="background: rgba(200,0,0,0.1); padding: 15px; border-left: 4px solid #c80000; margin-bottom: 15px;">
+                <h4 style="color: #f88; margin: 0 0 10px 0;">Method 6: Chaos Spam (NOT RECOMMENDED - Expensive)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</li>
+                    <li>Finish with bench craft</li>
+                </ol>
+                <p style="color: #f88; margin: 10px 0 0 0;">❌ <strong>Why NOT recommended:</strong> Chaos orbs are 1c each. For ${totalModCount} mods, you might need 100-1000 chaos = very expensive!</p>
+                <p style="color: #ddd; margin: 5px 0 0 0;">⚠️ Only use if you have lots of currency and are lazy. Usually cheaper to buy from market!</p>
+            </div>`;
+
+            // Bench crafts section
+            if (craftedModCount > 0) {
+                stepsHTML += `<div style="background: rgba(255,170,0,0.15); padding: 15px; border-left: 4px solid #ffa500; margin-top: 20px;">
+                    <h4 style="color: #ffa500; margin: 0 0 10px 0;">🔧 This Item Has ${craftedModCount} Bench Craft(s)</h4>
+                    <p style="color: #ddd; margin: 0;">The orange "Crafted Mods" you see can be added at your <strong>Hideout Crafting Bench</strong>.</p>
+                    <p style="color: #afa; margin: 10px 0 0 0;">✅ You only need to craft the ${explicitModCount} explicit (green) mods, then add bench crafts at the end!</p>
+                </div>`;
+            }
 
             return stepsHTML;
         }
 
         function generateCraftingTips(itemData, modsOnItem) {
-            let tipsHTML = `<ul style="color: #ddd; line-height: 1.8;">`;
+            const explicitModCount = modsOnItem.explicit.length;
+            const craftedModCount = modsOnItem.crafted.length;
 
-            tipsHTML += `<li>💰 <strong>Cost Estimate:</strong> Expect to spend 10-100+ chaos orbs depending on mod rarity and your luck</li>`;
-            tipsHTML += `<li>🎲 <strong>RNG Warning:</strong> Crafting is gambling! Budget accordingly and don't spend your last currency</li>`;
-            tipsHTML += `<li>📊 <strong>Use Craft of Exile:</strong> Visit <a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">craftofexile.com</a> for exact probabilities</li>`;
-            tipsHTML += `<li>🔍 <strong>Check poe.trade First:</strong> Sometimes it's cheaper to buy than craft!</li>`;
+            let tipsHTML = `<h3 style="color: #ffd700; margin-bottom: 10px;">💡 Pro Crafting Tips</h3>
+                <ul style="color: #ddd; line-height: 1.8;">`;
 
+            // Market check tip
+            tipsHTML += `<li>🛒 <strong>ALWAYS Check Trade First:</strong> Search <a href="https://www.pathofexile.com/trade" target="_blank" style="color: #ffd700;">pathofexile.com/trade</a> before crafting. You can often buy similar items for 1/10th the crafting cost!</li>`;
+
+            // Currency efficiency tip
+            tipsHTML += `<li>💰 <strong>Currency Efficiency:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong style="color: #afa;">Alterations = 0.1-0.2c</strong> (super cheap!)</li>
+                    <li><strong style="color: #ffa;">Chaos = 1c</strong> (5-10x more expensive)</li>
+                    <li><strong style="color: #f88;">High-tier Essence = 5-20c</strong> (expensive, but guarantees mod)</li>
+                </ul>
+            </li>`;
+
+            // Recombinator tip
+            if (explicitModCount >= 2) {
+                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If available, this is THE most cost-effective method! Alt-spam for single mods (very cheap), then combine. Even with 50% failure rate, still way cheaper than chaos spam.</li>`;
+            }
+
+            // RNG warning
+            tipsHTML += `<li>🎲 <strong>RNG Warning:</strong> Crafting is gambling! Set a budget before you start and STOP if you hit it. Don't spend your last chaos!</li>`;
+
+            // Craft of Exile
+            tipsHTML += `<li>📊 <strong>Calculate Exact Odds:</strong> Visit <a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">craftofexile.com</a> to see exact probability for hitting your mods. Very useful!</li>`;
+
+            // ilvl specific tips
             if (itemData.itemLevel && itemData.itemLevel >= 86) {
-                tipsHTML += `<li>✨ <strong>Great ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll T1 mods on most slots</li>`;
+                tipsHTML += `<li>✨ <strong>Excellent ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll T1 mods on all item slots. This is perfect for endgame crafting!</li>`;
             } else if (itemData.itemLevel && itemData.itemLevel >= 82) {
-                tipsHTML += `<li>✅ <strong>Good ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll most T1 mods</li>`;
-            } else if (itemData.itemLevel && itemData.itemLevel < 82) {
-                tipsHTML += `<li>⚠️ <strong>Low ilvl:</strong> ilvl ${itemData.itemLevel} may not be able to roll T1 mods (need 82-86)</li>`;
+                tipsHTML += `<li>✅ <strong>Good ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll most T1 mods. Some slots need ilvl 86 for T1, but this is solid!</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel >= 75) {
+                tipsHTML += `<li>⚠️ <strong>Medium ilvl:</strong> ilvl ${itemData.itemLevel} can roll T2-T3 mods. You won't get T1 mods (need 82-86), but it's fine for budget items!</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel < 75) {
+                tipsHTML += `<li>❌ <strong>Low ilvl:</strong> ilvl ${itemData.itemLevel} is too low for endgame crafting. You need ilvl 82+ for T1 mods, 75+ for T2 mods.</li>`;
             }
 
-            const modCount = modsOnItem.explicit.length;
-            if (modCount >= 5) {
-                tipsHTML += `<li>🎯 <strong>Complex Item:</strong> With ${modCount} mods, this will be expensive to replicate. Consider Harvest or Fossil crafting.</li>`;
+            // Complexity warning
+            if (explicitModCount >= 5) {
+                tipsHTML += `<li>🎯 <strong>Very Complex Item:</strong> ${explicitModCount} explicit mods = very expensive to craft (easily 100+ chaos). Strongly recommend buying from market instead!</li>`;
+            } else if (explicitModCount >= 3) {
+                tipsHTML += `<li>🎯 <strong>Moderate Complexity:</strong> ${explicitModCount} mods will cost ~30-100c to craft depending on method. Compare with market prices!</li>`;
+            } else {
+                tipsHTML += `<li>✅ <strong>Simple Item:</strong> ${explicitModCount} mods is easy to craft! Alt-spam or recombinators should be very affordable (~10-30c).</li>`;
             }
+
+            // Bench craft info
+            if (craftedModCount > 0) {
+                tipsHTML += `<li>🔧 <strong>Bench Crafts are FREE:</strong> The ${craftedModCount} crafted mod(s) can be added at your hideout bench for just a few chaos. Focus on getting the explicit mods first!</li>`;
+            }
+
+            // League economy tip
+            tipsHTML += `<li>⏰ <strong>League Timing Matters:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Early League (Week 1-2):</strong> Chaos orbs are expensive. Use alterations + recombinators!</li>
+                    <li><strong>Mid League:</strong> More options available, prices stabilize</li>
+                    <li><strong>Late League:</strong> Currency is cheap, market has lots of items to buy</li>
+                </ul>
+            </li>`;
+
+            // Final tip
+            tipsHTML += `<li>🎓 <strong>Learn by Doing:</strong> Start with cheap bases and simple items. As you learn, you'll waste less currency and get better results!</li>`;
 
             tipsHTML += `</ul>`;
 
