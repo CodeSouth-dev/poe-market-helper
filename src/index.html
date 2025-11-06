@@ -639,8 +639,19 @@
 
         <!-- Profitable Items Section -->
         <section id="profitableSection" class="crafting-results" style="display: none;">
-            <h2 style="color: #ffd700; margin-bottom: 20px;">💰 Best Profit Opportunities</h2>
-            <p style="color: #cccccc; margin-bottom: 20px;">Items with the best profit margins for crafting and reselling.</p>
+            <h2 style="color: #ffd700; margin-bottom: 20px;">💰 Best Craftable Items for Profit</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">
+                <strong>Craftable rare base types</strong> with the best profit margins. These are NOT drop-only uniques like Headhunter or Mageblood - these are items you can actually craft!
+            </p>
+            <div style="background: rgba(255, 215, 0, 0.1); border-left: 3px solid #ffd700; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                <p style="color: #ffd700; margin: 0; font-weight: bold;">ℹ️ How to Use This Data:</p>
+                <ul style="color: #cccccc; margin: 10px 0 0 20px;">
+                    <li>Check the "Suggested Method" for each item</li>
+                    <li>Go to "Crafting Prediction" tab to calculate exact costs</li>
+                    <li>Compare your craft cost vs the market "Sell Price"</li>
+                    <li>Look for High/Medium demand items for faster sales</li>
+                </ul>
+            </div>
             <div id="profitableItemsList"></div>
         </section>
 
@@ -1423,39 +1434,52 @@
         function displayProfitableItems() {
             const container = document.getElementById('profitableItemsList');
             if (insightsData.profitable.length === 0) {
-                container.innerHTML = '<p>No data available</p>';
+                container.innerHTML = '<p style="color: #cccccc; padding: 20px;">No craftable items found. Try refreshing or selecting a different league.</p>';
                 return;
             }
 
             let html = '';
             insightsData.profitable.forEach((data, index) => {
                 const item = data.item;
+                const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
                 html += `
                     <div class="method-card">
                         <div class="method-header">
                             <div>
                                 <span class="method-name">#${index + 1} ${item.name}</span>
                                 ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                                <span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
+                                    ✓ Craftable
+                                </span>
                             </div>
-                            <div class="method-cost">+${data.profitMargin.toFixed(1)} Profit</div>
+                            <div class="method-cost">+${data.profitMargin.toFixed(0)} Profit</div>
                         </div>
                         <div class="method-stats">
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.sellPrice.toFixed(1)}</div>
+                                <div class="method-stat-value">${data.sellPrice.toFixed(0)}</div>
                                 <div class="method-stat-label">Sell Price (Chaos)</div>
                             </div>
                             <div class="method-stat">
+                                <div class="method-stat-value">${data.craftingMethod}</div>
+                                <div class="method-stat-label">Suggested Method</div>
+                            </div>
+                            <div class="method-stat">
                                 <div class="method-stat-value">${data.demand}</div>
-                                <div class="method-stat-label">Demand</div>
+                                <div class="method-stat-label">Market Demand</div>
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${item.listingCount || 0}</div>
                                 <div class="method-stat-label">Listings</div>
                             </div>
                         </div>
-                        <p style="color: #4ade80; margin-top: 10px;">
-                            💰 Estimated profit margin: ${data.profitMargin.toFixed(1)} Chaos (${((data.profitMargin / data.sellPrice) * 100).toFixed(1)}%)
-                        </p>
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
+                            <p style="color: #4ade80; margin: 0;">
+                                💰 <strong>Profit:</strong> ${data.profitMargin.toFixed(0)} Chaos (${profitPercent}% margin)
+                            </p>
+                            <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
+                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${item.baseType || 'Base Type'}
+                            </p>
+                        </div>
                     </div>
                 `;
             });

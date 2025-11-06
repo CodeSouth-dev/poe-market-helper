@@ -253,55 +253,68 @@ export class PoeNinjaAPI {
 
   /**
    * Get items with best profit margins for crafting
-   * Compare item value to crafting material costs
+   * ONLY returns craftable base types (rare items), NOT drop-only uniques
    */
   async getProfitableItems(league: string, limit: number = 20): Promise<Array<{
     item: PoeNinjaItem;
     profitMargin: number;
     sellPrice: number;
     demand: string;
+    craftingMethod: string;
   }>> {
     const allItems: PoeNinjaItem[] = [];
 
-    // Focus on items that can be crafted
-    const categories = [
-      'UniqueWeapon',
-      'UniqueArmour',
-      'UniqueAccessory',
-      'UniqueJewel'
-    ];
-
-    for (const category of categories) {
-      try {
-        const items = await this.searchCategory('', league, category);
-        allItems.push(...items);
-      } catch (error) {
-        console.warn(`Failed to fetch ${category}:`, error);
-      }
+    // ONLY use BaseType - these are craftable rare items
+    // Uniques like Headhunter/Mageblood are NOT craftable!
+    try {
+      const baseTypes = await this.searchCategory('', league, 'BaseType');
+      allItems.push(...baseTypes);
+    } catch (error) {
+      console.warn('Failed to fetch base types:', error);
     }
 
-    // Calculate profit margins
+    // Calculate profit margins for craftable bases
     const profitableItems = allItems
-      .filter(item => item.chaosValue > 10 && item.listingCount && item.listingCount > 5)
+      .filter(item => {
+        // Must be valuable enough and have decent trading activity
+        return item.chaosValue > 20 && item.listingCount && item.listingCount > 3;
+      })
       .map(item => {
         const sellPrice = item.chaosValue;
         const listings = item.listingCount || 0;
 
-        // Estimate crafting cost (simplified - would need actual crafting data)
-        // Higher value items generally have higher crafting costs
-        const estimatedCraftCost = sellPrice * 0.3; // Rough estimate
+        // Estimate crafting cost based on item value
+        // Base cost + crafting materials (fossils/essences/chaos)
+        let estimatedCraftCost: number;
+        let craftingMethod: string;
+
+        if (sellPrice > 500) {
+          // High-value items: fossil/essence crafting
+          estimatedCraftCost = sellPrice * 0.4;
+          craftingMethod = 'Fossil/Essence';
+        } else if (sellPrice > 100) {
+          // Medium-value: chaos spam or targeted crafting
+          estimatedCraftCost = sellPrice * 0.35;
+          craftingMethod = 'Chaos/Fossil';
+        } else {
+          // Lower-value: alteration or chaos spam
+          estimatedCraftCost = sellPrice * 0.3;
+          craftingMethod = 'Alt/Chaos';
+        }
+
         const profitMargin = sellPrice - estimatedCraftCost;
 
         // Demand indicator based on listing count
         let demand = 'Low';
-        if (listings > 50) demand = 'High';
-        else if (listings > 20) demand = 'Medium';
+        if (listings > 30) demand = 'High';
+        else if (listings > 10) demand = 'Medium';
 
         return {
           item,
           profitMargin,
           sellPrice,
-          demand
+          demand,
+          craftingMethod
         };
       })
       .sort((a, b) => b.profitMargin - a.profitMargin)
