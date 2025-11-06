@@ -83,7 +83,7 @@ export class PoeNinjaAPI {
   /**
    * Search a specific category
    */
-  private async searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]> {
+  public async searchCategory(searchTerm: string, league: string, category: string): Promise<PoeNinjaItem[]> {
     const endpoint = this.getCategoryEndpoint(category);
     const url = `${this.baseUrl}/${endpoint}`;
     
@@ -238,4 +238,13 @@ export class PoeNinjaAPI {
       return ['Crucible']; // Fallback
     }
   }
+}
+
+/**
+ * Standalone helper function for searching items
+ * Creates a PoeNinjaAPI instance and calls searchItem
+ */
+export async function searchItem(itemName: string, league: string): Promise<SearchResult> {
+  const api = new PoeNinjaAPI();
+  return api.searchItem(itemName, league);
 }
