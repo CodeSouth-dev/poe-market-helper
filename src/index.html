@@ -516,13 +516,13 @@
     <div class="container">
         <header>
             <h1>Path of Exile Market Helper</h1>
-            <p class="subtitle">Live market data & crafting predictions</p>
+            <p class="subtitle">Live market data & crafting helper</p>
         </header>
 
         <div class="tabs">
             <button class="tab active" data-tab="market">Market Search</button>
             <button class="tab" data-tab="insights">Market Insights</button>
-            <button class="tab" data-tab="crafting">Crafting Prediction</button>
+            <button class="tab" data-tab="crafting">Crafting Helper</button>
         </div>
 
         <div id="marketTab" class="tab-content active">
@@ -661,7 +661,7 @@
                 <p style="color: #ffd700; margin: 0; font-weight: bold;">ℹ️ How to Use This Data:</p>
                 <ul style="color: #cccccc; margin: 10px 0 0 20px;">
                     <li>Check the "Suggested Method" for each item</li>
-                    <li>Go to "Crafting Prediction" tab to calculate exact costs</li>
+                    <li>Go to "Crafting Helper" tab to calculate exact costs</li>
                     <li>Compare your craft cost vs the market "Sell Price"</li>
                     <li>Look for High/Medium demand items for faster sales</li>
                 </ul>
@@ -679,12 +679,31 @@
 
         <div id="craftingTab" class="tab-content">
         <section class="crafting-input-section">
-            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Prediction Calculator</h2>
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Helper</h2>
+
+            <!-- Item Paste Area -->
+            <div style="background: rgba(255, 215, 0, 0.1); border: 2px dashed #ffd700; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+                <label for="itemPaste" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    📋 Paste Item from PoE (Ctrl+C in game):
+                </label>
+                <textarea
+                    id="itemPaste"
+                    placeholder="Paste your copied item here... (Copy item from PoE with Ctrl+C)"
+                    style="width: 100%; min-height: 100px; background: rgba(30, 30, 40, 0.95); color: #ffffff; border: 2px solid #444; border-radius: 5px; padding: 10px; font-family: 'Courier New', monospace; font-size: 14px; resize: vertical;"
+                ></textarea>
+                <p style="color: #888; font-size: 12px; margin-top: 5px;">Item data will auto-fill the fields below</p>
+            </div>
 
             <form id="craftingForm">
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="craftBaseItem">Base Item:</label>
                     <input type="text" id="craftBaseItem" placeholder="e.g., Vaal Regalia, Siege Axe, Steel Ring" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftItemLevel">Item Level (ilvl):</label>
+                    <input type="number" id="craftItemLevel" placeholder="e.g., 86" min="1" max="100">
+                    <p style="color: #888; font-size: 12px; margin-top: 5px;">Higher ilvl allows better mods (T1 mods usually require ilvl 82-86)</p>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 20px;">
@@ -1186,6 +1205,120 @@
         };
 
         addModBtn.addEventListener('click', addModInput);
+
+        // Item paste parser
+        const itemPasteArea = document.getElementById('itemPaste');
+        if (itemPasteArea) {
+            itemPasteArea.addEventListener('input', function() {
+                const pastedText = this.value.trim();
+                if (!pastedText) return;
+
+                try {
+                    const parsedData = parsePoEItem(pastedText);
+
+                    // Auto-fill the form fields
+                    if (parsedData.baseName) {
+                        document.getElementById('craftBaseItem').value = parsedData.baseName;
+                    }
+
+                    if (parsedData.itemLevel) {
+                        document.getElementById('craftItemLevel').value = parsedData.itemLevel;
+                    }
+
+                    if (parsedData.itemClass) {
+                        const itemClassSelect = document.getElementById('craftItemClass');
+                        // Try to match the item class
+                        for (let option of itemClassSelect.options) {
+                            if (option.value.toLowerCase().includes(parsedData.itemClass.toLowerCase()) ||
+                                parsedData.itemClass.toLowerCase().includes(option.value.toLowerCase())) {
+                                itemClassSelect.value = option.value;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Visual feedback
+                    itemPasteArea.style.borderColor = '#00ff00';
+                    setTimeout(() => {
+                        itemPasteArea.style.borderColor = '#444';
+                    }, 1000);
+
+                } catch (err) {
+                    console.error('Error parsing item:', err);
+                    itemPasteArea.style.borderColor = '#ff4444';
+                    setTimeout(() => {
+                        itemPasteArea.style.borderColor = '#444';
+                    }, 1000);
+                }
+            });
+        }
+
+        // Parse PoE item text
+        function parsePoEItem(itemText) {
+            const lines = itemText.split('\n').map(line => line.trim()).filter(line => line);
+            const result = {
+                baseName: null,
+                itemLevel: null,
+                itemClass: null,
+                rarity: null
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Parse rarity (first line usually)
+                if (line.startsWith('Rarity:')) {
+                    result.rarity = line.replace('Rarity:', '').trim();
+                }
+
+                // Parse item level
+                if (line.match(/Item Level:|ItemLevel:|ilvl:/i)) {
+                    const ilvlMatch = line.match(/(\d+)/);
+                    if (ilvlMatch) {
+                        result.itemLevel = parseInt(ilvlMatch[1]);
+                    }
+                }
+
+                // Parse base name - usually after rarity line or second non-empty line
+                // For magic/rare items, look for "--------" separator and get the line after
+                if (line === '--------') {
+                    // Base type is usually after the separator
+                    for (let j = i + 1; j < lines.length; j++) {
+                        const nextLine = lines[j];
+                        // Skip requirement lines and look for base
+                        if (!nextLine.match(/Requirements?:|Sockets:|Item Level:|Quality:/i)) {
+                            result.baseName = nextLine;
+                            break;
+                        }
+                    }
+                }
+
+                // For white items, base name is the second line after rarity
+                if (result.rarity && result.rarity.toLowerCase() === 'normal' && i === 1) {
+                    result.baseName = line;
+                }
+
+                // Try to extract item class from item text
+                // Common patterns: "Body Armour", "Ring", "Amulet", etc.
+                if (line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i)) {
+                    const classMatch = line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i);
+                    if (classMatch) {
+                        result.itemClass = classMatch[0];
+                    }
+                }
+            }
+
+            // If no base name found yet, try to get it from the name lines
+            if (!result.baseName && lines.length >= 2) {
+                // For magic/rare items: line after the item name is usually the base
+                // Skip the first line (rarity) and second line (item name if rare/magic)
+                if (lines.length >= 3 && result.rarity && result.rarity.toLowerCase() !== 'normal') {
+                    result.baseName = lines[2];
+                }
+            }
+
+            return result;
+        }
 
         // Add initial mod input
         addModInput();
