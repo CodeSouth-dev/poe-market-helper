@@ -45,7 +45,8 @@ class PoeNinjaAPI {
                 allResults = allResults.concat(categoryResults);
             }
             catch (error) {
-                console.warn(`Failed to search category ${category}:`, error.message);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                console.warn(`Failed to search category ${category}:`, errorMessage);
                 // Continue with other categories
             }
         }
@@ -89,7 +90,7 @@ class PoeNinjaAPI {
                 return [];
             }
             // Filter results that match the search term
-            return response.data.lines.filter(item => {
+            return response.data.lines.filter((item) => {
                 const name = item.name.toLowerCase();
                 const baseType = item.baseType ? item.baseType.toLowerCase() : '';
                 return name.includes(searchTerm) || baseType.includes(searchTerm);
@@ -99,7 +100,8 @@ class PoeNinjaAPI {
             if (error.code === 'ECONNABORTED') {
                 throw new Error(`Timeout searching ${category}`);
             }
-            throw new Error(`Failed to search ${category}: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            throw new Error(`Failed to search ${category}: ${errorMessage}`);
         }
     }
     /**

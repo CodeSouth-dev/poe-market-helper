@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
 import { PoeNinjaAPI } from './api/poeNinja';
 import { CacheManager } from './utils/cache';
@@ -48,7 +48,7 @@ app.on('activate', () => {
 });
 
 // IPC handlers for communication between main and renderer processes
-ipcMain.handle('search-item', async (event, itemName: string, league: string = 'Crucible') => {
+ipcMain.handle('search-item', async (event: IpcMainInvokeEvent, itemName: string, league: string = 'Crucible') => {
   try {
     console.log(`Searching for item: ${itemName} in league: ${league}`);
     const result = await poeAPI.searchItem(itemName, league);
@@ -56,7 +56,8 @@ ipcMain.handle('search-item', async (event, itemName: string, league: string = '
     return { success: true, data: result };
   } catch (error) {
     console.error('Search error:', error);
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 });
 
@@ -64,24 +65,27 @@ ipcMain.handle('get-favorites', async () => {
   try {
     return { success: true, data: await favorites.getAll() };
   } catch (error) {
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 });
 
-ipcMain.handle('add-favorite', async (event, item: any) => {
+ipcMain.handle('add-favorite', async (event: IpcMainInvokeEvent, item: any) => {
   try {
     await favorites.add(item);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 });
 
-ipcMain.handle('remove-favorite', async (event, itemName: string) => {
+ipcMain.handle('remove-favorite', async (event: IpcMainInvokeEvent, itemName: string) => {
   try {
     await favorites.remove(itemName);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 });
