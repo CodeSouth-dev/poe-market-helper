@@ -72,7 +72,8 @@ export class PoeNinjaAPI {
         const categoryResults = await this.searchCategory(searchTerm, league, category);
         allResults = allResults.concat(categoryResults);
       } catch (error) {
-        console.warn(`Failed to search category ${category}:`, error.message);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`Failed to search category ${category}:`, errorMessage);
         // Continue with other categories
       }
     }
@@ -133,10 +134,11 @@ export class PoeNinjaAPI {
       });
 
     } catch (error) {
-      if (error.code === 'ECONNABORTED') {
+      if (error instanceof Error && 'code' in error && (error as any).code === 'ECONNABORTED') {
         throw new Error(`Timeout searching ${category}`);
       }
-      throw new Error(`Failed to search ${category}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to search ${category}: ${errorMessage}`);
     }
   }
 
