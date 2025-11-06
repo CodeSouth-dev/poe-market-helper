@@ -167,3 +167,44 @@ electron_1.ipcMain.handle('search-base-items', async (event, query) => {
         return { success: false, error: error.message };
     }
 });
+// Market analysis IPC handlers
+electron_1.ipcMain.handle('get-leagues', async () => {
+    try {
+        const leagues = await poeAPI.getLeagues();
+        return { success: true, data: leagues };
+    }
+    catch (error) {
+        console.error('Get leagues error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-popular-items', async (event, league, limit = 20) => {
+    try {
+        const items = await poeAPI.getPopularItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get popular items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-profitable-items', async (event, league, limit = 20) => {
+    try {
+        const items = await poeAPI.getProfitableItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get profitable items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-trending-items', async (event, league, limit = 10) => {
+    try {
+        const items = await poeAPI.getTrendingItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get trending items error:', error);
+        return { success: false, error: error.message };
+    }
+});

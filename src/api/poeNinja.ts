@@ -163,15 +163,186 @@ export class PoeNinjaAPI {
   }
 
   /**
-   * Get available leagues
+   * Get available leagues by testing the API
    */
   async getLeagues(): Promise<string[]> {
     try {
-      // Common leagues - you might want to fetch this dynamically
-      return ['Crucible', 'Hardcore Crucible', 'Standard', 'Hardcore'];
+      // Known possible leagues to test
+      const leaguesToTest = [
+        'Settlers of Kalguur',
+        'Settlers',
+        'Keepers of the Flame',
+        'Keepers',
+        'Standard',
+        'Hardcore',
+        'SSF Standard',
+        'SSF Hardcore'
+      ];
+
+      const validLeagues: string[] = [];
+
+      // Test each league by attempting to fetch currency data
+      for (const league of leaguesToTest) {
+        try {
+          const url = `${this.baseUrl}/currencyoverview`;
+          const response = await axios.get(url, {
+            params: { league, type: 'Currency' },
+            timeout: 5000
+          });
+
+          if (response.data && response.data.lines && response.data.lines.length > 0) {
+            validLeagues.push(league);
+          }
+        } catch (error) {
+          // League doesn't exist or API error, skip it
+          continue;
+        }
+      }
+
+      // Always include Standard as fallback
+      if (validLeagues.length === 0) {
+        validLeagues.push('Standard', 'Hardcore');
+      }
+
+      console.log('Available leagues:', validLeagues);
+      return validLeagues;
     } catch (error) {
       console.error('Failed to fetch leagues:', error);
-      return ['Crucible']; // Fallback
+      return ['Keepers of the Flame', 'Standard', 'Hardcore']; // Fallback with current league
     }
+  }
+
+  /**
+   * Get popular/high-demand items based on listing counts
+   */
+  async getPopularItems(league: string, limit: number = 20): Promise<PoeNinjaItem[]> {
+    const allItems: PoeNinjaItem[] = [];
+
+    // Categories most relevant for trading
+    const categories = [
+      'UniqueWeapon',
+      'UniqueArmour',
+      'UniqueAccessory',
+      'UniqueJewel',
+      'UniqueFlask',
+      'Gem'
+    ];
+
+    for (const category of categories) {
+      try {
+        const items = await this.searchCategory('', league, category);
+        allItems.push(...items);
+      } catch (error) {
+        console.warn(`Failed to fetch ${category}:`, error);
+      }
+    }
+
+    // Sort by listing count (higher = more demand) and value
+    const popularItems = allItems
+      .filter(item => item.listingCount && item.listingCount > 10) // At least 10 listings
+      .sort((a, b) => {
+        // Combine listing count and value for popularity score
+        const scoreA = (a.listingCount || 0) * 0.7 + (a.chaosValue || 0) * 0.3;
+        const scoreB = (b.listingCount || 0) * 0.7 + (b.chaosValue || 0) * 0.3;
+        return scoreB - scoreA;
+      })
+      .slice(0, limit);
+
+    return popularItems;
+  }
+
+  /**
+   * Get items with best profit margins for crafting
+   * Compare item value to crafting material costs
+   */
+  async getProfitableItems(league: string, limit: number = 20): Promise<Array<{
+    item: PoeNinjaItem;
+    profitMargin: number;
+    sellPrice: number;
+    demand: string;
+  }>> {
+    const allItems: PoeNinjaItem[] = [];
+
+    // Focus on items that can be crafted
+    const categories = [
+      'UniqueWeapon',
+      'UniqueArmour',
+      'UniqueAccessory',
+      'UniqueJewel'
+    ];
+
+    for (const category of categories) {
+      try {
+        const items = await this.searchCategory('', league, category);
+        allItems.push(...items);
+      } catch (error) {
+        console.warn(`Failed to fetch ${category}:`, error);
+      }
+    }
+
+    // Calculate profit margins
+    const profitableItems = allItems
+      .filter(item => item.chaosValue > 10 && item.listingCount && item.listingCount > 5)
+      .map(item => {
+        const sellPrice = item.chaosValue;
+        const listings = item.listingCount || 0;
+
+        // Estimate crafting cost (simplified - would need actual crafting data)
+        // Higher value items generally have higher crafting costs
+        const estimatedCraftCost = sellPrice * 0.3; // Rough estimate
+        const profitMargin = sellPrice - estimatedCraftCost;
+
+        // Demand indicator based on listing count
+        let demand = 'Low';
+        if (listings > 50) demand = 'High';
+        else if (listings > 20) demand = 'Medium';
+
+        return {
+          item,
+          profitMargin,
+          sellPrice,
+          demand
+        };
+      })
+      .sort((a, b) => b.profitMargin - a.profitMargin)
+      .slice(0, limit);
+
+    return profitableItems;
+  }
+
+  /**
+   * Get trending items (recent price increases)
+   */
+  async getTrendingItems(league: string, limit: number = 10): Promise<PoeNinjaItem[]> {
+    const allItems: PoeNinjaItem[] = [];
+
+    const categories = [
+      'UniqueWeapon',
+      'UniqueArmour',
+      'UniqueAccessory',
+      'Gem'
+    ];
+
+    for (const category of categories) {
+      try {
+        const items = await this.searchCategory('', league, category);
+        allItems.push(...items);
+      } catch (error) {
+        console.warn(`Failed to fetch ${category}:`, error);
+      }
+    }
+
+    // Items with higher value and good listing counts are likely trending
+    const trending = allItems
+      .filter(item => item.chaosValue > 5 && item.listingCount && item.listingCount > 10)
+      .sort((a, b) => {
+        // Sort by value * listing count (proxy for demand)
+        const scoreA = a.chaosValue * Math.log(a.listingCount || 1);
+        const scoreB = b.chaosValue * Math.log(b.listingCount || 1);
+        return scoreB - scoreA;
+      })
+      .slice(0, limit);
+
+    return trending;
   }
 }

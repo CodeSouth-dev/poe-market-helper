@@ -507,6 +507,7 @@
 
         <div class="tabs">
             <button class="tab active" data-tab="market">Market Search</button>
+            <button class="tab" data-tab="insights">Market Insights</button>
             <button class="tab" data-tab="crafting">Crafting Prediction</button>
         </div>
 
@@ -521,10 +522,7 @@
                 <div class="form-group">
                     <label for="league">League:</label>
                     <select id="league">
-                        <option value="Crucible">Crucible</option>
-                        <option value="Hardcore Crucible">Hardcore Crucible</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Hardcore">Hardcore</option>
+                        <option value="">Loading leagues...</option>
                     </select>
                 </div>
                 
@@ -598,6 +596,62 @@
         </section>
         </div> <!-- End Market Tab -->
 
+        <div id="insightsTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">📊 Market Insights & Profit Opportunities</h2>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="insightsLeague">League:</label>
+                <select id="insightsLeague">
+                    <option value="">Loading leagues...</option>
+                </select>
+                <button type="button" id="refreshInsightsBtn" style="margin-left: 10px;">Refresh Data</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('popular')">
+                    <div class="stat-value" id="popularCount">0</div>
+                    <div class="stat-label">🔥 Popular Items</div>
+                </div>
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('profitable')">
+                    <div class="stat-value" id="profitableCount">0</div>
+                    <div class="stat-label">💰 Profitable Crafts</div>
+                </div>
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('trending')">
+                    <div class="stat-value" id="trendingCount">0</div>
+                    <div class="stat-label">📈 Trending Items</div>
+                </div>
+            </div>
+        </section>
+
+        <div id="insightsLoading" class="loading" style="display: none;">
+            📊 Loading market data...
+        </div>
+
+        <div id="insightsError" class="error" style="display: none;"></div>
+
+        <!-- Popular Items Section -->
+        <section id="popularSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">🔥 Most Popular Items (High Demand)</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">These items have the highest trading volume and are frequently used in meta builds.</p>
+            <div id="popularItemsList"></div>
+        </section>
+
+        <!-- Profitable Items Section -->
+        <section id="profitableSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">💰 Best Profit Opportunities</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">Items with the best profit margins for crafting and reselling.</p>
+            <div id="profitableItemsList"></div>
+        </section>
+
+        <!-- Trending Items Section -->
+        <section id="trendingSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">📈 Trending Items</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">Items currently in high demand based on value and listing activity.</p>
+            <div id="trendingItemsList"></div>
+        </section>
+        </div> <!-- End Insights Tab -->
+
         <div id="craftingTab" class="tab-content">
         <section class="crafting-input-section">
             <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Prediction Calculator</h2>
@@ -640,10 +694,7 @@
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="craftLeague">League:</label>
                     <select id="craftLeague">
-                        <option value="Crucible">Crucible</option>
-                        <option value="Hardcore Crucible">Hardcore Crucible</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Hardcore">Hardcore</option>
+                        <option value="">Loading leagues...</option>
                     </select>
                 </div>
 
@@ -963,9 +1014,54 @@
             // For now, just basic functionality
         });
 
+        // ===== DYNAMIC LEAGUE LOADING =====
+        let availableLeagues = [];
+
+        async function loadLeagues() {
+            try {
+                const result = await ipcRenderer.invoke('get-leagues');
+                if (result.success && result.data.length > 0) {
+                    availableLeagues = result.data;
+                    updateLeagueSelectors();
+                } else {
+                    // Fallback
+                    availableLeagues = ['Keepers of the Flame', 'Standard', 'Hardcore'];
+                    updateLeagueSelectors();
+                }
+            } catch (error) {
+                console.error('Failed to load leagues:', error);
+                availableLeagues = ['Keepers of the Flame', 'Standard', 'Hardcore'];
+                updateLeagueSelectors();
+            }
+        }
+
+        function updateLeagueSelectors() {
+            const leagueSelectors = [
+                document.getElementById('league'),
+                document.getElementById('craftLeague'),
+                document.getElementById('insightsLeague')
+            ];
+
+            leagueSelectors.forEach(selector => {
+                if (selector) {
+                    selector.innerHTML = '';
+                    availableLeagues.forEach(league => {
+                        const option = document.createElement('option');
+                        option.value = league;
+                        option.textContent = league;
+                        selector.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        // Load leagues on startup
+        loadLeagues();
+
         // ===== TAB SWITCHING =====
         const tabs = document.querySelectorAll('.tab');
         const marketTab = document.getElementById('marketTab');
+        const insightsTab = document.getElementById('insightsTab');
         const craftingTab = document.getElementById('craftingTab');
 
         tabs.forEach(tab => {
@@ -978,11 +1074,15 @@
 
                 // Hide all tab contents
                 marketTab.classList.remove('active');
+                insightsTab.classList.remove('active');
                 craftingTab.classList.remove('active');
 
                 // Show selected tab
                 if (tabName === 'market') {
                     marketTab.classList.add('active');
+                } else if (tabName === 'insights') {
+                    insightsTab.classList.add('active');
+                    loadMarketInsights();
                 } else if (tabName === 'crafting') {
                     craftingTab.classList.add('active');
                     initializeCrafting();
@@ -1199,6 +1299,220 @@
             craftingError.style.display = 'block';
             setTimeout(() => {
                 craftingError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ===== MARKET INSIGHTS FUNCTIONALITY =====
+        let insightsData = {
+            popular: [],
+            profitable: [],
+            trending: []
+        };
+
+        const insightsLoading = document.getElementById('insightsLoading');
+        const insightsError = document.getElementById('insightsError');
+        const refreshInsightsBtn = document.getElementById('refreshInsightsBtn');
+
+        async function loadMarketInsights() {
+            const league = document.getElementById('insightsLeague').value;
+            if (!league) return;
+
+            insightsLoading.style.display = 'block';
+            insightsError.style.display = 'none';
+
+            // Hide all sections
+            document.getElementById('popularSection').style.display = 'none';
+            document.getElementById('profitableSection').style.display = 'none';
+            document.getElementById('trendingSection').style.display = 'none';
+
+            try {
+                // Fetch all data in parallel
+                const [popularResult, profitableResult, trendingResult] = await Promise.all([
+                    ipcRenderer.invoke('get-popular-items', league, 20),
+                    ipcRenderer.invoke('get-profitable-items', league, 20),
+                    ipcRenderer.invoke('get-trending-items', league, 10)
+                ]);
+
+                if (popularResult.success) {
+                    insightsData.popular = popularResult.data;
+                    document.getElementById('popularCount').textContent = insightsData.popular.length;
+                }
+
+                if (profitableResult.success) {
+                    insightsData.profitable = profitableResult.data;
+                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
+                }
+
+                if (trendingResult.success) {
+                    insightsData.trending = trendingResult.data;
+                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
+                }
+
+                insightsLoading.style.display = 'none';
+
+                // Show first section by default
+                showSection('popular');
+            } catch (error) {
+                insightsLoading.style.display = 'none';
+                showInsightsError('Failed to load market data: ' + error.message);
+            }
+        }
+
+        window.showSection = function(section) {
+            // Hide all sections
+            document.getElementById('popularSection').style.display = 'none';
+            document.getElementById('profitableSection').style.display = 'none';
+            document.getElementById('trendingSection').style.display = 'none';
+
+            // Show selected section
+            if (section === 'popular') {
+                document.getElementById('popularSection').style.display = 'block';
+                displayPopularItems();
+            } else if (section === 'profitable') {
+                document.getElementById('profitableSection').style.display = 'block';
+                displayProfitableItems();
+            } else if (section === 'trending') {
+                document.getElementById('trendingSection').style.display = 'block';
+                displayTrendingItems();
+            }
+        };
+
+        function displayPopularItems() {
+            const container = document.getElementById('popularItemsList');
+            if (insightsData.popular.length === 0) {
+                container.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.popular.forEach((item, index) => {
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                            </div>
+                            <div class="method-cost">${item.chaosValue.toFixed(1)} Chaos</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.baseType || 'N/A'}</div>
+                                <div class="method-stat-label">Base Type</div>
+                            </div>
+                            ${item.links ? `
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.links}L</div>
+                                <div class="method-stat-label">Links</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <p style="color: #4ade80; margin-top: 10px;">
+                            💡 High demand item - Good for trading and crafting for profit
+                        </p>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function displayProfitableItems() {
+            const container = document.getElementById('profitableItemsList');
+            if (insightsData.profitable.length === 0) {
+                container.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.profitable.forEach((data, index) => {
+                const item = data.item;
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                            </div>
+                            <div class="method-cost">+${data.profitMargin.toFixed(1)} Profit</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${data.sellPrice.toFixed(1)}</div>
+                                <div class="method-stat-label">Sell Price (Chaos)</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${data.demand}</div>
+                                <div class="method-stat-label">Demand</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                        </div>
+                        <p style="color: #4ade80; margin-top: 10px;">
+                            💰 Estimated profit margin: ${data.profitMargin.toFixed(1)} Chaos (${((data.profitMargin / data.sellPrice) * 100).toFixed(1)}%)
+                        </p>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function displayTrendingItems() {
+            const container = document.getElementById('trendingItemsList');
+            if (insightsData.trending.length === 0) {
+                container.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.trending.forEach((item, index) => {
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                            </div>
+                            <div class="method-cost">${item.chaosValue.toFixed(1)} Chaos</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.baseType || 'N/A'}</div>
+                                <div class="method-stat-label">Base Type</div>
+                            </div>
+                        </div>
+                        <p style="color: #ffd700; margin-top: 10px;">
+                            📈 Trending - High value and activity
+                        </p>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+
+        document.getElementById('insightsLeague').addEventListener('change', () => {
+            // Reset counts
+            document.getElementById('popularCount').textContent = '0';
+            document.getElementById('profitableCount').textContent = '0';
+            document.getElementById('trendingCount').textContent = '0';
+        });
+
+        function showInsightsError(message) {
+            insightsError.textContent = message;
+            insightsError.style.display = 'block';
+            setTimeout(() => {
+                insightsError.style.display = 'none';
             }, 5000);
         }
     </script>
