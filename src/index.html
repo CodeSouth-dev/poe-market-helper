@@ -808,7 +808,21 @@
         <div id="guideTab" class="tab-content">
         <section class="crafting-input-section">
             <h2 style="color: #ffd700; margin-bottom: 20px;">Learn to Craft This Item</h2>
-            <p style="color: #cccccc; margin-bottom: 20px;">Paste an item from Path of Exile to learn how to craft it yourself!</p>
+            <p style="color: #cccccc; margin-bottom: 20px;">Paste an item from Path of Exile to get the most cost-effective crafting method!</p>
+
+            <!-- Budget Selection -->
+            <div style="margin-bottom: 20px;">
+                <label for="craftingBudget" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    💰 Your Crafting Budget:
+                </label>
+                <select id="craftingBudget" style="padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #ffd700; border-radius: 5px; font-size: 14px; width: 100%; max-width: 400px;">
+                    <option value="low">Low Budget (1-20 chaos)</option>
+                    <option value="medium" selected>Medium Budget (20-100 chaos)</option>
+                    <option value="high">High Budget (100-500 chaos)</option>
+                    <option value="very-high">Very High Budget (500+ chaos / 2.5+ divine)</option>
+                </select>
+                <p style="color: #aaa; margin-top: 5px; font-size: 13px;">The guide will recommend crafting methods within your budget.</p>
+            </div>
 
             <!-- Item Paste Area for Guide -->
             <div style="background: rgba(255, 215, 0, 0.1); border: 2px dashed #ffd700; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
@@ -1955,98 +1969,68 @@
             const itemClass = (itemData.itemClass || '').toLowerCase();
             const baseName = (itemData.baseName || '').toLowerCase();
 
-            // Check for weapon types
+            // Check for weapon types that can use +1 gem recipes
             const isWand = itemClass.includes('wand') || baseName.includes('wand');
             const isSceptre = itemClass.includes('sceptre') || baseName.includes('sceptre');
             const isStaff = itemClass.includes('staff') || baseName.includes('staff');
-            const isBow = itemClass.includes('bow') || baseName.includes('bow');
-            const isCaster = isWand || isSceptre || isStaff;
+            const isRuneDagger = itemClass.includes('rune dagger') || baseName.includes('rune dagger');
+            const isCasterWeapon = isWand || isSceptre || isStaff || isRuneDagger;
 
             // Check for gem level mods
             const hasFireGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
                 m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Fire\s+.*?Gems/i) ||
-                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Fire\s+Skill/i)
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Fire\s+Spell/i)
             );
             const hasColdGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
                 m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Cold\s+.*?Gems/i) ||
-                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Cold\s+Skill/i)
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Cold\s+Spell/i)
             );
             const hasLightningGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
                 m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Lightning\s+.*?Gems/i) ||
-                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Lightning\s+Skill/i)
-            );
-            const hasChaosGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
-                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Chaos\s+.*?Gems/i) ||
-                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Chaos\s+Skill/i)
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Lightning\s+Spell/i)
             );
 
-            // Caster weapon +1 gem recipes
-            if (isCaster && (hasFireGems || hasColdGems || hasLightningGems || hasChaosGems)) {
+            // Caster weapon +1 gem recipes (CORRECT METHOD: 40% quality gems)
+            if (isCasterWeapon && (hasFireGems || hasColdGems || hasLightningGems)) {
+                const weaponType = isWand ? 'Wand' : isSceptre ? 'Sceptre' : isStaff ? 'Staff' : 'Rune Dagger';
+
                 if (hasFireGems) {
                     recipes.push({
-                        name: '+1 to Fire Gems Recipe',
-                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Ruby Ring', 'Orb of Alteration'],
+                        name: '+1 to Fire Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Fire gems with 40% total quality (any fire spell gems)'
+                        ],
                         result: '+1 to Level of all Fire Spell Skill Gems',
-                        cost: '~1c (cost of magic base + ruby ring)',
-                        tip: 'Start with this recipe, then craft further with other methods'
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any fire spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'fire'
                     });
                 }
                 if (hasColdGems) {
                     recipes.push({
-                        name: '+1 to Cold Gems Recipe',
-                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Sapphire Ring', 'Orb of Alteration'],
+                        name: '+1 to Cold Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Cold gems with 40% total quality (any cold spell gems)'
+                        ],
                         result: '+1 to Level of all Cold Spell Skill Gems',
-                        cost: '~1c (cost of magic base + sapphire ring)',
-                        tip: 'Start with this recipe, then craft further with other methods'
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any cold spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'cold'
                     });
                 }
                 if (hasLightningGems) {
                     recipes.push({
-                        name: '+1 to Lightning Gems Recipe',
-                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Topaz Ring', 'Orb of Alteration'],
+                        name: '+1 to Lightning Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Lightning gems with 40% total quality (any lightning spell gems)'
+                        ],
                         result: '+1 to Level of all Lightning Spell Skill Gems',
-                        cost: '~1c (cost of magic base + topaz ring)',
-                        tip: 'Start with this recipe, then craft further with other methods'
-                    });
-                }
-                if (hasChaosGems) {
-                    recipes.push({
-                        name: '+1 to Chaos Gems Recipe',
-                        items: ['Magic ' + (itemData.baseName || 'weapon'), 'Amethyst Ring', 'Orb of Alteration'],
-                        result: '+1 to Level of all Chaos Spell Skill Gems',
-                        cost: '~1c (cost of magic base + amethyst ring)',
-                        tip: 'Start with this recipe, then craft further with other methods'
-                    });
-                }
-            }
-
-            // Bow +2 gem recipes
-            if (isBow && (hasFireGems || hasColdGems || hasLightningGems)) {
-                if (hasFireGems) {
-                    recipes.push({
-                        name: '+2 to Fire Bow Gems Recipe',
-                        items: [itemData.baseName || 'bow', 'Ruby Ring (any rarity)'],
-                        result: 'Magic bow with +2 to Level of Fire Bow Gems',
-                        cost: '~0.5c (cost of base + ruby ring)',
-                        tip: 'VERY cheap starting point for bow crafting!'
-                    });
-                }
-                if (hasColdGems) {
-                    recipes.push({
-                        name: '+2 to Cold Bow Gems Recipe',
-                        items: [itemData.baseName || 'bow', 'Sapphire Ring (any rarity)'],
-                        result: 'Magic bow with +2 to Level of Cold Bow Gems',
-                        cost: '~0.5c (cost of base + sapphire ring)',
-                        tip: 'VERY cheap starting point for bow crafting!'
-                    });
-                }
-                if (hasLightningGems) {
-                    recipes.push({
-                        name: '+2 to Lightning Bow Gems Recipe',
-                        items: [itemData.baseName || 'bow', 'Topaz Ring (any rarity)'],
-                        result: 'Magic bow with +2 to Level of Lightning Bow Gems',
-                        cost: '~0.5c (cost of base + topaz ring)',
-                        tip: 'VERY cheap starting point for bow crafting!'
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any lightning spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'lightning'
                     });
                 }
             }
@@ -2054,10 +2038,68 @@
             return recipes;
         }
 
+        function determineBestCraftingMethod(itemData, modsOnItem, vendorRecipes, budgetMax) {
+            const explicitModCount = modsOnItem.explicit.length;
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+
+            // Priority order (cheapest first):
+            // 1. Vendor Recipe (if applicable) - ~1c
+            // 2. Alt-Regal (1-2 mods) - ~5-20c
+            // 3. Recombinator (2+ mods) - ~10-40c per attempt
+            // 4. Essence (specific mod needed) - ~20-100c
+            // 5. Harvest (if available) - ~50-200c
+            // 6. Chaos Spam (jewelry only, last resort) - ~100-500c
+
+            // Check vendor recipes first
+            if (vendorRecipes.length > 0 && budgetMax >= 1) {
+                return { type: 'vendor', data: vendorRecipes[0], cost: 1 };
+            }
+
+            // Alt-Regal for simple items (1-2 mods)
+            if (explicitModCount <= 2 && budgetMax >= 10) {
+                return { type: 'alt-regal', cost: 15 };
+            }
+
+            // Recombinator for 2+ mods
+            if (explicitModCount >= 2 && budgetMax >= 15) {
+                return { type: 'recombinator', cost: 20 };
+            }
+
+            // Essence for items needing specific mods
+            if (budgetMax >= 30) {
+                return { type: 'essence', cost: 50 };
+            }
+
+            // Harvest for complex items
+            if (budgetMax >= 50) {
+                return { type: 'harvest', cost: 100 };
+            }
+
+            // Chaos spam only for jewelry with high budget
+            if (isJewelry && budgetMax >= 200) {
+                return { type: 'chaos', cost: 300 };
+            }
+
+            // Default to buy from market
+            return { type: 'market', cost: 0 };
+        }
+
         function generateCraftingSteps(itemData, modsOnItem) {
             const explicitModCount = modsOnItem.explicit.length;
             const craftedModCount = modsOnItem.crafted.length;
             const totalModCount = explicitModCount + craftedModCount;
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+
+            // Get budget from selector
+            const budget = document.getElementById('craftingBudget')?.value || 'medium';
+            const budgetMax = {
+                'low': 20,
+                'medium': 100,
+                'high': 500,
+                'very-high': 10000
+            }[budget];
 
             const hasLife = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Life'));
             const hasResists = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Resistance'));
@@ -2066,8 +2108,12 @@
             // Detect applicable vendor recipes
             const vendorRecipes = detectVendorRecipes(itemData, modsOnItem);
 
+            // Determine the CHEAPEST/BEST method
+            let bestMethod = determineBestCraftingMethod(itemData, modsOnItem, vendorRecipes, budgetMax);
+
             let stepsHTML = `<div style="margin-bottom: 20px;">
-                <h3 style="color: #ffd700; margin-bottom: 10px;">💰 Recommended Crafting Methods (Cheapest First)</h3>
+                <h3 style="color: #ffd700; margin-bottom: 10px;">💰 Most Cost-Effective Method (Within Your Budget)</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Based on your budget of ${budgetMax}c and item analysis, here's the CHEAPEST way to craft this:</p>
             </div>`;
 
             // Method 1: Check market first (ALWAYS recommend this)
@@ -2104,7 +2150,7 @@
             if (explicitModCount >= 2) {
                 stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
                     <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method ${methodNum}: Recombinator Method (VERY COST-EFFECTIVE)</h4>
-                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Available in Kingsmarch (PoE1) or Expedition (PoE2).</p>
+                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Available in Kingsmarch.</p>
                     <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                         <li><strong style="color: #ffd700;">Prepare Item 1:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
                             <ul style="margin-top: 5px;">
@@ -2118,10 +2164,9 @@
                                 <li>Regal it as well</li>
                             </ul>
                         </li>
-                        <li><strong style="color: #ffd700;">Recombine:</strong> Use the Recombinator in Kingsmarch or Expedition
+                        <li><strong style="color: #ffd700;">Recombine:</strong> Use the Recombinator in Kingsmarch
                             <ul style="margin-top: 5px;">
-                                <li><strong>PoE1 (Kingsmarch):</strong> Costs Gold + Thaumaturgic Dust (not chaos orbs!)</li>
-                                <li><strong>PoE2 (Expedition):</strong> Costs Expedition Artifacts</li>
+                                <li>Costs <strong>Gold + Thaumaturgic Dust</strong> (NOT chaos orbs!)</li>
                                 <li>Select which mods you want to keep from each item</li>
                                 <li>Success chance varies based on mods selected (fewer mods = higher chance)</li>
                                 <li>⚠️ <strong>If it fails, BOTH items are destroyed!</strong></li>
@@ -2132,7 +2177,7 @@
                     </ol>
                     <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Main cost is just alterations (0.1-0.2c each) + base items. Total ~5-20c per attempt, way cheaper than chaos spam!</p>
                     <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>Pro tip:</strong> Start with 1:1 recombination (1 mod from each item) for best success rate. Can do 2:1 or 3:1 for more mods but lower success.</p>
-                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Availability:</strong> Check if Recombinator is in current league (Kingsmarch or Expedition).</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Availability:</strong> Check if Kingsmarch Recombinator is available in current league.</p>
                 </div>`;
                 methodNum++;
             }
@@ -2239,7 +2284,7 @@
 
             // Recombinator tip
             if (explicitModCount >= 2) {
-                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If available (Kingsmarch/Expedition), this is THE most cost-effective method! Prepare two bases with desired mods using cheap alterations, then recombine. Costs Gold+Dust or Artifacts (NOT chaos orbs). Even with risk of failure, way cheaper than chaos spam!</li>`;
+                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If Kingsmarch is available, this is THE most cost-effective method! Prepare two bases with desired mods using cheap alterations, then recombine. Costs Gold+Thaumaturgic Dust (NOT chaos orbs). Even with risk of failure, way cheaper than chaos spam!</li>`;
             }
 
             // RNG warning
