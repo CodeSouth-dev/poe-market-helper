@@ -74,7 +74,7 @@ electron_1.app.on('activate', () => {
     }
 });
 // IPC handlers for communication between main and renderer processes
-electron_1.ipcMain.handle('search-item', async (event, itemName, league = 'Crucible') => {
+electron_1.ipcMain.handle('search-item', async (_event, itemName, league = 'Crucible') => {
     try {
         console.log(`Searching for item: ${itemName} in league: ${league}`);
         const result = await poeAPI.searchItem(itemName, league);
@@ -94,7 +94,7 @@ electron_1.ipcMain.handle('get-favorites', async () => {
         return { success: false, error: error.message };
     }
 });
-electron_1.ipcMain.handle('add-favorite', async (event, item) => {
+electron_1.ipcMain.handle('add-favorite', async (_event, item) => {
     try {
         await favorites.add(item);
         return { success: true };
@@ -103,12 +103,24 @@ electron_1.ipcMain.handle('add-favorite', async (event, item) => {
         return { success: false, error: error.message };
     }
 });
-electron_1.ipcMain.handle('remove-favorite', async (event, itemName) => {
+electron_1.ipcMain.handle('remove-favorite', async (_event, itemName) => {
     try {
         await favorites.remove(itemName);
         return { success: true };
     }
     catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+// Get available leagues from poe.ninja/PoE API
+electron_1.ipcMain.handle('get-leagues', async () => {
+    try {
+        console.log('Fetching available leagues...');
+        const leagues = await poeAPI.getLeagues();
+        return { success: true, data: leagues };
+    }
+    catch (error) {
+        console.error('Failed to fetch leagues:', error);
         return { success: false, error: error.message };
     }
 });

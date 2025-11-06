@@ -208,6 +208,40 @@
             color: #90EE90;
         }
 
+        .confidence {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .confidence-high {
+            background: rgba(0, 255, 0, 0.3);
+            color: #90EE90;
+        }
+
+        .confidence-medium {
+            background: rgba(255, 255, 0, 0.3);
+            color: #ffff99;
+        }
+
+        .confidence-low {
+            background: rgba(255, 0, 0, 0.3);
+            color: #ffcccc;
+        }
+
+        .popular-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #1a1a2e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
         .no-results {
             text-align: center;
             color: #cccccc;
@@ -371,6 +405,18 @@
                     <div class="stat-value" id="totalListings">-</div>
                     <div class="stat-label">Total Listings</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVolume">-</div>
+                    <div class="stat-label">Volume/Hour</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="averageConfidence">-</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="mostPopular">-</div>
+                    <div class="stat-label">Most Popular</div>
+                </div>
             </div>
 
             <div style="overflow-x: auto;">
@@ -379,8 +425,10 @@
                         <tr>
                             <th>Item Name</th>
                             <th>Base Type</th>
-                            <th>Chaos Value</th>
+                            <th>Value (Adaptive)</th>
                             <th>Listings</th>
+                            <th>Volume/Hr</th>
+                            <th>Confidence</th>
                             <th>Links</th>
                             <th>Variant</th>
                         </tr>
@@ -434,7 +482,27 @@
         // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
             loadFavorites();
+            loadLeagues();
         });
+
+        // Load leagues dynamically from API
+        async function loadLeagues() {
+            try {
+                const result = await ipcRenderer.invoke('get-leagues');
+                if (result.success && result.data.length > 0) {
+                    leagueSelect.innerHTML = '';
+                    result.data.forEach(league => {
+                        const option = document.createElement('option');
+                        option.value = league;
+                        option.textContent = league;
+                        leagueSelect.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load leagues:', err);
+                // Keep default leagues if fetch fails
+            }
+        }
 
         // Search form handler
         searchForm.addEventListener('submit', async (e) => {
@@ -528,43 +596,96 @@
         }
 
         function displayResults(searchResult) {
-            const { itemName, league, results, timestamp, minPrice, maxPrice, medianPrice, totalListings } = searchResult;
-            
+            const { itemName, league, results, timestamp, minPrice, maxPrice, medianPrice, totalListings,
+                    mostPopular, totalVolume, averageConfidence } = searchResult;
+
             resultsTitle.textContent = `Results for "${itemName}"`;
             resultsMeta.textContent = `League: ${league} | Updated: ${new Date(timestamp).toLocaleString()}`;
-            
+
             // Update stats
             document.getElementById('minPrice').textContent = minPrice.toFixed(2);
             document.getElementById('medianPrice').textContent = medianPrice.toFixed(2);
             document.getElementById('maxPrice').textContent = maxPrice.toFixed(2);
             document.getElementById('totalListings').textContent = totalListings;
-            
+
+            // Update new economy metrics
+            document.getElementById('totalVolume').textContent = totalVolume ? totalVolume.toFixed(1) : '-';
+
+            const confidenceEl = document.getElementById('averageConfidence');
+            if (averageConfidence) {
+                confidenceEl.innerHTML = formatConfidenceBadge(averageConfidence);
+            } else {
+                confidenceEl.textContent = '-';
+            }
+
+            document.getElementById('mostPopular').textContent = mostPopular
+                ? (mostPopular.name.length > 20 ? mostPopular.name.substring(0, 20) + '...' : mostPopular.name)
+                : '-';
+
             // Clear previous results
             resultsTableBody.innerHTML = '';
-            
+
             if (results.length === 0) {
                 noResults.style.display = 'block';
                 resultsSection.style.display = 'block';
                 return;
             }
-            
+
             noResults.style.display = 'none';
-            
-            // Populate table
+
+            // Populate table with enhanced data
             results.forEach(item => {
                 const row = document.createElement('tr');
+                const adaptiveValue = formatAdaptiveValue(item);
+                const volumePerHour = item.volumePerHour ? item.volumePerHour.toFixed(1) : '-';
+                const popularBadge = item.isPopular ? '<span class="popular-badge">POPULAR</span>' : '';
+
                 row.innerHTML = `
-                    <td>${escapeHtml(item.name)}</td>
+                    <td>${escapeHtml(item.name)}${popularBadge}</td>
                     <td>${escapeHtml(item.baseType || '-')}</td>
-                    <td class="price">${item.chaosValue.toFixed(2)}</td>
+                    <td class="price">${adaptiveValue}</td>
                     <td>${item.listingCount || item.count || '-'}</td>
+                    <td>${volumePerHour}</td>
+                    <td>${formatConfidenceBadge(item.confidenceLevel || 'medium')}</td>
                     <td>${item.links || '-'}</td>
                     <td>${escapeHtml(item.variant || '-')}</td>
                 `;
                 resultsTableBody.appendChild(row);
             });
-            
+
             resultsSection.style.display = 'block';
+        }
+
+        // Format adaptive value for display
+        function formatAdaptiveValue(item) {
+            const chaos = item.chaosValue || 0;
+            const divine = item.divineValue || 0;
+            const exalted = item.exaltedValue || 0;
+
+            // If item is worth more than 10 divine, display in divine
+            if (divine >= 10) {
+                return `${divine.toFixed(2)}<span style="color: #ffd700;">d</span>`;
+            }
+
+            // If item is worth more than 100 chaos but less than 10 divine, show both
+            if (chaos >= 100 && divine > 0) {
+                return `${divine.toFixed(2)}<span style="color: #ffd700;">d</span> (${chaos.toFixed(0)}c)`;
+            }
+
+            // If exalted value is significant (legacy support)
+            if (exalted >= 10) {
+                return `${exalted.toFixed(2)}<span style="color: #silver;">ex</span>`;
+            }
+
+            // Default to chaos
+            return `${chaos.toFixed(2)}<span style="color: #ffd700;">c</span>`;
+        }
+
+        // Format confidence badge
+        function formatConfidenceBadge(level) {
+            if (!level) return '-';
+            const levelUpper = level.toUpperCase();
+            return `<span class="confidence confidence-${level}">${levelUpper}</span>`;
         }
 
         async function loadFavorites() {

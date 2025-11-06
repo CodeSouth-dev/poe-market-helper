@@ -48,13 +48,13 @@ app.on('activate', () => {
 });
 
 // IPC handlers for communication between main and renderer processes
-ipcMain.handle('search-item', async (event, itemName: string, league: string = 'Crucible') => {
+ipcMain.handle('search-item', async (_event: any, itemName: string, league: string = 'Crucible') => {
   try {
     console.log(`Searching for item: ${itemName} in league: ${league}`);
     const result = await poeAPI.searchItem(itemName, league);
     await cache.set(`${league}-${itemName}`, result);
     return { success: true, data: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search error:', error);
     return { success: false, error: error.message };
   }
@@ -63,25 +63,37 @@ ipcMain.handle('search-item', async (event, itemName: string, league: string = '
 ipcMain.handle('get-favorites', async () => {
   try {
     return { success: true, data: await favorites.getAll() };
-  } catch (error) {
+  } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('add-favorite', async (event, item: any) => {
+ipcMain.handle('add-favorite', async (_event: any, item: any) => {
   try {
     await favorites.add(item);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('remove-favorite', async (event, itemName: string) => {
+ipcMain.handle('remove-favorite', async (_event: any, itemName: string) => {
   try {
     await favorites.remove(itemName);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Get available leagues from poe.ninja/PoE API
+ipcMain.handle('get-leagues', async () => {
+  try {
+    console.log('Fetching available leagues...');
+    const leagues = await poeAPI.getLeagues();
+    return { success: true, data: leagues };
+  } catch (error: any) {
+    console.error('Failed to fetch leagues:', error);
     return { success: false, error: error.message };
   }
 });
