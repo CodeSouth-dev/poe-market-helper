@@ -567,6 +567,7 @@
             <button class="tab" data-tab="livesearch">Live Search</button>
             <button class="tab" data-tab="fossil">Fossil Optimizer</button>
             <button class="tab" data-tab="guide">Learn to Craft</button>
+            <button class="tab" data-tab="craftguides">📚 Crafting Guides</button>
         </div>
 
         <div id="marketTab" class="tab-content active">
@@ -815,7 +816,20 @@
                     <button type="button" id="addModBtn" class="btn-success" style="margin-top: 10px;">+ Add Mod</button>
                 </div>
 
-                <button type="submit" id="calculateBtn">Calculate Best Crafting Method</button>
+                <!-- Risk Mode Toggle -->
+                <div style="margin-bottom: 25px; background: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 15px; border-radius: 5px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="riskModeToggle" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                        <div>
+                            <span style="color: #ff9800; font-weight: bold; font-size: 16px;">🎲 High Risk Mode</span>
+                            <p style="color: #ccc; font-size: 13px; margin: 5px 0 0 0;">
+                                Enable advanced strategies like recombinators for potential mirror-tier results. Higher cost, higher reward!
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <button type="submit" id="calculateBtn">🎯 Calculate Best Crafting Method</button>
             </form>
         </section>
 
@@ -888,6 +902,99 @@
             </section>
         </section>
         </div> <!-- End Guide Tab -->
+
+        <!-- Crafting Guides Tab -->
+        <div id="craftguidesTab" class="tab-content">
+            <section class="search-section">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">📚 Crafting Guides Library</h2>
+                <p style="color: #cccccc; margin-bottom: 20px;">Browse comprehensive crafting guides from Pohx.net and MaxRoll.gg</p>
+
+                <!-- Guide Source Selection -->
+                <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                    <button id="showPohxGuides" class="btn-success" style="flex: 1;">
+                        🔥 Pohx Guides (14 Sections)
+                    </button>
+                    <button id="showMaxRollGuides" class="btn-primary" style="flex: 1;">
+                        📖 MaxRoll Guides (Basic-Advanced)
+                    </button>
+                </div>
+
+                <!-- Pohx Guides Section -->
+                <div id="pohxGuidesSection" style="display: none;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Pohx.net Crafting Guides</h3>
+                    <p style="color: #aaa; margin-bottom: 20px;">Build-specific crafting guides for Righteous Fire and more</p>
+
+                    <!-- Filter Controls -->
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <select id="pohxSectionFilter" style="flex: 1; min-width: 200px; padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #ffd700; border-radius: 5px;">
+                                <option value="">All Sections</option>
+                            </select>
+
+                            <select id="pohxItemTypeFilter" style="flex: 1; min-width: 200px; padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #ffd700; border-radius: 5px;">
+                                <option value="">All Item Types</option>
+                                <option value="helmet">Helmets</option>
+                                <option value="body armour">Body Armours</option>
+                                <option value="gloves">Gloves</option>
+                                <option value="boots">Boots</option>
+                                <option value="weapon">Weapons</option>
+                                <option value="shield">Shields</option>
+                                <option value="ring">Rings</option>
+                                <option value="amulet">Amulets</option>
+                                <option value="belt">Belts</option>
+                            </select>
+
+                            <select id="pohxDifficultyFilter" style="flex: 1; min-width: 200px; padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #ffd700; border-radius: 5px;">
+                                <option value="">All Difficulties</option>
+                                <option value="beginner">Beginner</option>
+                                <option value="advanced">Advanced</option>
+                                <option value="endgame">Endgame</option>
+                            </select>
+
+                            <button id="loadPohxGuides" class="btn-success" style="padding: 8px 20px;">
+                                Load Guides
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="pohxGuidesLoading" class="loading" style="display: none;">
+                        📖 Loading Pohx guides...
+                    </div>
+
+                    <div id="pohxGuidesList"></div>
+                </div>
+
+                <!-- MaxRoll Guides Section -->
+                <div id="maxRollGuidesSection" style="display: none;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">MaxRoll.gg Crafting Guides</h3>
+                    <p style="color: #aaa; margin-bottom: 20px;">General crafting methods from basic to advanced</p>
+
+                    <!-- Filter Controls -->
+                    <div style="background: rgba(33, 150, 243, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <select id="maxRollCategoryFilter" style="flex: 1; min-width: 200px; padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #2196F3; border-radius: 5px;">
+                                <option value="">All Categories</option>
+                                <option value="Basic">Basic (Beginner)</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+
+                            <input id="maxRollSearchInput" type="text" placeholder="Search methods..." style="flex: 1; min-width: 200px; padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #2196F3; border-radius: 5px;">
+
+                            <button id="loadMaxRollGuides" class="btn-primary" style="padding: 8px 20px;">
+                                Load Guides
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="maxRollGuidesLoading" class="loading" style="display: none;">
+                        📖 Loading MaxRoll guides...
+                    </div>
+
+                    <div id="maxRollGuidesList"></div>
+                </div>
+            </section>
+        </div> <!-- End Crafting Guides Tab -->
 
         <!-- PoB Import Tab -->
         <div id="pobTab" class="tab-content">
@@ -1861,17 +1968,39 @@
                         craftBaseItem.value = topBase.name;
                     }
 
-                    // Display all suggestions
+                    // Display all suggestions (top 3 only - verified craftable bases with economy data)
                     let html = '';
-                    result.data.slice(0, 5).forEach((base, index) => {
+                    result.data.slice(0, 3).forEach((base, index) => {
                         const isTop = index === 0;
+                        const lowConfWarning = base.lowConfidence ? ' <span style="color: #ff6b6b;">⚠️ Low Sellability</span>' : '';
+                        const priceStr = base.chaosValue > 0 ? `${base.chaosValue.toFixed(1)}c` : 'N/A';
+                        const trendIcon = base.sparkline && base.sparkline.totalChange !== 0 ?
+                            (base.sparkline.totalChange > 0 ? '📈' : '📉') : '';
+                        const trendPct = base.sparkline && base.sparkline.totalChange !== 0 ?
+                            ` ${base.sparkline.totalChange > 0 ? '+' : ''}${base.sparkline.totalChange.toFixed(1)}%` : '';
+
                         html += `
-                            <div style="padding: 8px; margin-bottom: 6px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; cursor: pointer; border: 1px solid ${isTop ? '#ffd700' : '#555'};" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => d.style.border = '1px solid #555'); this.style.border = '1px solid #ffd700';">
-                                <div style="color: ${isTop ? '#ffd700' : '#ffffff'}; font-weight: ${isTop ? 'bold' : 'normal'};">
-                                    ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}
-                                </div>
-                                <div style="color: #aaa; font-size: 12px; margin-top: 4px;">
-                                    ${base.reason || 'Popular choice for this slot'}
+                            <div style="padding: 10px; margin-bottom: 8px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; border: 1px solid ${isTop ? '#ffd700' : '#555'};">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1; cursor: pointer;" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => { const inner = d.querySelector('div'); if(inner) inner.style.border = 'none'; }); this.style.border = '2px solid #ffd700';">
+                                        <div style="color: ${isTop ? '#ffd700' : '#ffffff'}; font-weight: ${isTop ? 'bold' : 'normal'}; font-size: 14px;">
+                                            ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}${lowConfWarning}
+                                        </div>
+                                        <div style="color: #aaa; font-size: 11px; margin-top: 4px;">
+                                            ${base.reason || 'Popular craftable base for this slot'}
+                                        </div>
+                                        <div style="margin-top: 6px; display: flex; gap: 12px; font-size: 11px;">
+                                            <span style="color: #4CAF50;">💰 ${priceStr}</span>
+                                            <span style="color: #2196F3;">📊 ${base.listingCount} listed</span>
+                                            ${trendIcon ? `<span style="color: ${base.sparkline.totalChange > 0 ? '#4CAF50' : '#ff6b6b'};">${trendIcon}${trendPct}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <button
+                                        style="margin-left: 8px; padding: 4px 8px; background: rgba(33, 150, 243, 0.8); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;"
+                                        onclick="event.stopPropagation(); ipcRenderer.invoke('open-trade-site', '${base.name.replace(/'/g, "\\'")}', document.getElementById('craftLeague').value);"
+                                        title="View on pathofexile.com/trade">
+                                        🔍 Trade
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -2218,7 +2347,9 @@
 
             const baseItem = document.getElementById('craftBaseItem').value;
             const itemClass = document.getElementById('craftItemClass').value;
+            const itemLevel = parseInt(document.getElementById('craftItemLevel').value) || 86;
             const league = document.getElementById('craftLeague').value;
+            const riskMode = document.getElementById('riskModeToggle').checked;
 
             // Collect mods
             const modInputs = document.querySelectorAll('.mod-input-group');
@@ -2228,7 +2359,7 @@
                 const name = modDiv.querySelector('.mod-name').value;
                 const type = modDiv.querySelector('.mod-type').value;
                 if (name) {
-                    desiredMods.push({ name, type });
+                    desiredMods.push(name);
                 }
             });
 
@@ -2237,23 +2368,32 @@
                 return;
             }
 
-            // Show loading
+            // Show loading with risk mode indicator
+            craftingLoading.innerHTML = riskMode
+                ? '🎲 Analyzing crafting methods (Risk Mode Active)...'
+                : '🔮 Analyzing crafting methods...';
             craftingLoading.style.display = 'block';
             craftingError.style.display = 'none';
             craftingResults.style.display = 'none';
 
             try {
-                const result = await ipcRenderer.invoke('calculate-crafting', {
-                    desiredMods,
-                    baseItemName: baseItem,
+                // Use smart optimizer
+                const craftingGoal = {
+                    baseItem,
+                    itemLevel,
                     itemClass,
-                    league
-                });
+                    desiredMods,
+                    budget: 1000, // Default budget, could be made configurable
+                    league,
+                    riskMode
+                };
+
+                const result = await window.api.invoke('smart-optimizer-get-strategy', craftingGoal);
 
                 craftingLoading.style.display = 'none';
 
                 if (result.success) {
-                    displayCraftingResults(result.data);
+                    displaySmartCraftingResults(result.data);
                 } else {
                     showCraftingError(result.error);
                 }
@@ -2349,6 +2489,185 @@
             }
 
             return `${chaosValue.toFixed(1)} Chaos`;
+        }
+
+        function displaySmartCraftingResults(strategy) {
+            craftingResults.style.display = 'block';
+
+            const riskColors = {
+                'safe': '#4caf50',
+                'moderate': '#ff9800',
+                'high': '#f44336',
+                'extreme': '#9c27b0'
+            };
+
+            const riskColor = riskColors[strategy.riskLevel] || '#888';
+
+            let html = `
+                <div style="background: linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(76,175,80,0.2) 100%); border-radius: 10px; padding: 25px; margin-bottom: 25px;">
+                    <h3 style="color: #ffd700; margin: 0 0 10px 0;">🎯 Optimal Strategy: ${strategy.method}</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <span style="background: ${riskColor}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 13px; font-weight: bold;">
+                            ${strategy.riskLevel.toUpperCase()} RISK
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); color: #ffd700; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
+                            Source: ${strategy.source.toUpperCase()}
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); color: #8b5cf6; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
+                            ${strategy.difficulty.toUpperCase()}
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Estimated Cost</div>
+                            <div style="color: #ffd700; font-size: 24px; font-weight: bold;">${strategy.estimatedCost}c</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Success Rate</div>
+                            <div style="color: #4caf50; font-size: 24px; font-weight: bold;">${(strategy.successRate * 100).toFixed(0)}%</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Time Required</div>
+                            <div style="color: #2196f3; font-size: 18px; font-weight: bold;">${strategy.timeToComplete}</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Profit Potential</div>
+                            <div style="color: #00ff00; font-size: 24px; font-weight: bold;">${strategy.profitPotential}c</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Steps -->
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">📋 Step-by-Step Guide</h4>
+                    <ol style="color: #cccccc; line-height: 2; padding-left: 20px;">
+                        ${strategy.steps.map(step => `<li>${step}</li>`).join('')}
+                    </ol>
+                </div>
+            `;
+
+            // Requirements
+            if (strategy.requirements.length > 0) {
+                html += `
+                    <div style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #2196f3; font-weight: bold; margin-bottom: 10px;">📦 Requirements</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.requirements.map(req => `<li>${req}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Tips
+            if (strategy.tips.length > 0) {
+                html += `
+                    <div style="background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #4caf50; font-weight: bold; margin-bottom: 10px;">💡 Pro Tips</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.tips.map(tip => `<li>${tip}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Warnings
+            if (strategy.warnings.length > 0) {
+                html += `
+                    <div style="background: rgba(244, 67, 54, 0.1); border-left: 4px solid #f44336; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">⚠️ Warnings</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Recombinator Strategy (if risk mode enabled)
+            if (strategy.recombinatorOption) {
+                const recomb = strategy.recombinatorOption;
+                html += `
+                    <div style="background: linear-gradient(135deg, rgba(156, 39, 176, 0.3) 0%, rgba(244, 67, 54, 0.3) 100%); border: 2px solid #9c27b0; border-radius: 10px; padding: 25px; margin-top: 25px;">
+                        <h3 style="color: #9c27b0; margin: 0 0 15px 0;">🎲 HIGH RISK RECOMBINATOR STRATEGY</h3>
+                        <p style="color: #cccccc; font-size: 16px; margin-bottom: 20px;">${recomb.description}</p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Total Investment</div>
+                                <div style="color: #ffd700; font-size: 24px; font-weight: bold;">${recomb.estimatedCost}c</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Success Rate</div>
+                                <div style="color: #ff9800; font-size: 24px; font-weight: bold;">${(recomb.successRate * 100).toFixed(0)}%</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Profit if Successful</div>
+                                <div style="color: #00ff00; font-size: 24px; font-weight: bold;">${recomb.profitPotential}c</div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="color: #ffd700; margin-bottom: 15px;">Recombinator Process</h4>
+                            <ol style="color: #cccccc; line-height: 2; padding-left: 20px;">
+                                ${recomb.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+
+                        ${recomb.warnings.length > 0 ? `
+                            <div style="background: rgba(244, 67, 54, 0.2); border-left: 4px solid #f44336; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                                <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">⚠️ CRITICAL WARNINGS</div>
+                                <ul style="color: #ffcccc; margin: 0; padding-left: 20px;">
+                                    ${recomb.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${recomb.tips.length > 0 ? `
+                            <div style="background: rgba(76, 175, 80, 0.2); border-left: 4px solid #4caf50; padding: 15px; border-radius: 5px;">
+                                <div style="color: #4caf50; font-weight: bold; margin-bottom: 10px;">💡 Expert Tips</div>
+                                <ul style="color: #ccffcc; margin: 0; padding-left: 20px;">
+                                    ${recomb.tips.map(tip => `<li>${tip}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Alternative Methods
+            if (strategy.alternativeMethods && strategy.alternativeMethods.length > 0) {
+                html += `
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-top: 25px;">
+                        <h4 style="color: #ffd700; margin-bottom: 15px;">🔄 Alternative Methods</h4>
+                        <div style="display: grid; gap: 15px;">
+                `;
+
+                strategy.alternativeMethods.forEach((alt, index) => {
+                    const altRiskColor = riskColors[alt.riskLevel] || '#888';
+                    html += `
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border-left: 4px solid ${altRiskColor};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <div style="color: #ffd700; font-weight: bold;">${index + 2}. ${alt.method}</div>
+                                    <div style="color: #888; font-size: 12px;">${alt.source} • ${alt.difficulty}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #ffd700; font-size: 18px; font-weight: bold;">${alt.estimatedCost}c</div>
+                                    <div style="color: #4caf50; font-size: 12px;">${(alt.successRate * 100).toFixed(0)}% success</div>
+                                </div>
+                            </div>
+                            <div style="color: #cccccc; font-size: 13px;">Time: ${alt.timeToComplete} | Profit: ${alt.profitPotential}c</div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            craftingResultsContent.innerHTML = html;
         }
 
         function showCraftingError(message) {
@@ -3767,6 +4086,306 @@
             setTimeout(() => {
                 fossilError.style.display = 'none';
             }, 5000);
+        }
+
+        // ==================== Crafting Guides Tab ====================
+
+        const showPohxGuides = document.getElementById('showPohxGuides');
+        const showMaxRollGuides = document.getElementById('showMaxRollGuides');
+        const pohxGuidesSection = document.getElementById('pohxGuidesSection');
+        const maxRollGuidesSection = document.getElementById('maxRollGuidesSection');
+        const loadPohxGuides = document.getElementById('loadPohxGuides');
+        const loadMaxRollGuides = document.getElementById('loadMaxRollGuides');
+        const pohxGuidesList = document.getElementById('pohxGuidesList');
+        const maxRollGuidesList = document.getElementById('maxRollGuidesList');
+        const pohxSectionFilter = document.getElementById('pohxSectionFilter');
+        const pohxItemTypeFilter = document.getElementById('pohxItemTypeFilter');
+        const pohxDifficultyFilter = document.getElementById('pohxDifficultyFilter');
+        const maxRollCategoryFilter = document.getElementById('maxRollCategoryFilter');
+        const maxRollSearchInput = document.getElementById('maxRollSearchInput');
+
+        // Toggle to show Pohx guides section
+        showPohxGuides?.addEventListener('click', async () => {
+            pohxGuidesSection.style.display = 'block';
+            maxRollGuidesSection.style.display = 'none';
+            showPohxGuides.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            showMaxRollGuides.style.background = 'rgba(255, 255, 255, 0.1)';
+
+            // Load section names for dropdown
+            try {
+                const result = await window.api.invoke('pohx-get-all-sections');
+                if (result.success) {
+                    const sectionNames = Object.keys(result.data);
+                    pohxSectionFilter.innerHTML = '<option value="">All Sections</option>';
+                    sectionNames.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        pohxSectionFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load Pohx sections:', error);
+            }
+        });
+
+        // Toggle to show MaxRoll guides section
+        showMaxRollGuides?.addEventListener('click', () => {
+            maxRollGuidesSection.style.display = 'block';
+            pohxGuidesSection.style.display = 'none';
+            showMaxRollGuides.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            showPohxGuides.style.background = 'rgba(255, 255, 255, 0.1)';
+        });
+
+        // Load Pohx guides with filters
+        loadPohxGuides?.addEventListener('click', async () => {
+            const section = pohxSectionFilter.value;
+            const itemType = pohxItemTypeFilter.value;
+            const difficulty = pohxDifficultyFilter.value;
+
+            pohxGuidesList.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="color: #ffd700; font-size: 18px;">🔄 Loading Pohx crafting guides...</div></div>';
+
+            try {
+                let guides = [];
+
+                // Fetch based on filters
+                if (section) {
+                    const result = await window.api.invoke('pohx-get-section', section);
+                    if (result.success) {
+                        guides = result.data.map(g => ({ ...g, sectionName: section }));
+                    }
+                } else if (itemType) {
+                    const result = await window.api.invoke('pohx-get-by-item-type', itemType);
+                    if (result.success) {
+                        guides = result.data;
+                    }
+                } else if (difficulty) {
+                    const result = await window.api.invoke('pohx-get-by-difficulty', difficulty);
+                    if (result.success) {
+                        guides = result.data;
+                    }
+                } else {
+                    // Load all sections
+                    const result = await window.api.invoke('pohx-get-all-sections');
+                    if (result.success) {
+                        const sections = result.data;
+                        guides = [];
+                        for (const [sectionName, sectionGuides] of Object.entries(sections)) {
+                            sectionGuides.forEach(g => {
+                                guides.push({ ...g, sectionName });
+                            });
+                        }
+                    }
+                }
+
+                displayPohxGuides(guides);
+
+            } catch (error) {
+                console.error('Failed to load Pohx guides:', error);
+                pohxGuidesList.innerHTML = `<div style="color: #f44336; padding: 20px; text-align: center;">❌ Failed to load guides: ${error.message}</div>`;
+            }
+        });
+
+        // Load MaxRoll guides with filters
+        loadMaxRollGuides?.addEventListener('click', async () => {
+            const category = maxRollCategoryFilter.value;
+            const search = maxRollSearchInput.value.trim();
+
+            maxRollGuidesList.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="color: #ffd700; font-size: 18px;">🔄 Loading MaxRoll crafting guides...</div></div>';
+
+            try {
+                let methods = [];
+
+                if (search) {
+                    // Search methods
+                    const result = await window.api.invoke('maxroll-search-methods', search);
+                    if (result.success) {
+                        methods = result.data;
+                    }
+                } else if (category === 'Basic') {
+                    const result = await window.api.invoke('maxroll-get-basic-methods');
+                    if (result.success) {
+                        methods = result.data;
+                    }
+                } else if (category === 'Intermediate') {
+                    const result = await window.api.invoke('maxroll-get-intermediate-methods');
+                    if (result.success) {
+                        methods = result.data;
+                    }
+                } else if (category) {
+                    const result = await window.api.invoke('maxroll-get-methods-by-category', category);
+                    if (result.success) {
+                        methods = result.data;
+                    }
+                } else {
+                    // Load all methods
+                    const result = await window.api.invoke('maxroll-scrape-all-guides');
+                    if (result.success) {
+                        methods = result.data.craftingMethods || [];
+                    }
+                }
+
+                displayMaxRollMethods(methods);
+
+            } catch (error) {
+                console.error('Failed to load MaxRoll guides:', error);
+                maxRollGuidesList.innerHTML = `<div style="color: #f44336; padding: 20px; text-align: center;">❌ Failed to load guides: ${error.message}</div>`;
+            }
+        });
+
+        // Display Pohx guides
+        function displayPohxGuides(guides) {
+            if (!guides || guides.length === 0) {
+                pohxGuidesList.innerHTML = '<div style="color: #888; padding: 40px; text-align: center;">No guides found matching your filters.</div>';
+                return;
+            }
+
+            let html = `<div style="display: grid; gap: 20px;">`;
+
+            guides.forEach(guide => {
+                const difficultyColor =
+                    guide.difficulty === 'beginner' ? '#4caf50' :
+                    guide.difficulty === 'intermediate' ? '#ff9800' :
+                    guide.difficulty === 'advanced' ? '#f44336' :
+                    guide.difficulty === 'endgame' ? '#9c27b0' : '#888';
+
+                html += `
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border-left: 4px solid ${difficultyColor};">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                            <h3 style="color: #ffd700; margin: 0;">${guide.title}</h3>
+                            <span style="background: ${difficultyColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+                                ${guide.difficulty || 'General'}
+                            </span>
+                        </div>
+
+                        ${guide.sectionName ? `<div style="color: #888; font-size: 12px; margin-bottom: 10px;">📂 ${guide.sectionName}</div>` : ''}
+                        ${guide.itemType ? `<div style="color: #8b5cf6; font-size: 12px; margin-bottom: 10px;">🎯 ${guide.itemType}</div>` : ''}
+
+                        <div style="color: #cccccc; margin-bottom: 15px; line-height: 1.6;">
+                            ${guide.description || 'No description available.'}
+                        </div>
+
+                        ${guide.steps && guide.steps.length > 0 ? `
+                            <div style="background: rgba(30, 30, 40, 0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">📋 Steps:</div>
+                                <ol style="margin: 0; padding-left: 20px; color: #cccccc;">
+                                    ${guide.steps.map(step => `<li style="margin-bottom: 8px;">${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                        ` : ''}
+
+                        ${guide.estimatedCost ? `
+                            <div style="background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px;">
+                                <span style="color: #ffc107; font-weight: bold;">💰 Cost:</span>
+                                <span style="color: #cccccc; margin-left: 10px;">${guide.estimatedCost}</span>
+                            </div>
+                        ` : ''}
+
+                        ${guide.tips && guide.tips.length > 0 ? `
+                            <div style="background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px;">
+                                <div style="color: #4caf50; font-weight: bold; margin-bottom: 5px;">💡 Tips:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: #cccccc;">
+                                    ${guide.tips.map(tip => `<li style="margin-bottom: 5px;">${tip}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${guide.warnings && guide.warnings.length > 0 ? `
+                            <div style="background: rgba(244, 67, 54, 0.1); border-left: 3px solid #f44336; padding: 10px 15px; border-radius: 5px;">
+                                <div style="color: #f44336; font-weight: bold; margin-bottom: 5px;">⚠️ Warnings:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: #cccccc;">
+                                    ${guide.warnings.map(warning => `<li style="margin-bottom: 5px;">${warning}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            pohxGuidesList.innerHTML = html;
+        }
+
+        // Display MaxRoll methods
+        function displayMaxRollMethods(methods) {
+            if (!methods || methods.length === 0) {
+                maxRollGuidesList.innerHTML = '<div style="color: #888; padding: 40px; text-align: center;">No crafting methods found matching your criteria.</div>';
+                return;
+            }
+
+            let html = `<div style="display: grid; gap: 20px;">`;
+
+            methods.forEach(method => {
+                const categoryColor =
+                    method.category === 'Basic' ? '#4caf50' :
+                    method.category === 'Intermediate' ? '#ff9800' :
+                    method.category === 'Advanced' ? '#f44336' : '#888';
+
+                html += `
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border-left: 4px solid ${categoryColor};">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                            <h3 style="color: #ffd700; margin: 0;">${method.name}</h3>
+                            <span style="background: ${categoryColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                                ${method.category}
+                            </span>
+                        </div>
+
+                        ${method.bestUseCase ? `<div style="color: #8b5cf6; font-size: 12px; margin-bottom: 10px;">🎯 ${method.bestUseCase}</div>` : ''}
+
+                        <div style="color: #cccccc; margin-bottom: 15px; line-height: 1.6;">
+                            ${method.description || 'No description available.'}
+                        </div>
+
+                        ${method.steps && method.steps.length > 0 ? `
+                            <div style="background: rgba(30, 30, 40, 0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">📋 How to do it:</div>
+                                <ol style="margin: 0; padding-left: 20px; color: #cccccc;">
+                                    ${method.steps.map(step => `<li style="margin-bottom: 8px;">${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                        ` : ''}
+
+                        ${method.requirements && method.requirements.length > 0 ? `
+                            <div style="background: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196f3; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px;">
+                                <div style="color: #2196f3; font-weight: bold; margin-bottom: 5px;">📦 Requirements:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: #cccccc;">
+                                    ${method.requirements.map(req => `<li style="margin-bottom: 5px;">${req}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${method.costEstimate ? `
+                            <div style="background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px;">
+                                <span style="color: #ffc107; font-weight: bold;">💰 Estimated Cost:</span>
+                                <span style="color: #cccccc; margin-left: 10px;">${method.costEstimate}</span>
+                            </div>
+                        ` : ''}
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                            ${method.pros && method.pros.length > 0 ? `
+                                <div style="background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50; padding: 10px 15px; border-radius: 5px;">
+                                    <div style="color: #4caf50; font-weight: bold; margin-bottom: 5px;">✅ Pros:</div>
+                                    <ul style="margin: 0; padding-left: 20px; color: #cccccc; font-size: 13px;">
+                                        ${method.pros.map(pro => `<li style="margin-bottom: 3px;">${pro}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+
+                            ${method.cons && method.cons.length > 0 ? `
+                                <div style="background: rgba(244, 67, 54, 0.1); border-left: 3px solid #f44336; padding: 10px 15px; border-radius: 5px;">
+                                    <div style="color: #f44336; font-weight: bold; margin-bottom: 5px;">❌ Cons:</div>
+                                    <ul style="margin: 0; padding-left: 20px; color: #cccccc; font-size: 13px;">
+                                        ${method.cons.map(con => `<li style="margin-bottom: 3px;">${con}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            maxRollGuidesList.innerHTML = html;
         }
     </script>
 </body>
