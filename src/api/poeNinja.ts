@@ -939,3 +939,6 @@ export async function searchItem(itemName: string, league: string): Promise<Sear
   const api = new PoeNinjaAPI();
   return api.searchItem(itemName, league);
 }
+
+// Export a singleton instance for convenience
+export const poeNinjaAPI = new PoeNinjaAPI();

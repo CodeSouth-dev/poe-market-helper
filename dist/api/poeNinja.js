@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PoeNinjaAPI = void 0;
+exports.poeNinjaAPI = exports.PoeNinjaAPI = void 0;
 exports.searchItem = searchItem;
 const axios_1 = __importDefault(require("axios"));
 const rateLimiter_1 = require("../rateLimiter");
@@ -774,3 +774,5 @@ async function searchItem(itemName, league) {
     const api = new PoeNinjaAPI();
     return api.searchItem(itemName, league);
 }
+// Export a singleton instance for convenience
+exports.poeNinjaAPI = new PoeNinjaAPI();

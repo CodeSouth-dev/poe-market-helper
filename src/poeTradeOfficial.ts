@@ -184,7 +184,7 @@ export class PoeTradeOfficial {
         await page.type('input[placeholder*="Search"]', itemName);
 
         // Wait for results
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Get first result price
         const price = await page.evaluate(() => {
