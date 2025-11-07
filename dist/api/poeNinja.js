@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PoeNinjaAPI = void 0;
 exports.searchItem = searchItem;
 const axios_1 = __importDefault(require("axios"));
+const rateLimiter_1 = require("../rateLimiter");
 class PoeNinjaAPI {
     constructor() {
         this.baseUrl = 'https://poe.ninja/api/data';
@@ -77,12 +78,15 @@ class PoeNinjaAPI {
             language: 'en'
         };
         try {
-            const response = await axios_1.default.get(url, {
-                params,
-                timeout: this.timeout,
-                headers: {
-                    'User-Agent': 'PoE-Market-Helper/1.0.0'
-                }
+            // Use rate limiter to prevent spam and avoid being blocked
+            const response = await rateLimiter_1.defaultRateLimiter.execute('poe.ninja', async () => {
+                return await axios_1.default.get(url, {
+                    params,
+                    timeout: this.timeout,
+                    headers: {
+                        'User-Agent': 'PoE-Market-Helper/1.0.0'
+                    }
+                });
             });
             if (!response.data || !response.data.lines) {
                 return [];
@@ -141,9 +145,11 @@ class PoeNinjaAPI {
             for (const league of leaguesToTest) {
                 try {
                     const url = `${this.baseUrl}/currencyoverview`;
-                    const response = await axios_1.default.get(url, {
-                        params: { league, type: 'Currency' },
-                        timeout: 5000
+                    const response = await rateLimiter_1.defaultRateLimiter.execute('poe.ninja', async () => {
+                        return await axios_1.default.get(url, {
+                            params: { league, type: 'Currency' },
+                            timeout: 5000
+                        });
                     });
                     if (response.data && response.data.lines && response.data.lines.length > 0) {
                         validLeagues.push(league);
@@ -620,12 +626,14 @@ class PoeNinjaAPI {
         try {
             console.log(`Scraping builds from: ${buildsUrl}`);
             // Fetch the HTML page
-            const response = await axios_1.default.get(buildsUrl, {
-                timeout: this.timeout,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                }
+            const response = await rateLimiter_1.defaultRateLimiter.execute('poe.ninja', async () => {
+                return await axios_1.default.get(buildsUrl, {
+                    timeout: this.timeout,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                    }
+                });
             });
             const html = response.data;
             // poe.ninja builds page is React-based, so we need to extract data from the page
@@ -636,11 +644,13 @@ class PoeNinjaAPI {
             if (buildsApiMatch) {
                 const apiUrl = `https://poe.ninja/api/data/builds?league=${league}&type=exp`;
                 console.log(`Found builds API: ${apiUrl}`);
-                const apiResponse = await axios_1.default.get(apiUrl, {
-                    timeout: this.timeout,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
+                const apiResponse = await rateLimiter_1.defaultRateLimiter.execute('poe.ninja', async () => {
+                    return await axios_1.default.get(apiUrl, {
+                        timeout: this.timeout,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
                 });
                 return this.parseBuildsApiResponse(apiResponse.data, league);
             }
