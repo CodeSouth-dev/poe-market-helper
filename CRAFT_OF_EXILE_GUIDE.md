@@ -248,6 +248,101 @@ const result = await ipcRenderer.invoke(
 // }
 ```
 
+### 6. Get Top Bases by Item Class
+
+Automatically retrieve the best base items for any item class.
+
+```javascript
+const result = await ipcRenderer.invoke(
+  'craft-get-bases-by-class',
+  'Body Armour',
+  86
+);
+
+// Returns:
+// {
+//   success: true,
+//   data: [
+//     {
+//       name: "Vaal Regalia",
+//       itemLevel: 86,
+//       defense: "Highest",
+//       dps: "Best",
+//       requirements: "Level 60",
+//       popularity: "100%",
+//       tags: ["meta", "popular"]
+//     },
+//     {
+//       name: "Astral Plate",
+//       itemLevel: 86,
+//       defense: "High",
+//       dps: "Good",
+//       requirements: "Level 62",
+//       popularity: "85%",
+//       tags: ["meta", "popular"]
+//     },
+//     // ... more bases
+//   ]
+// }
+```
+
+**Supported Item Classes:**
+- Body Armour, Helmet, Gloves, Boots, Shield
+- Belt, Amulet, Ring
+- Bow, Wand, One Hand Sword, Two Hand Sword
+- One Hand Axe, Two Hand Axe, One Hand Mace, Sceptre
+- Staff, Dagger, Claw, Quiver
+
+### 7. Get Available Mods for Item Class
+
+Retrieve all available mods for a specific item class and level.
+
+```javascript
+const result = await ipcRenderer.invoke(
+  'craft-get-mods-for-class',
+  'Body Armour',
+  86,
+  'all'  // 'prefix', 'suffix', or 'all'
+);
+
+// Returns:
+// {
+//   success: true,
+//   data: [
+//     {
+//       name: "+# to maximum Life",
+//       type: "prefix",
+//       tier: "T1",
+//       minLevel: 44,
+//       weight: 1000,
+//       stats: "+90 to +99 to maximum Life"
+//     },
+//     {
+//       name: "+# to Level of Socketed Gems",
+//       type: "prefix",
+//       tier: "T1",
+//       minLevel: 25,
+//       weight: 100,
+//       stats: "+1 to Level of Socketed Gems"
+//     },
+//     {
+//       name: "+#% to Fire Resistance",
+//       type: "suffix",
+//       tier: "T1",
+//       minLevel: 72,
+//       weight: 1000,
+//       stats: "+46% to +48% to Fire Resistance"
+//     },
+//     // ... more mods
+//   ]
+// }
+```
+
+**Mod Types:**
+- `'prefix'` - Only prefix mods
+- `'suffix'` - Only suffix mods
+- `'all'` - Both prefix and suffix mods (default)
+
 ## Complete Workflow Examples
 
 ### Workflow 1: Find Best Crafting Method for Your Budget
@@ -427,6 +522,123 @@ planCraftingProject(
 );
 ```
 
+### Workflow 4: Auto-Populate Crafting UI with Class Selection
+
+```javascript
+// When user selects an item class, automatically populate bases and mods
+async function handleItemClassChange(itemClass, itemLevel = 86) {
+  console.log(`\n🎯 Loading data for ${itemClass}...`);
+
+  // 1. Get top bases for this class
+  const basesResult = await ipcRenderer.invoke(
+    'craft-get-bases-by-class',
+    itemClass,
+    itemLevel
+  );
+
+  if (basesResult.success) {
+    console.log(`\n📦 Top Bases for ${itemClass}:`);
+    basesResult.data.slice(0, 5).forEach((base, index) => {
+      console.log(`   ${index + 1}. ${base.name}`);
+      console.log(`      Defense: ${base.defense} | Popularity: ${base.popularity}`);
+    });
+
+    // Populate UI dropdown with bases
+    const baseSelect = document.getElementById('baseItemSelect');
+    baseSelect.innerHTML = '<option value="">Select Base...</option>';
+    basesResult.data.forEach(base => {
+      const option = document.createElement('option');
+      option.value = base.name;
+      option.textContent = `${base.name} (${base.popularity} popular)`;
+      baseSelect.appendChild(option);
+    });
+  }
+
+  // 2. Get available mods for this class
+  const modsResult = await ipcRenderer.invoke(
+    'craft-get-mods-for-class',
+    itemClass,
+    itemLevel,
+    'all'
+  );
+
+  if (modsResult.success) {
+    console.log(`\n📝 Available Mods: ${modsResult.data.length} total`);
+
+    // Separate prefix and suffix
+    const prefixes = modsResult.data.filter(m => m.type === 'prefix');
+    const suffixes = modsResult.data.filter(m => m.type === 'suffix');
+
+    console.log(`   Prefixes: ${prefixes.length} | Suffixes: ${suffixes.length}`);
+
+    // Show top 5 most weighted mods of each type
+    console.log(`\n   🔥 Top Prefixes:`);
+    prefixes.sort((a, b) => b.weight - a.weight).slice(0, 5).forEach(mod => {
+      console.log(`      • ${mod.name} (${mod.tier})`);
+      console.log(`        ${mod.stats}`);
+    });
+
+    console.log(`\n   🔥 Top Suffixes:`);
+    suffixes.sort((a, b) => b.weight - a.weight).slice(0, 5).forEach(mod => {
+      console.log(`      • ${mod.name} (${mod.tier})`);
+      console.log(`        ${mod.stats}`);
+    });
+
+    // Populate mod search/autocomplete
+    window.availableMods = modsResult.data;
+    updateModAutocomplete(modsResult.data);
+  }
+}
+
+// Example: User selects "Body Armour"
+handleItemClassChange('Body Armour', 86);
+
+// Output:
+// 🎯 Loading data for Body Armour...
+//
+// 📦 Top Bases for Body Armour:
+//    1. Vaal Regalia
+//       Defense: Highest | Popularity: 100%
+//    2. Astral Plate
+//       Defense: High | Popularity: 85%
+//    3. Glorious Plate
+//       Defense: High | Popularity: 70%
+//    4. Occultist's Vestment
+//       Defense: High | Popularity: 55%
+//    5. Sadist Garb
+//       Defense: High | Popularity: 40%
+//
+// 📝 Available Mods: 23 total
+//    Prefixes: 13 | Suffixes: 10
+//
+//    🔥 Top Prefixes:
+//       • +# to maximum Life (T1)
+//         +90 to +99 to maximum Life
+//       • #% increased Energy Shield (T1)
+//         131% to 160% increased Energy Shield
+//       • +# to maximum Energy Shield (T1)
+//         +71 to +80 to maximum Energy Shield
+//       • #% increased Armour (T1)
+//         131% to 160% increased Armour
+//       • #% increased Evasion Rating (T1)
+//         131% to 160% increased Evasion Rating
+//
+//    🔥 Top Suffixes:
+//       • +#% to Fire Resistance (T1)
+//         +46% to +48% to Fire Resistance
+//       • +#% to Cold Resistance (T1)
+//         +46% to +48% to Cold Resistance
+//       • +#% to Lightning Resistance (T1)
+//         +46% to +48% to Lightning Resistance
+//       • #% increased Stun and Block Recovery (T1)
+//         24% to 28% increased Stun and Block Recovery
+//       • +#% to Chaos Resistance (T1)
+//         +33% to +35% to Chaos Resistance
+```
+
+**Use Case:**
+This workflow is perfect for auto-populating your crafting UI when users select an item class. It shows the best bases and all available mods automatically, making the crafting helper much more user-friendly!
+
 ## Cache Management
 
 Craft of Exile data is cached for 24 hours.
@@ -515,5 +727,14 @@ Craft of Exile integration answers:
 - ❓ "What are my odds?" → Mod weights
 - ❓ "Is this craft profitable?" → Combine with price comparison
 - ❓ "How do I craft this step-by-step?" → Crafting guides
+- ❓ "What are the best bases for this class?" → Get top bases by class
+- ❓ "What mods can I get on this item?" → Get available mods for class
 
 **Result:** Make informed crafting decisions and maximize profit! 🚀
+
+**New Features:**
+- 🎯 **Auto-populate bases** when item class is selected
+- 📝 **Auto-populate mods** filtered by item class and level
+- 🔥 **Weight-based sorting** to show most common mods first
+- 💾 **24-hour caching** for instant responses
+- 🎨 **Perfect for UI integration** - just call the IPC handlers!
