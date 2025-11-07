@@ -164,6 +164,15 @@ ipcMain.handle('get-leagues', async () => {
   }
 });
 
+// Cache for market insights data (manual refresh only)
+let marketInsightsCache: {
+  popular: any[];
+  profitable: any[];
+  trending: any[];
+  league: string;
+  timestamp: Date;
+} | null = null;
+
 ipcMain.handle('get-popular-items', async (event: any, league: string, limit: number = 20) => {
   try {
     const items = await poeAPI.getPopularItems(league, limit);
@@ -192,4 +201,94 @@ ipcMain.handle('get-trending-items', async (event: any, league: string, limit: n
     console.error('Get trending items error:', error);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle('get-build-craftable-items', async (event: any, league: string, limit: number = 20) => {
+  try {
+    const items = await poeAPI.getBuildCraftableItems(league, limit);
+    return { success: true, data: items };
+  } catch (error: any) {
+    console.error('Get build craftable items error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Load all market insights data with caching
+ipcMain.handle('load-market-insights', async (event: any, league: string) => {
+  try {
+    console.log(`Loading market insights for league: ${league}`);
+
+    // Fetch all data in parallel
+    const [popularResult, profitableResult, trendingResult] = await Promise.all([
+      poeAPI.getPopularItems(league, 20),
+      poeAPI.getBuildCraftableItems(league, 20),
+      poeAPI.getTrendingItems(league, 10)
+    ]);
+
+    // Cache the results
+    marketInsightsCache = {
+      popular: popularResult,
+      profitable: profitableResult,
+      trending: trendingResult,
+      league,
+      timestamp: new Date()
+    };
+
+    return {
+      success: true,
+      data: marketInsightsCache,
+      cached: false
+    };
+  } catch (error: any) {
+    console.error('Load market insights error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-cached-market-insights', async (event: any, league: string) => {
+  if (marketInsightsCache && marketInsightsCache.league === league) {
+    return {
+      success: true,
+      data: marketInsightsCache,
+      cached: true
+    };
+  }
+  return { success: false, error: 'No cached market insights for this league' };
+});
+
+// Scrape builds from poe.ninja (manual refresh only)
+let buildDataCache: any = null;
+let buildDataTimestamp: Date | null = null;
+
+ipcMain.handle('scrape-builds', async (event: any, league: string) => {
+  try {
+    console.log(`Scraping builds for league: ${league}`);
+    const scrapedData = await poeAPI.scrapeBuilds(league);
+
+    // Cache the scraped data
+    buildDataCache = scrapedData;
+    buildDataTimestamp = new Date();
+
+    return {
+      success: true,
+      data: scrapedData,
+      cached: false,
+      timestamp: buildDataTimestamp
+    };
+  } catch (error: any) {
+    console.error('Scrape builds error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-cached-builds', async (event: any) => {
+  if (buildDataCache && buildDataTimestamp) {
+    return {
+      success: true,
+      data: buildDataCache,
+      cached: true,
+      timestamp: buildDataTimestamp
+    };
+  }
+  return { success: false, error: 'No cached build data available' };
 });

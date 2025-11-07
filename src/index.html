@@ -655,12 +655,29 @@
         <section class="crafting-input-section">
             <h2 style="color: #ffd700; margin-bottom: 20px;">📊 Market Insights & Profit Opportunities</h2>
 
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label for="insightsLeague">League:</label>
-                <select id="insightsLeague">
-                    <option value="">Loading leagues...</option>
-                </select>
-                <button type="button" id="refreshInsightsBtn" style="margin-left: 10px;">Refresh Data</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="insightsLeague">League:</label>
+                    <select id="insightsLeague">
+                        <option value="">Loading leagues...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="currentWealth">💰 Current Wealth (Chaos Orbs):</label>
+                    <input type="number" id="currentWealth" placeholder="Enter your budget (e.g., 500)" min="0" value="1000" style="width: 100%;">
+                    <p style="color: #888; font-size: 11px; margin-top: 3px;">Only show crafts you can afford</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <button type="button" id="refreshInsightsBtn" class="btn-success">🔄 Load Market Data</button>
+                <button type="button" id="scrapeBuildsBtn" class="btn-success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔍 Scrape Builds Data</button>
+            </div>
+
+            <div id="buildDataStatus" style="background: rgba(139, 92, 246, 0.15); border: 2px solid #8b5cf6; padding: 12px; margin-bottom: 20px; border-radius: 8px; display: none;">
+                <p style="color: #8b5cf6; margin: 0; font-size: 0.9em;">
+                    <strong>Build Data:</strong> <span id="buildDataInfo">Not loaded</span>
+                </p>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
@@ -1458,7 +1475,8 @@
                     marketTab.classList.add('active');
                 } else if (tabName === 'insights') {
                     insightsTab.classList.add('active');
-                    loadMarketInsights();
+                    // Check for cached data instead of auto-loading
+                    checkCachedMarketInsights();
                 } else if (tabName === 'crafting') {
                     craftingTab.classList.add('active');
                     initializeCrafting();
@@ -1689,7 +1707,12 @@
             }
         };
 
-        addModBtn.addEventListener('click', addModInput);
+        // Setup add mod button with proper check
+        if (addModBtn) {
+            addModBtn.addEventListener('click', addModInput);
+        } else {
+            console.error('Add Mod button not found');
+        }
 
         // Item paste parser
         const itemPasteArea = document.getElementById('itemPaste');
@@ -1713,22 +1736,38 @@
                     if (parsedData.itemClass) {
                         const itemClassSelect = document.getElementById('craftItemClass');
                         // Try to match the item class
+                        let matched = false;
                         for (let option of itemClassSelect.options) {
                             if (option.value.toLowerCase().includes(parsedData.itemClass.toLowerCase()) ||
                                 parsedData.itemClass.toLowerCase().includes(option.value.toLowerCase())) {
                                 itemClassSelect.value = option.value;
+                                matched = true;
                                 break;
                             }
                         }
+
+                        // If no match found, log it for debugging
+                        if (!matched) {
+                            console.log('Could not match item class:', parsedData.itemClass);
+                        }
                     }
 
-                    // Update mod dropdowns based on parsed item
-                    updateAllModDropdowns();
+                    // Trigger change event on item class to update mod dropdowns
+                    const itemClassSelect = document.getElementById('craftItemClass');
+                    if (itemClassSelect) {
+                        itemClassSelect.dispatchEvent(new Event('change'));
+                    }
 
                     // Show current mods if any
                     if (parsedData.currentMods && parsedData.currentMods.length > 0) {
                         console.log('Current mods on item:', parsedData.currentMods);
                         console.log('Available mod slots - Prefixes:', 3 - currentItemMods.count.prefixes, ', Suffixes:', 3 - currentItemMods.count.suffixes);
+
+                        // Show visual feedback about available slots
+                        this.style.borderColor = '#00ff00';
+                        setTimeout(() => {
+                            this.style.borderColor = '#ffd700';
+                        }, 1000);
                     }
 
                     // Visual feedback
@@ -1760,6 +1799,7 @@
 
             let inModSection = false;
             let pastRequirements = false;
+            let foundBaseName = false;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
@@ -1777,32 +1817,124 @@
                     }
                 }
 
-                // Parse base name - usually after rarity line or second non-empty line
-                // For magic/rare items, look for "--------" separator and get the line after
-                if (line === '--------') {
-                    inModSection = true;
-                    // Base type is usually after the separator
-                    for (let j = i + 1; j < lines.length; j++) {
-                        const nextLine = lines[j];
-                        // Skip requirement lines and look for base
-                        if (!nextLine.match(/Requirements?:|Sockets:|Item Level:|Quality:/i)) {
-                            result.baseName = nextLine;
-                            break;
-                        }
+                // For rare/magic items: base name is typically line 3 (after Rarity and item name)
+                // For normal items: base name is line 2 (after Rarity)
+                if (result.rarity && !foundBaseName) {
+                    if (result.rarity.toLowerCase() === 'normal' && i === 1) {
+                        result.baseName = line;
+                        foundBaseName = true;
+                    } else if ((result.rarity.toLowerCase() === 'rare' || result.rarity.toLowerCase() === 'magic') && i === 2) {
+                        result.baseName = line;
+                        foundBaseName = true;
                     }
                 }
 
-                // For white items, base name is the second line after rarity
-                if (result.rarity && result.rarity.toLowerCase() === 'normal' && i === 1) {
-                    result.baseName = line;
+                // Check for separator
+                if (line === '--------') {
+                    if (!inModSection) {
+                        inModSection = true;
+                    }
                 }
 
-                // Try to extract item class from item text
-                // Common patterns: "Body Armour", "Ring", "Amulet", etc.
-                if (line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i)) {
-                    const classMatch = line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i);
+                // Try to extract item class from base name or explicit mentions
+                // First check if line explicitly states item class
+                if (line.match(/^Item Class:/i)) {
+                    const classMatch = line.match(/Item Class:\s*(.+)/i);
                     if (classMatch) {
-                        result.itemClass = classMatch[0];
+                        result.itemClass = classMatch[1].trim();
+                    }
+                }
+
+                // Also detect item class from base name patterns
+                // Check for explicit class keywords
+                if (!result.itemClass) {
+                    // Body armours
+                    if (line.match(/Regalia|Vestment|Garb|Robe|Brigandine|Raiment|Coat|Chainmail|Plate|Lamellar|Armour|Cuirass|Hauberk/i)) {
+                        result.itemClass = 'Body Armour';
+                    }
+                    // Helmets
+                    else if (line.match(/Helmet|Helm|Crown|Hood|Circlet|Tricorne|Burgonet|Sallet|Bascinet/i)) {
+                        result.itemClass = 'Helmet';
+                    }
+                    // Gloves
+                    else if (line.match(/Gloves|Gauntlets|Mitts|Mittens/i)) {
+                        result.itemClass = 'Gloves';
+                    }
+                    // Boots
+                    else if (line.match(/Boots|Greaves|Slippers/i)) {
+                        result.itemClass = 'Boots';
+                    }
+                    // Shields
+                    else if (line.match(/Shield|Buckler/i)) {
+                        result.itemClass = 'Shield';
+                    }
+                    // Rings
+                    else if (line.match(/Ring$/i) || line.match(/^Ring\s/i)) {
+                        result.itemClass = 'Ring';
+                    }
+                    // Amulets
+                    else if (line.match(/Amulet|Talisman|Pendant/i)) {
+                        result.itemClass = 'Amulet';
+                    }
+                    // Belts
+                    else if (line.match(/Belt|Sash|Stygian/i)) {
+                        result.itemClass = 'Belt';
+                    }
+                    // Weapons - Swords
+                    else if (line.match(/Sword|Blade|Rapier|Foil|Saber/i)) {
+                        if (line.match(/Two Hand|2H/i) || line.match(/Zweihander|Exquisite Blade/i)) {
+                            result.itemClass = 'Two Hand Sword';
+                        } else {
+                            result.itemClass = 'One Hand Sword';
+                        }
+                    }
+                    // Axes
+                    else if (line.match(/Axe|Cleaver|Hatchet|Labrys/i)) {
+                        if (line.match(/Two Hand|2H|Vaal Axe|Fleshripper/i)) {
+                            result.itemClass = 'Two Hand Axe';
+                        } else {
+                            result.itemClass = 'One Hand Axe';
+                        }
+                    }
+                    // Maces
+                    else if (line.match(/Mace|Gavel|Hammer|Pernarch/i)) {
+                        if (line.match(/Two Hand|2H|Karui Maul/i)) {
+                            result.itemClass = 'Two Hand Mace';
+                        } else {
+                            result.itemClass = 'One Hand Mace';
+                        }
+                    }
+                    // Bows
+                    else if (line.match(/Bow$/i) || line.match(/^.*Bow\s/i)) {
+                        result.itemClass = 'Bow';
+                    }
+                    // Wands
+                    else if (line.match(/Wand/i)) {
+                        result.itemClass = 'Wand';
+                    }
+                    // Daggers
+                    else if (line.match(/Dagger|Kris|Poignard|Skean/i)) {
+                        result.itemClass = 'Dagger';
+                    }
+                    // Claws
+                    else if (line.match(/Claw|Awl/i)) {
+                        result.itemClass = 'Claw';
+                    }
+                    // Sceptres
+                    else if (line.match(/Sceptre|Sekhem|Opal Sceptre/i)) {
+                        result.itemClass = 'Sceptre';
+                    }
+                    // Staves
+                    else if (line.match(/Staff|Quarterstaff|Lathi/i)) {
+                        result.itemClass = 'Staff';
+                    }
+                    // Quivers
+                    else if (line.match(/Quiver/i)) {
+                        result.itemClass = 'Quiver';
+                    }
+                    // Jewels
+                    else if (line.match(/Jewel/i)) {
+                        result.itemClass = 'Jewel';
                     }
                 }
 
@@ -1811,22 +1943,14 @@
                     pastRequirements = true;
                 }
 
-                // Extract mods (between separators, after requirements)
+                // Extract mods (after requirements, between separators)
                 if (inModSection && pastRequirements && line !== '--------') {
-                    // Mods typically have numbers or percentages, and are not requirements/sockets
+                    // Mods typically have numbers or percentages
+                    // Exclude property lines (Armour, Evasion, Energy Shield, etc.)
                     if (line.match(/[+\-]?\d+/) &&
-                        !line.match(/Requirements?:|Sockets:|Item Level:|Quality:|Armour:|Evasion:|Energy Shield:|Level:|Str |Dex |Int /i)) {
+                        !line.match(/^Requirements?:|^Sockets:|^Item Level:|^Quality:|^Armour:|^Evasion:|^Energy Shield:|^Level:|^Str |^Dex |^Int |^Physical Damage:|^Elemental Damage:|^Chaos Damage:|^Attacks per Second:|^Critical Strike Chance:|^Weapon Range:/i)) {
                         result.currentMods.push(line);
                     }
-                }
-            }
-
-            // If no base name found yet, try to get it from the name lines
-            if (!result.baseName && lines.length >= 2) {
-                // For magic/rare items: line after the item name is usually the base
-                // Skip the first line (rarity) and second line (item name if rare/magic)
-                if (lines.length >= 3 && result.rarity && result.rarity.toLowerCase() !== 'normal') {
-                    result.baseName = lines[2];
                 }
             }
 
@@ -1836,7 +1960,7 @@
             currentItemMods.suffixes = [];
             result.currentMods.forEach(mod => {
                 // Common prefix indicators: life, mana, energy shield, flat damage, attributes
-                if (mod.match(/maximum Life|maximum Mana|maximum Energy Shield|to Strength|to Dexterity|to Intelligence|to all Attributes|Adds \d+ to \d+|increased Armour|increased Evasion|Level of/i)) {
+                if (mod.match(/maximum Life|maximum Mana|maximum Energy Shield|to Strength|to Dexterity|to Intelligence|to all Attributes|Adds \d+ to \d+|increased Armour|increased Evasion|Level of|increased Physical Damage|increased Spell Damage/i)) {
                     currentItemMods.prefixes.push(mod);
                 } else {
                     // Common suffix indicators: resistances, accuracy, attack speed, cast speed
@@ -2551,35 +2675,55 @@
             document.getElementById('trendingSection').style.display = 'none';
 
             try {
-                // Fetch all data in parallel
-                const [popularResult, profitableResult, trendingResult] = await Promise.all([
-                    ipcRenderer.invoke('get-popular-items', league, 20),
-                    ipcRenderer.invoke('get-profitable-items', league, 20),
-                    ipcRenderer.invoke('get-trending-items', league, 10)
-                ]);
+                // Use new cached endpoint
+                const result = await ipcRenderer.invoke('load-market-insights', league);
 
-                if (popularResult.success) {
-                    insightsData.popular = popularResult.data;
+                if (result.success) {
+                    const data = result.data;
+                    insightsData.popular = data.popular;
+                    insightsData.profitable = data.profitable;
+                    insightsData.trending = data.trending;
+
                     document.getElementById('popularCount').textContent = insightsData.popular.length;
-                }
-
-                if (profitableResult.success) {
-                    insightsData.profitable = profitableResult.data;
                     document.getElementById('profitableCount').textContent = insightsData.profitable.length;
-                }
-
-                if (trendingResult.success) {
-                    insightsData.trending = trendingResult.data;
                     document.getElementById('trendingCount').textContent = insightsData.trending.length;
+
+                    insightsLoading.style.display = 'none';
+
+                    // Show first section by default
+                    showSection('popular');
+                } else {
+                    insightsLoading.style.display = 'none';
+                    showInsightsError('Failed to load market data: ' + result.error);
                 }
-
-                insightsLoading.style.display = 'none';
-
-                // Show first section by default
-                showSection('popular');
             } catch (error) {
                 insightsLoading.style.display = 'none';
                 showInsightsError('Failed to load market data: ' + error.message);
+            }
+        }
+
+        // Check for cached market insights on tab switch
+        async function checkCachedMarketInsights() {
+            const league = document.getElementById('insightsLeague').value;
+            if (!league) return;
+
+            try {
+                const result = await ipcRenderer.invoke('get-cached-market-insights', league);
+                if (result.success) {
+                    const data = result.data;
+                    insightsData.popular = data.popular;
+                    insightsData.profitable = data.profitable;
+                    insightsData.trending = data.trending;
+
+                    document.getElementById('popularCount').textContent = insightsData.popular.length;
+                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
+                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
+
+                    // Show first section if we have cached data
+                    showSection('popular');
+                }
+            } catch (error) {
+                console.log('No cached market insights available');
             }
         }
 
@@ -2655,50 +2799,130 @@
                 return;
             }
 
-            let html = '';
-            insightsData.profitable.forEach((data, index) => {
-                const item = data.item;
-                const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
-                const formattedSellPrice = formatPriceForDisplay(data.sellPrice);
-                const formattedProfit = formatPriceForDisplay(data.profitMargin);
-                const readableBaseType = formatBaseType(item.baseType || item.name);
+            // Get current wealth filter
+            const currentWealthInput = document.getElementById('currentWealth');
+            const currentWealth = currentWealthInput ? parseFloat(currentWealthInput.value) || Infinity : Infinity;
+
+            // Filter items by wealth
+            let filteredItems = insightsData.profitable;
+            let showingFiltered = false;
+
+            if (currentWealth !== Infinity) {
+                filteredItems = insightsData.profitable.filter(buildItem => {
+                    const estimatedCraftCost = buildItem.craftingStrategy.estimatedCost;
+                    return estimatedCraftCost <= currentWealth;
+                });
+                showingFiltered = true;
+            }
+
+            // Show filter info
+            let filterInfoHtml = '';
+            if (showingFiltered) {
+                const affordableCount = filteredItems.length;
+                const totalCount = insightsData.profitable.length;
+                filterInfoHtml = `
+                    <div style="background: rgba(74, 222, 128, 0.15); border: 2px solid #4ade80; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                        <p style="color: #4ade80; margin: 0; font-weight: bold;">
+                            💰 Budget Filter Active: ${formatPriceForDisplay(currentWealth)} available
+                        </p>
+                        <p style="color: #cccccc; margin: 5px 0 0 0;">
+                            Showing ${affordableCount} of ${totalCount} craftable items within your budget
+                        </p>
+                    </div>
+                `;
+            }
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = filterInfoHtml + '<p style="color: #cccccc; padding: 20px;">No craftable items found within your budget. Try increasing your wealth or refreshing data.</p>';
+                return;
+            }
+
+            let html = filterInfoHtml;
+            filteredItems.forEach((buildItem, index) => {
+                const sellPrice = buildItem.chaosValue;
+                const estimatedCraftCost = buildItem.craftingStrategy.estimatedCost;
+                const profitMargin = sellPrice - estimatedCraftCost;
+                const profitPercent = ((profitMargin / sellPrice) * 100).toFixed(1);
+                const roi = ((profitMargin / estimatedCraftCost) * 100).toFixed(0);
+
+                const formattedSellPrice = formatPriceForDisplay(sellPrice);
+                const formattedProfit = formatPriceForDisplay(profitMargin);
+                const formattedCraftCost = formatPriceForDisplay(estimatedCraftCost);
+
+                // Determine affordability status
+                const isAffordable = estimatedCraftCost <= currentWealth;
+                const affordabilityBadge = isAffordable
+                    ? '<span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">✓ Affordable</span>'
+                    : '<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">⚠ Over Budget</span>';
+
+                // Difficulty color
+                const difficultyColors = {
+                    'Easy': '#4ade80',
+                    'Medium': '#facc15',
+                    'Hard': '#fb923c',
+                    'Very Hard': '#ef4444'
+                };
+                const difficultyColor = difficultyColors[buildItem.craftingStrategy.difficulty] || '#888';
+
+                // Build mods display
+                const modsHtml = buildItem.mods.explicit.slice(0, 5).map(mod =>
+                    `<div style="color: #8b5cf6; font-size: 0.85em; margin: 3px 0;">• ${mod}</div>`
+                ).join('');
+
+                // Build crafting steps
+                const stepsHtml = buildItem.craftingStrategy.steps.map(step =>
+                    `<div style="color: #cccccc; font-size: 0.9em; margin: 8px 0; padding-left: 10px;">${step}</div>`
+                ).join('');
 
                 html += `
-                    <div class="method-card">
+                    <div class="method-card" style="${!isAffordable ? 'opacity: 0.6;' : ''}">
                         <div class="method-header">
                             <div>
-                                <span class="method-name">#${index + 1} ${item.name}</span>
-                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
-                                <span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
-                                    ✓ Craftable
+                                <span class="method-name">#${index + 1} ${buildItem.name}</span>
+                                <span style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
+                                    ${buildItem.itemClass}
                                 </span>
+                                ${affordabilityBadge}
                             </div>
                             <div class="method-cost">${formattedProfit} Profit</div>
                         </div>
+
                         <div class="method-stats">
                             <div class="method-stat">
+                                <div class="method-stat-value" style="color: #ffd700;">${formattedCraftCost}</div>
+                                <div class="method-stat-label">Est. Craft Cost</div>
+                            </div>
+                            <div class="method-stat">
                                 <div class="method-stat-value">${formattedSellPrice}</div>
-                                <div class="method-stat-label">Market Price</div>
+                                <div class="method-stat-label">Sell Price</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.craftingMethod}</div>
-                                <div class="method-stat-label">Suggested Method</div>
+                                <div class="method-stat-value" style="color: ${difficultyColor};">${buildItem.craftingStrategy.difficulty}</div>
+                                <div class="method-stat-label">Difficulty</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.demand}</div>
-                                <div class="method-stat-label">Demand</div>
-                            </div>
-                            <div class="method-stat">
-                                <div class="method-stat-value">${item.listingCount || 0}</div>
-                                <div class="method-stat-label">Listings</div>
+                                <div class="method-stat-value">${buildItem.craftingStrategy.successRate}</div>
+                                <div class="method-stat-label">Success Rate</div>
                             </div>
                         </div>
+
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 5px;">
+                            <p style="color: #8b5cf6; margin: 0 0 8px 0; font-weight: bold;">📜 Example Mods (Target)</p>
+                            ${modsHtml}
+                            ${buildItem.mods.explicit.length > 5 ? '<div style="color: #888; font-size: 0.85em; margin-top: 3px;">...and more</div>' : ''}
+                        </div>
+
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(255, 215, 0, 0.1); border-left: 3px solid #ffd700; border-radius: 5px;">
+                            <p style="color: #ffd700; margin: 0 0 8px 0; font-weight: bold;">🔨 Crafting Method: ${buildItem.craftingStrategy.method}</p>
+                            ${stepsHtml}
+                        </div>
+
                         <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
                             <p style="color: #4ade80; margin: 0;">
-                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%)
+                                💰 <strong>Profit:</strong> ${formattedProfit} (${profitPercent}%) • <strong>ROI:</strong> ${roi}%
                             </p>
                             <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
-                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType}
+                                ${buildItem.baseType} • ${buildItem.listingCount} listings on market
                             </p>
                         </div>
                     </div>
@@ -2790,14 +3014,108 @@
             return formatted;
         }
 
-        refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+        // Setup refresh button with null check
+        if (refreshInsightsBtn) {
+            refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+        } else {
+            console.error('Refresh insights button not found');
+        }
 
-        document.getElementById('insightsLeague').addEventListener('change', () => {
-            // Reset counts
-            document.getElementById('popularCount').textContent = '0';
-            document.getElementById('profitableCount').textContent = '0';
-            document.getElementById('trendingCount').textContent = '0';
-        });
+        // Setup scrape builds button
+        const scrapeBuildsBtn = document.getElementById('scrapeBuildsBtn');
+        const buildDataStatus = document.getElementById('buildDataStatus');
+        const buildDataInfo = document.getElementById('buildDataInfo');
+
+        if (scrapeBuildsBtn) {
+            scrapeBuildsBtn.addEventListener('click', async () => {
+                const league = document.getElementById('insightsLeague').value;
+                if (!league) {
+                    showInsightsError('Please select a league first');
+                    return;
+                }
+
+                // Show loading state
+                scrapeBuildsBtn.disabled = true;
+                scrapeBuildsBtn.textContent = '⏳ Scraping builds...';
+                buildDataStatus.style.display = 'block';
+                buildDataInfo.textContent = 'Scraping data from poe.ninja/builds...';
+
+                try {
+                    const result = await ipcRenderer.invoke('scrape-builds', league);
+
+                    if (result.success) {
+                        const data = result.data;
+                        const timestamp = new Date(result.timestamp);
+                        const timeStr = timestamp.toLocaleTimeString();
+
+                        buildDataInfo.textContent = `Loaded ${data.totalBuilds} builds at ${timeStr}`;
+                        buildDataInfo.style.color = '#4ade80';
+
+                        console.log('Build data scraped:', data);
+
+                        // Optionally reload market data to incorporate build info
+                        await loadMarketInsights();
+                    } else {
+                        buildDataInfo.textContent = `Failed: ${result.error}`;
+                        buildDataInfo.style.color = '#ef4444';
+                        showInsightsError('Failed to scrape builds: ' + result.error);
+                    }
+                } catch (error) {
+                    buildDataInfo.textContent = `Error: ${error.message}`;
+                    buildDataInfo.style.color = '#ef4444';
+                    showInsightsError('Error scraping builds: ' + error.message);
+                } finally {
+                    scrapeBuildsBtn.disabled = false;
+                    scrapeBuildsBtn.textContent = '🔍 Scrape Builds Data';
+                }
+            });
+        }
+
+        // Check for cached build data on load
+        async function checkCachedBuilds() {
+            try {
+                const result = await ipcRenderer.invoke('get-cached-builds');
+                if (result.success) {
+                    const timestamp = new Date(result.timestamp);
+                    const timeStr = timestamp.toLocaleTimeString();
+                    buildDataStatus.style.display = 'block';
+                    buildDataInfo.textContent = `Using cached data from ${timeStr} (${result.data.totalBuilds} builds)`;
+                    buildDataInfo.style.color = '#8b5cf6';
+                }
+            } catch (error) {
+                console.log('No cached build data available');
+            }
+        }
+
+        checkCachedBuilds();
+
+        // Setup league selector - NO auto-load, only check cache
+        const insightsLeagueSelect = document.getElementById('insightsLeague');
+        if (insightsLeagueSelect) {
+            insightsLeagueSelect.addEventListener('change', () => {
+                // Reset counts
+                document.getElementById('popularCount').textContent = '0';
+                document.getElementById('profitableCount').textContent = '0';
+                document.getElementById('trendingCount').textContent = '0';
+
+                // Check for cached data instead of auto-loading
+                checkCachedMarketInsights();
+            });
+        }
+
+        // Check for cached data on initial load
+        checkCachedMarketInsights();
+
+        // Setup wealth input to trigger filtering
+        const currentWealthInput = document.getElementById('currentWealth');
+        if (currentWealthInput) {
+            currentWealthInput.addEventListener('input', () => {
+                // Re-display items with new filter if data already loaded
+                if (insightsData.profitable.length > 0) {
+                    displayProfitableItems();
+                }
+            });
+        }
 
         function showInsightsError(message) {
             insightsError.textContent = message;
