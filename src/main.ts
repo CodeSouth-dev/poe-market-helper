@@ -9,6 +9,7 @@ import { browserManager } from './browserManager';
 import { poeTradeOfficial } from './poeTradeOfficial';
 import { priceComparisonService } from './priceComparison';
 import { poeNinjaScraper } from './poeNinjaScraper';
+import { poedbScraper } from './poedbScraper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -455,6 +456,76 @@ ipcMain.handle('get-build-stats', async (event: any, league: string) => {
     return { success: true, data: stats };
   } catch (error: any) {
     console.error('Get build stats error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get popular items by slot with percentages
+ipcMain.handle('get-popular-items-by-slot', async (event: any, league: string, slot: string) => {
+  try {
+    const items = await poeNinjaScraper.getPopularItemsBySlot(league, slot);
+    return { success: true, data: items };
+  } catch (error: any) {
+    console.error('Get popular items by slot error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get weapon configuration analysis
+ipcMain.handle('get-weapon-analysis', async (event: any, league: string) => {
+  try {
+    const analysis = await poeNinjaScraper.getWeaponAnalysis(league);
+    return { success: true, data: analysis };
+  } catch (error: any) {
+    console.error('Get weapon analysis error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ============================================================================
+// PoeDB Integration (Modifiers and Base Items)
+// ============================================================================
+
+// Scrape modifiers from poedb.tw
+ipcMain.handle('scrape-poedb-modifiers', async (event: any, itemClass: string) => {
+  try {
+    const modifiers = await poedbScraper.scrapeModifiers(itemClass);
+    return { success: true, data: modifiers };
+  } catch (error: any) {
+    console.error('Scrape poedb modifiers error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Scrape base items from poedb.tw
+ipcMain.handle('scrape-poedb-base-items', async (event: any, itemClass: string) => {
+  try {
+    const baseItems = await poedbScraper.scrapeBaseItems(itemClass);
+    return { success: true, data: baseItems };
+  } catch (error: any) {
+    console.error('Scrape poedb base items error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get best ilvl for desired mods
+ipcMain.handle('get-best-ilvl-for-mods', async (event: any, itemClass: string, desiredMods: string[]) => {
+  try {
+    const recommendation = await poedbScraper.getBestIlvlForMods(itemClass, desiredMods);
+    return { success: true, data: recommendation };
+  } catch (error: any) {
+    console.error('Get best ilvl error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Clear poedb cache
+ipcMain.handle('clear-poedb-cache', async () => {
+  try {
+    await poedbScraper.clearCache();
+    return { success: true, message: 'PoeDB cache cleared' };
+  } catch (error: any) {
+    console.error('Clear poedb cache error:', error);
     return { success: false, error: error.message };
   }
 });

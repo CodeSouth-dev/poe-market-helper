@@ -291,6 +291,217 @@ export class PoeNinjaScraper {
   }
 
   /**
+   * Get most popular items by slot with usage percentages
+   */
+  async getPopularItemsBySlot(league: string, slot: string): Promise<Array<{
+    name: string;
+    baseType: string;
+    usageCount: number;
+    usagePercent: number;
+    builds: string[];
+  }>> {
+    console.log(`\n🔍 Analyzing ${slot} slot popularity for ${league}...`);
+
+    const buildData = await this.scrapeBuilds(league);
+    const slotUsage = new Map<string, { count: number; builds: Set<string> }>();
+
+    // Analyze each build's items for this slot
+    buildData.builds.forEach(build => {
+      build.items.forEach(item => {
+        const itemKey = item.name || item.baseType;
+
+        // Check if this item belongs to the requested slot
+        if (this.itemMatchesSlot(itemKey, slot)) {
+          const existing = slotUsage.get(itemKey) || { count: 0, builds: new Set() };
+          existing.count++;
+          existing.builds.add(build.name);
+          slotUsage.set(itemKey, existing);
+        }
+      });
+    });
+
+    // Convert to array and calculate percentages
+    const items = Array.from(slotUsage.entries())
+      .map(([name, data]) => ({
+        name,
+        baseType: this.extractBaseType(name),
+        usageCount: data.count,
+        usagePercent: (data.count / buildData.totalBuilds) * 100,
+        builds: Array.from(data.builds).slice(0, 5) // Top 5 builds using this
+      }))
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 20);
+
+    console.log(`\n📊 Top ${slot} by usage:`);
+    items.slice(0, 10).forEach((item, i) => {
+      console.log(`   ${i + 1}. ${item.name} - ${item.usagePercent.toFixed(1)}% (${item.usageCount} builds)`);
+    });
+
+    return items;
+  }
+
+  /**
+   * Get weapon configuration analysis
+   */
+  async getWeaponAnalysis(league: string): Promise<{
+    mainHand: Array<{ name: string; usagePercent: number }>;
+    offHand: Array<{ name: string; usagePercent: number }>;
+    twoHanded: Array<{ name: string; usagePercent: number }>;
+    weaponTypes: Array<{ type: string; usagePercent: number }>;
+  }> {
+    console.log(`\n⚔️  Analyzing weapon configurations for ${league}...`);
+
+    const buildData = await this.scrapeBuilds(league);
+
+    const mainHandUsage = new Map<string, number>();
+    const offHandUsage = new Map<string, number>();
+    const twoHandedUsage = new Map<string, number>();
+    const weaponTypeUsage = new Map<string, number>();
+
+    buildData.builds.forEach(build => {
+      build.items.forEach(item => {
+        const itemName = (item.name || item.baseType).toLowerCase();
+
+        // Classify weapon
+        if (this.isWeapon(itemName)) {
+          const weaponType = this.getWeaponType(itemName);
+
+          // Count weapon type
+          weaponTypeUsage.set(weaponType, (weaponTypeUsage.get(weaponType) || 0) + 1);
+
+          // Count by slot
+          if (this.isTwoHanded(itemName)) {
+            twoHandedUsage.set(item.name, (twoHandedUsage.get(item.name) || 0) + 1);
+          } else {
+            // Assume main hand for one-handed weapons
+            mainHandUsage.set(item.name, (mainHandUsage.get(item.name) || 0) + 1);
+          }
+
+          // Track shields and off-hand items
+          if (itemName.includes('shield')) {
+            offHandUsage.set(item.name, (offHandUsage.get(item.name) || 0) + 1);
+          }
+        }
+      });
+    });
+
+    const toPercentArray = (map: Map<string, number>) =>
+      Array.from(map.entries())
+        .map(([name, count]) => ({
+          name,
+          usagePercent: (count / buildData.totalBuilds) * 100
+        }))
+        .sort((a, b) => b.usagePercent - a.usagePercent)
+        .slice(0, 10);
+
+    const result = {
+      mainHand: toPercentArray(mainHandUsage),
+      offHand: toPercentArray(offHandUsage),
+      twoHanded: toPercentArray(twoHandedUsage),
+      weaponTypes: Array.from(weaponTypeUsage.entries())
+        .map(([type, count]) => ({
+          type,
+          usagePercent: (count / buildData.totalBuilds) * 100
+        }))
+        .sort((a, b) => b.usagePercent - a.usagePercent)
+    };
+
+    console.log('\n⚔️  Weapon Type Distribution:');
+    result.weaponTypes.forEach(wt => {
+      console.log(`   ${wt.type}: ${wt.usagePercent.toFixed(1)}%`);
+    });
+
+    return result;
+  }
+
+  /**
+   * Check if item name matches a slot
+   */
+  private itemMatchesSlot(itemName: string, slot: string): boolean {
+    const name = itemName.toLowerCase();
+    const slotLower = slot.toLowerCase();
+
+    if (slotLower === 'boots') {
+      return name.includes('boot') || name.includes('slink');
+    }
+    if (slotLower === 'gloves') {
+      return name.includes('glove') || name.includes('gauntlet') || name.includes('mitts');
+    }
+    if (slotLower === 'helmet' || slotLower === 'helm') {
+      return name.includes('helmet') || name.includes('helm') || name.includes('cap') || name.includes('hood');
+    }
+    if (slotLower === 'body armour' || slotLower === 'chest') {
+      return name.includes('regalia') || name.includes('vest') || name.includes('robe') ||
+             name.includes('plate') || name.includes('brigandine') || name.includes('coat') ||
+             name.includes('garb') || name.includes('armour');
+    }
+    if (slotLower === 'weapon') {
+      return this.isWeapon(name);
+    }
+    if (slotLower === 'ring') {
+      return name.includes('ring');
+    }
+    if (slotLower === 'amulet') {
+      return name.includes('amulet');
+    }
+    if (slotLower === 'belt') {
+      return name.includes('belt') || name.includes('sash') || name.includes('vise');
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if item is a weapon
+   */
+  private isWeapon(itemName: string): boolean {
+    const weaponKeywords = [
+      'sword', 'axe', 'mace', 'dagger', 'claw', 'bow', 'staff', 'wand',
+      'sceptre', 'scepter', 'foil', 'blade', 'reaver', 'cleaver'
+    ];
+
+    return weaponKeywords.some(keyword => itemName.includes(keyword));
+  }
+
+  /**
+   * Check if weapon is two-handed
+   */
+  private isTwoHanded(itemName: string): boolean {
+    const twoHandedKeywords = [
+      'staff', 'bow', 'two hand', 'twohanded', '2h', 'maul', 'bastard', 'greatsword'
+    ];
+
+    return twoHandedKeywords.some(keyword => itemName.includes(keyword));
+  }
+
+  /**
+   * Get weapon type classification
+   */
+  private getWeaponType(itemName: string): string {
+    if (itemName.includes('bow')) return 'Bow';
+    if (itemName.includes('wand')) return 'Wand';
+    if (itemName.includes('staff')) return 'Staff';
+    if (itemName.includes('claw')) return 'Claw';
+    if (itemName.includes('dagger')) return 'Dagger';
+    if (itemName.includes('sword') || itemName.includes('foil') || itemName.includes('blade')) return 'Sword';
+    if (itemName.includes('axe') || itemName.includes('cleaver')) return 'Axe';
+    if (itemName.includes('mace') || itemName.includes('sceptre') || itemName.includes('scepter')) return 'Mace/Sceptre';
+    return 'Other';
+  }
+
+  /**
+   * Extract base type from item name
+   */
+  private extractBaseType(itemName: string): string {
+    // Remove prefixes like "Rare ", "Unique ", item level indicators, etc.
+    let base = itemName.replace(/^(Rare|Unique|Magic|Normal)\s+/i, '');
+    base = base.replace(/\s+ilvl\s*\d+/i, '');
+    base = base.replace(/\s+\(\d+\)/, '');
+
+    return base.trim();
+  }
+
+  /**
    * Normalize league name for URL
    */
   private normalizeLeagueName(league: string): string {
