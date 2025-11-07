@@ -16,6 +16,7 @@ import { liveSearchManager } from './liveSearch';
 import { fossilOptimizer } from './fossilOptimizer';
 import { automatedBaseAnalyzer } from './automatedBaseAnalyzer';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
+import { pohxCraftingScraper } from './pohxCraftingScraper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -927,6 +928,74 @@ ipcMain.handle('currency-get-rising', async (event: any, minChange: number, leag
     return { success: true, data: results };
   } catch (error: any) {
     console.error('Get rising items error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Pohx Crafting Guides ====================
+
+// Scrape all crafting guides from pohx.net
+ipcMain.handle('pohx-scrape-all-guides', async (event: any) => {
+  try {
+    const result = await pohxCraftingScraper.scrapeAllGuides();
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Scrape Pohx guides error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get all sections
+ipcMain.handle('pohx-get-all-sections', async (event: any) => {
+  try {
+    const sections = await pohxCraftingScraper.getAllSections();
+    return { success: true, data: sections };
+  } catch (error: any) {
+    console.error('Get Pohx sections error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get guides for a specific section
+ipcMain.handle('pohx-get-section', async (event: any, sectionName: string) => {
+  try {
+    const guides = await pohxCraftingScraper.getSection(sectionName);
+    return { success: true, data: guides };
+  } catch (error: any) {
+    console.error('Get Pohx section error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get guides by item type
+ipcMain.handle('pohx-get-by-item-type', async (event: any, itemType: string) => {
+  try {
+    const guides = await pohxCraftingScraper.getGuidesByItemType(itemType);
+    return { success: true, data: guides };
+  } catch (error: any) {
+    console.error('Get Pohx guides by item type error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get guides by difficulty
+ipcMain.handle('pohx-get-by-difficulty', async (event: any, difficulty: string) => {
+  try {
+    const guides = await pohxCraftingScraper.getGuidesByDifficulty(difficulty);
+    return { success: true, data: guides };
+  } catch (error: any) {
+    console.error('Get Pohx guides by difficulty error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Search Pohx guides
+ipcMain.handle('pohx-search', async (event: any, keyword: string) => {
+  try {
+    const guides = await pohxCraftingScraper.searchGuides(keyword);
+    return { success: true, data: guides };
+  } catch (error: any) {
+    console.error('Search Pohx guides error:', error);
     return { success: false, error: error.message };
   }
 });
