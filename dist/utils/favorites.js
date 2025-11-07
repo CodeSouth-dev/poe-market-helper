@@ -186,4 +186,3 @@ class FavoritesManager {
     }
 }
 exports.FavoritesManager = FavoritesManager;
-//# sourceMappingURL=favorites.js.map

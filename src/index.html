@@ -11,41 +11,117 @@
             padding: 0;
         }
 
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             color: #ffffff;
-            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
         }
 
         h1 {
             color: #ffd700;
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.8em;
+            margin-bottom: 5px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
         .subtitle {
             color: #cccccc;
-            font-size: 1.1em;
+            font-size: 0.9em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 5px 5px 0 0;
+            color: #cccccc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.15);
+            color: #ffd700;
+        }
+
+        .tab.active {
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            border-bottom: 3px solid #ffd700;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 10px;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom scrollbar */
+        .tab-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tab-content::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        .tab-content::-webkit-scrollbar-thumb {
+            background: rgba(255,215,0,0.5);
+            border-radius: 10px;
+        }
+
+        .tab-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,215,0,0.7);
         }
 
         .search-section {
             background: rgba(255,255,255,0.1);
-            padding: 25px;
+            padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
         }
@@ -69,14 +145,28 @@
             font-size: 0.9em;
         }
 
-        input[type="text"], select {
-            padding: 12px;
+        input[type="text"], input[type="number"], select {
+            padding: 8px;
             border: 2px solid #444;
             border-radius: 5px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(30, 30, 40, 0.95);
             color: #ffffff;
             font-size: 16px;
             min-width: 200px;
+        }
+
+        /* Dark mode dropdown options */
+        select option {
+            background: #1a1a2e;
+            color: #ffffff;
+            padding: 10px;
+        }
+
+        select option:hover,
+        select option:focus,
+        select option:checked {
+            background: #2a2a3e;
+            color: #ffd700;
         }
 
         input[type="text"]:focus, select:focus {
@@ -86,7 +176,7 @@
         }
 
         button {
-            padding: 12px 25px;
+            padding: 8px 20px;
             background: linear-gradient(45deg, #ffd700, #ffed4e);
             color: #1a1a2e;
             border: none;
@@ -94,7 +184,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         button:hover {
@@ -127,16 +217,17 @@
         .results-section {
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
         }
 
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -263,45 +354,6 @@
             gap: 10px;
         }
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-        }
-
-        .tab-button {
-            padding: 12px 30px;
-            background: rgba(255,255,255,0.05);
-            color: #cccccc;
-            border: none;
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab-button:hover {
-            background: rgba(255,255,255,0.1);
-            color: #ffffff;
-        }
-
-        .tab-button.active {
-            background: rgba(255,215,0,0.2);
-            color: #ffd700;
-            border-bottom-color: #ffd700;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
         .btn-small {
             padding: 5px 10px;
             font-size: 0.8em;
@@ -315,6 +367,150 @@
         .btn-info {
             background: linear-gradient(45deg, #4444ff, #0000cc);
             color: white;
+        }
+
+        /* Crafting UI Styles */
+        .crafting-input-section {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+
+        .mod-input-group {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .mod-inputs {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #218838);
+        }
+
+        .crafting-results {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .method-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .method-card.recommended {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+
+        .method-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .method-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .method-cost {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        .method-description {
+            color: #cccccc;
+            margin-bottom: 15px;
+        }
+
+        .method-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .method-stat {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .method-stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .method-stat-label {
+            font-size: 0.85em;
+            color: #999;
+        }
+
+        .crafting-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .crafting-steps li {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 5px;
+            border-radius: 5px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .recommended-badge {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .base-recommendation {
+            background: rgba(255,215,0,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .base-rec-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
         }
 
         @media (max-width: 768px) {
@@ -349,6 +545,10 @@
             .results-table td {
                 padding: 8px;
             }
+
+            .mod-inputs {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -356,64 +556,35 @@
     <div class="container">
         <header>
             <h1>Path of Exile Market Helper</h1>
-            <p class="subtitle">Live market data from poe.ninja</p>
+            <p class="subtitle">Live market data & crafting helper</p>
         </header>
 
-        <!-- Tab Navigation -->
         <div class="tabs">
-            <button class="tab-button active" data-tab="item-crafting">Item Crafting</button>
-            <button class="tab-button" data-tab="map-crafting">Map Crafting</button>
+            <button class="tab active" data-tab="market">Market Search</button>
+            <button class="tab" data-tab="insights">Market Insights</button>
+            <button class="tab" data-tab="crafting">Crafting Helper</button>
+            <button class="tab" data-tab="guide">Learn to Craft</button>
         </div>
 
-        <!-- Item Crafting Tab -->
-        <div id="item-crafting" class="tab-content active">
-            <section class="search-section">
-                <form class="search-form" id="searchForm">
-                    <div class="form-group">
-                        <label for="itemName">Item Name:</label>
-                        <input type="text" id="itemName" placeholder="e.g., Tabula Rasa, Divine Orb, Fossil, Essence" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="league">League:</label>
-                        <select id="league">
-                            <option value="Crucible">Crucible</option>
-                            <option value="Hardcore Crucible">Hardcore Crucible</option>
-                            <option value="Standard">Standard</option>
-                            <option value="Hardcore">Hardcore</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" id="searchBtn">Search Items</button>
-                    <button type="button" id="favoriteBtn" style="display: none;">Add to Favorites</button>
-                </form>
-            </section>
-        </div>
-
-        <!-- Map Crafting Tab -->
-        <div id="map-crafting" class="tab-content">
-            <section class="search-section">
-                <form class="search-form" id="mapSearchForm">
-                    <div class="form-group">
-                        <label for="mapItemName">Map Item Name:</label>
-                        <input type="text" id="mapItemName" placeholder="e.g., Scarab, Chisel, Sextant, Unique Map" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="mapLeague">League:</label>
-                        <select id="mapLeague">
-                            <option value="Crucible">Crucible</option>
-                            <option value="Hardcore Crucible">Hardcore Crucible</option>
-                            <option value="Standard">Standard</option>
-                            <option value="Hardcore">Hardcore</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" id="mapSearchBtn">Search Map Items</button>
-                    <button type="button" id="mapFavoriteBtn" style="display: none;">Add to Favorites</button>
-                </form>
-            </section>
-        </div>
+        <div id="marketTab" class="tab-content active">
+        <section class="search-section">
+            <form class="search-form" id="searchForm">
+                <div class="form-group">
+                    <label for="itemName">Item Name:</label>
+                    <input type="text" id="itemName" placeholder="e.g., Tabula Rasa, Divine Orb, Shaper's Touch" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="league">League:</label>
+                    <select id="league">
+                        <option value="">Loading leagues...</option>
+                    </select>
+                </div>
+                
+                <button type="submit" id="searchBtn">Search</button>
+                <button type="button" id="favoriteBtn" style="display: none;">Add to Favorites</button>
+            </form>
+        </section>
 
         <div id="loading" class="loading" style="display: none;">
             🔍 Searching poe.ninja...
@@ -478,26 +649,231 @@
                 No favorites added yet. Search for items and add them to your favorites!
             </div>
         </section>
+        </div> <!-- End Market Tab -->
+
+        <div id="insightsTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">📊 Market Insights & Profit Opportunities</h2>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="insightsLeague">League:</label>
+                <select id="insightsLeague">
+                    <option value="">Loading leagues...</option>
+                </select>
+                <button type="button" id="refreshInsightsBtn" style="margin-left: 10px;">Refresh Data</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('popular')">
+                    <div class="stat-value" id="popularCount">0</div>
+                    <div class="stat-label">🔥 Popular Items</div>
+                </div>
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('profitable')">
+                    <div class="stat-value" id="profitableCount">0</div>
+                    <div class="stat-label">💰 Profitable Crafts</div>
+                </div>
+                <div class="stat-card" style="cursor: pointer;" onclick="showSection('trending')">
+                    <div class="stat-value" id="trendingCount">0</div>
+                    <div class="stat-label">📈 Trending Items</div>
+                </div>
+            </div>
+        </section>
+
+        <div id="insightsLoading" class="loading" style="display: none;">
+            📊 Loading market data...
+        </div>
+
+        <div id="insightsError" class="error" style="display: none;"></div>
+
+        <!-- Popular Items Section -->
+        <section id="popularSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">🔥 Most Popular Items (High Demand)</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">These items have the highest trading volume and are frequently used in meta builds.</p>
+            <div id="popularItemsList"></div>
+        </section>
+
+        <!-- Profitable Items Section -->
+        <section id="profitableSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">💰 Best Craftable Items for Profit</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">
+                <strong>Craftable rare base types</strong> with the best profit margins. These are NOT drop-only uniques like Headhunter or Mageblood - these are items you can actually craft!
+            </p>
+            <div style="background: rgba(255, 215, 0, 0.1); border-left: 3px solid #ffd700; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                <p style="color: #ffd700; margin: 0; font-weight: bold;">ℹ️ How to Use This Data:</p>
+                <ul style="color: #cccccc; margin: 10px 0 0 20px;">
+                    <li>Check the "Suggested Method" for each item</li>
+                    <li>Go to "Crafting Helper" tab to calculate exact costs</li>
+                    <li>Compare your craft cost vs the market "Sell Price"</li>
+                    <li>Look for High/Medium demand items for faster sales</li>
+                </ul>
+            </div>
+            <div id="profitableItemsList"></div>
+        </section>
+
+        <!-- Trending Items Section -->
+        <section id="trendingSection" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">📈 Trending Items</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">Items currently in high demand based on value and listing activity.</p>
+            <div id="trendingItemsList"></div>
+        </section>
+        </div> <!-- End Insights Tab -->
+
+        <div id="craftingTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Helper</h2>
+
+            <!-- Item Paste Area -->
+            <div style="background: rgba(255, 215, 0, 0.1); border: 2px dashed #ffd700; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+                <label for="itemPaste" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    📋 Paste Item from PoE (Ctrl+C in game):
+                </label>
+                <textarea
+                    id="itemPaste"
+                    placeholder="Paste your copied item here... (Copy item from PoE with Ctrl+C)"
+                    style="width: 100%; min-height: 100px; background: rgba(30, 30, 40, 0.95); color: #ffffff; border: 2px solid #444; border-radius: 5px; padding: 10px; font-family: 'Courier New', monospace; font-size: 14px; resize: vertical;"
+                ></textarea>
+                <p style="color: #888; font-size: 12px; margin-top: 5px;">Item data will auto-fill the fields below</p>
+            </div>
+
+            <form id="craftingForm">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftBaseItem">Base Item:</label>
+                    <input type="text" id="craftBaseItem" placeholder="e.g., Vaal Regalia, Siege Axe, Steel Ring" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftItemLevel">Item Level (ilvl):</label>
+                    <input type="number" id="craftItemLevel" placeholder="e.g., 86" min="1" max="100">
+                    <p style="color: #888; font-size: 12px; margin-top: 5px;">Higher ilvl allows better mods (T1 mods usually require ilvl 82-86)</p>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftItemClass">Item Class:</label>
+                    <select id="craftItemClass" required>
+                        <option value="">Select Item Class</option>
+                        <option value="Body Armour">Body Armour</option>
+                        <option value="Helmet">Helmet</option>
+                        <option value="Gloves">Gloves</option>
+                        <option value="Boots">Boots</option>
+                        <option value="Shield">Shield</option>
+                        <option value="One Hand Sword">One Hand Sword</option>
+                        <option value="Two Hand Sword">Two Hand Sword</option>
+                        <option value="One Hand Axe">One Hand Axe</option>
+                        <option value="Two Hand Axe">Two Hand Axe</option>
+                        <option value="One Hand Mace">One Hand Mace</option>
+                        <option value="Two Hand Mace">Two Hand Mace</option>
+                        <option value="Bow">Bow</option>
+                        <option value="Wand">Wand</option>
+                        <option value="Dagger">Dagger</option>
+                        <option value="Claw">Claw</option>
+                        <option value="Sceptre">Sceptre</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Ring">Ring</option>
+                        <option value="Amulet">Amulet</option>
+                        <option value="Belt">Belt</option>
+                        <option value="Quiver">Quiver</option>
+                        <option value="Jewel">Jewel</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="craftLeague">League:</label>
+                    <select id="craftLeague">
+                        <option value="">Loading leagues...</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px;">Desired Mods:</label>
+                    <div id="modsList"></div>
+                    <button type="button" id="addModBtn" class="btn-success" style="margin-top: 10px;">+ Add Mod</button>
+                </div>
+
+                <button type="submit" id="calculateBtn">Calculate Best Crafting Method</button>
+            </form>
+        </section>
+
+        <div id="craftingLoading" class="loading" style="display: none;">
+            🔮 Calculating crafting methods...
+        </div>
+
+        <div id="craftingError" class="error" style="display: none;"></div>
+
+        <section id="craftingResults" class="crafting-results" style="display: none;">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Crafting Recommendations</h2>
+            <div id="craftingResultsContent"></div>
+        </section>
+        </div> <!-- End Crafting Tab -->
+
+        <div id="guideTab" class="tab-content">
+        <section class="crafting-input-section">
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Learn to Craft This Item</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">Paste an item from Path of Exile to get the most cost-effective crafting method!</p>
+
+            <!-- Budget Selection -->
+            <div style="margin-bottom: 20px;">
+                <label for="craftingBudget" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    💰 Your Crafting Budget:
+                </label>
+                <select id="craftingBudget" style="padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #ffd700; border-radius: 5px; font-size: 14px; width: 100%; max-width: 400px;">
+                    <option value="low">Low Budget (1-20 chaos)</option>
+                    <option value="medium" selected>Medium Budget (20-100 chaos)</option>
+                    <option value="high">High Budget (100-500 chaos)</option>
+                    <option value="very-high">Very High Budget (500+ chaos / 2.5+ divine)</option>
+                </select>
+                <p style="color: #aaa; margin-top: 5px; font-size: 13px;">The guide will recommend crafting methods within your budget.</p>
+            </div>
+
+            <!-- Item Paste Area for Guide -->
+            <div style="background: rgba(255, 215, 0, 0.1); border: 2px dashed #ffd700; padding: 20px; margin-bottom: 20px; border-radius: 5px;">
+                <label for="guidePaste" style="display: block; color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                    📋 Paste Your Target Item (Ctrl+C in game):
+                </label>
+                <textarea
+                    id="guidePaste"
+                    placeholder="Paste the item you want to learn how to craft... (Copy from PoE with Ctrl+C)"
+                    style="width: 100%; min-height: 150px; background: rgba(30, 30, 40, 0.95); color: #ffffff; border: 2px solid #444; border-radius: 5px; padding: 10px; font-family: 'Courier New', monospace; font-size: 14px; resize: vertical;"
+                ></textarea>
+                <button type="button" id="analyzeItemBtn" style="margin-top: 10px;">Analyze Item & Generate Crafting Guide</button>
+            </div>
+
+            <!-- Analysis Results -->
+            <div id="guideLoading" class="loading" style="display: none;">
+                🔍 Analyzing item and generating crafting guide...
+            </div>
+
+            <div id="guideError" class="error" style="display: none;"></div>
+
+            <section id="guideResults" style="display: none;">
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Item Analysis</h3>
+                    <div id="guideItemInfo" style="color: #cccccc;"></div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Step-by-Step Crafting Guide</h3>
+                    <div id="guideCraftingSteps" style="color: #cccccc;"></div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">💡 Tips & Considerations</h3>
+                    <div id="guideTips" style="color: #cccccc;"></div>
+                </div>
+            </section>
+        </section>
+        </div> <!-- End Guide Tab -->
+
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
-
-        // DOM elements - Item Crafting
+        
+        // DOM elements
         const searchForm = document.getElementById('searchForm');
         const itemNameInput = document.getElementById('itemName');
         const leagueSelect = document.getElementById('league');
         const searchBtn = document.getElementById('searchBtn');
         const favoriteBtn = document.getElementById('favoriteBtn');
-
-        // DOM elements - Map Crafting
-        const mapSearchForm = document.getElementById('mapSearchForm');
-        const mapItemNameInput = document.getElementById('mapItemName');
-        const mapLeagueSelect = document.getElementById('mapLeague');
-        const mapSearchBtn = document.getElementById('mapSearchBtn');
-        const mapFavoriteBtn = document.getElementById('mapFavoriteBtn');
-
-        // DOM elements - Shared
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
         const resultsSection = document.getElementById('resultsSection');
@@ -512,46 +888,211 @@
         // State
         let currentSearchResult = null;
         let favorites = [];
-        let currentTab = 'item-crafting';
+
+        // Mod Database - Common mods by item class
+        const MOD_DATABASE = {
+            // Universal mods (work on most items)
+            universal: {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1-T5', ilvl: 44 },
+                    { name: '+# to maximum Mana', tier: 'T1-T5', ilvl: 2 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1-T5', ilvl: 12 },
+                    { name: '+# to Strength', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to Dexterity', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to Intelligence', tier: 'T1-T5', ilvl: 11 },
+                    { name: '+# to all Attributes', tier: 'T1-T3', ilvl: 60 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Cold Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1-T6', ilvl: 18 },
+                    { name: '+#% to Chaos Resistance', tier: 'T1-T5', ilvl: 16 },
+                    { name: '+#% to all Elemental Resistances', tier: 'T1-T3', ilvl: 60 },
+                    { name: '#% increased Rarity of Items found', tier: 'T1-T5', ilvl: 20 }
+                ]
+            },
+            'Body Armour': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (100-109)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (175-200)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Evasion Rating', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Energy Shield', tier: 'T1-T10', ilvl: 12 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T6', ilvl: 50 },
+                    { name: '+# to Level of Socketed Gems', tier: 'T1-T2', ilvl: 50 }
+                ],
+                suffix: [
+                    { name: '+#% to all Elemental Resistances', tier: 'T1 (15-16%)', ilvl: 60 },
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Stun and Block Recovery', tier: 'T1-T6', ilvl: 18 }
+                ]
+            },
+            'Helmet': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (90-99)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (110-125)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 },
+                    { name: 'Nearby Enemies have -#% to Fire Resistance', tier: 'T1-T3', ilvl: 75 },
+                    { name: '+# to Level of Socketed Minion Gems', tier: 'T1-T3', ilvl: 50 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to Accuracy Rating', tier: 'T1-T8', ilvl: 20 }
+                ]
+            },
+            'Gloves': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (80-89)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (75-85)', ilvl: 82 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1 (16-19)', ilvl: 74 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (400-450)', ilvl: 74 },
+                    { name: '#% increased Attack Speed', tier: 'T1-T6', ilvl: 35 }
+                ]
+            },
+            'Boots': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (80-89)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (60-70)', ilvl: 82 },
+                    { name: '+# to Armour', tier: 'T1-T10', ilvl: 35 },
+                    { name: '+# to Evasion Rating', tier: 'T1-T10', ilvl: 35 },
+                    { name: '#% increased Movement Speed', tier: 'T1 (30-35%)', ilvl: 55 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Stun and Block Recovery', tier: 'T1-T6', ilvl: 18 }
+                ]
+            },
+            'Ring': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (70-79)', ilvl: 82 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (60-65)', ilvl: 79 },
+                    { name: '+# to maximum Mana', tier: 'T1 (70-75)', ilvl: 80 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T8', ilvl: 44 },
+                    { name: '#% increased Elemental Damage with Attack Skills', tier: 'T1-T9', ilvl: 4 },
+                    { name: 'Curse Enemies with Level # Assassin\'s Mark on Hit', tier: 'T1-T8', ilvl: 38 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to all Attributes', tier: 'T1 (51-55)', ilvl: 85 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (400-450)', ilvl: 74 },
+                    { name: '#% increased Rarity of Items found', tier: 'T1-T8', ilvl: 20 }
+                ]
+            },
+            'Amulet': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (70-79)', ilvl: 82 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (55-62)', ilvl: 80 },
+                    { name: '#% increased Global Critical Strike Chance', tier: 'T1-T10', ilvl: 20 },
+                    { name: '+# to Level of all Skill Gems', tier: 'T1 (+2)', ilvl: 65 },
+                    { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1-T8', ilvl: 44 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+# to all Attributes', tier: 'T1 (51-55)', ilvl: 85 },
+                    { name: '#% to Global Critical Strike Multiplier', tier: 'T1-T10', ilvl: 20 }
+                ]
+            },
+            'Belt': {
+                prefix: [
+                    { name: '+# to maximum Life', tier: 'T1 (90-99)', ilvl: 86 },
+                    { name: '+# to maximum Energy Shield', tier: 'T1 (50-60)', ilvl: 79 },
+                    { name: '#% increased Flask Life Recovery rate', tier: 'T1-T7', ilvl: 16 },
+                    { name: '#% increased Flask Mana Recovery rate', tier: 'T1-T7', ilvl: 16 },
+                    { name: '#% increased Armour', tier: 'T1-T10', ilvl: 11 }
+                ],
+                suffix: [
+                    { name: '+#% to Fire Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Cold Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '+#% to Lightning Resistance', tier: 'T1 (46-48%)', ilvl: 84 },
+                    { name: '#% increased Flask Charges gained', tier: 'T1-T7', ilvl: 8 }
+                ]
+            },
+            'Weapon': {
+                prefix: [
+                    { name: '+# to Level of Socketed Gems', tier: 'T1 (+2)', ilvl: 55 },
+                    { name: 'Adds # to # Physical Damage', tier: 'T1-T10', ilvl: 11 },
+                    { name: '#% increased Physical Damage', tier: 'T1-T10', ilvl: 11 },
+                    { name: '+# to Accuracy Rating', tier: 'T1 (500-600)', ilvl: 79 },
+                    { name: '#% increased Attack Speed', tier: 'T1-T10', ilvl: 2 },
+                    { name: '#% increased Critical Strike Chance', tier: 'T1-T10', ilvl: 20 }
+                ],
+                suffix: [
+                    { name: 'Adds # to # Fire Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: 'Adds # to # Cold Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: 'Adds # to # Lightning Damage', tier: 'T1-T10', ilvl: 2 },
+                    { name: '+#% to Global Critical Strike Multiplier', tier: 'T1-T10', ilvl: 20 },
+                    { name: '#% chance to gain Onslaught on Kill', tier: 'T1-T3', ilvl: 55 }
+                ]
+            }
+        };
+
+        // Get available mods for a specific item class
+        function getModsForItemClass(itemClass, modType) {
+            if (!itemClass) return [];
+
+            let mods = [];
+
+            // Add universal mods
+            if (MOD_DATABASE.universal[modType]) {
+                mods = mods.concat(MOD_DATABASE.universal[modType]);
+            }
+
+            // Add class-specific mods
+            if (MOD_DATABASE[itemClass] && MOD_DATABASE[itemClass][modType]) {
+                mods = mods.concat(MOD_DATABASE[itemClass][modType]);
+            }
+
+            // For weapon classes, add weapon mods
+            if (itemClass.includes('Sword') || itemClass.includes('Axe') ||
+                itemClass.includes('Mace') || itemClass.includes('Bow') ||
+                itemClass.includes('Wand') || itemClass.includes('Dagger') ||
+                itemClass.includes('Claw') || itemClass.includes('Sceptre') ||
+                itemClass.includes('Staff')) {
+                if (MOD_DATABASE.Weapon[modType]) {
+                    mods = mods.concat(MOD_DATABASE.Weapon[modType]);
+                }
+            }
+
+            // Remove duplicates
+            const uniqueMods = Array.from(new Set(mods.map(m => m.name)))
+                .map(name => mods.find(m => m.name === name));
+
+            return uniqueMods;
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
             loadFavorites();
-            initializeTabs();
         });
 
-        // Tab switching functionality
-        function initializeTabs() {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tabId = button.getAttribute('data-tab');
-
-                    // Update active states
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
-
-                    button.classList.add('active');
-                    document.getElementById(tabId).classList.add('active');
-
-                    currentTab = tabId;
-
-                    // Clear results when switching tabs
-                    hideResults();
-                    hideError();
-                });
-            });
-        }
-
-        // Item crafting search form handler
+        // Search form handler
         searchForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
+            
             const itemName = itemNameInput.value.trim();
             const league = leagueSelect.value;
-
+            
             if (!itemName) {
                 showError('Please enter an item name');
                 return;
@@ -560,29 +1101,14 @@
             await searchItem(itemName, league);
         });
 
-        // Map crafting search form handler
-        mapSearchForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const itemName = mapItemNameInput.value.trim();
-            const league = mapLeagueSelect.value;
-
-            if (!itemName) {
-                showError('Please enter a map item name');
-                return;
-            }
-
-            await searchMapCrafting(itemName, league);
-        });
-
-        // Add to favorites handler - Item Crafting
+        // Add to favorites handler
         favoriteBtn.addEventListener('click', async () => {
             if (!currentSearchResult) return;
 
             try {
                 const itemName = itemNameInput.value.trim();
                 const league = leagueSelect.value;
-
+                
                 await ipcRenderer.invoke('add-favorite', {
                     name: itemName,
                     league: league
@@ -590,27 +1116,6 @@
 
                 showSuccess('Added to favorites!');
                 favoriteBtn.style.display = 'none';
-                await loadFavorites();
-            } catch (err) {
-                showError(`Failed to add to favorites: ${err.message}`);
-            }
-        });
-
-        // Add to favorites handler - Map Crafting
-        mapFavoriteBtn.addEventListener('click', async () => {
-            if (!currentSearchResult) return;
-
-            try {
-                const itemName = mapItemNameInput.value.trim();
-                const league = mapLeagueSelect.value;
-
-                await ipcRenderer.invoke('add-favorite', {
-                    name: itemName,
-                    league: league
-                });
-
-                showSuccess('Added to favorites!');
-                mapFavoriteBtn.style.display = 'none';
                 await loadFavorites();
             } catch (err) {
                 showError(`Failed to add to favorites: ${err.message}`);
@@ -647,13 +1152,13 @@
                 searchBtn.textContent = 'Searching...';
 
                 const result = await ipcRenderer.invoke('search-item', itemName, league);
-
+                
                 if (!result.success) {
                     throw new Error(result.error);
                 }
 
                 currentSearchResult = result.data;
-
+                
                 if (showUI) {
                     displayResults(result.data);
                     updateFavoriteButton(itemName, league);
@@ -668,44 +1173,7 @@
                     hideLoading();
                 }
                 searchBtn.disabled = false;
-                searchBtn.textContent = 'Search Items';
-            }
-        }
-
-        async function searchMapCrafting(itemName, league, showUI = true) {
-            try {
-                if (showUI) {
-                    showLoading();
-                    hideError();
-                    hideResults();
-                }
-
-                mapSearchBtn.disabled = true;
-                mapSearchBtn.textContent = 'Searching...';
-
-                const result = await ipcRenderer.invoke('search-map-crafting', itemName, league);
-
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
-
-                currentSearchResult = result.data;
-
-                if (showUI) {
-                    displayResults(result.data);
-                    updateMapFavoriteButton(itemName, league);
-                }
-            } catch (err) {
-                if (showUI) {
-                    showError(`Map search failed: ${err.message}`);
-                }
-                console.error('Map search error:', err);
-            } finally {
-                if (showUI) {
-                    hideLoading();
-                }
-                mapSearchBtn.disabled = false;
-                mapSearchBtn.textContent = 'Search Map Items';
+                searchBtn.textContent = 'Search';
             }
         }
 
@@ -816,21 +1284,12 @@
         }
 
         function updateFavoriteButton(itemName, league) {
-            const isFavorite = favorites.some(fav =>
-                fav.name.toLowerCase() === itemName.toLowerCase() &&
+            const isFavorite = favorites.some(fav => 
+                fav.name.toLowerCase() === itemName.toLowerCase() && 
                 fav.league === league
             );
-
+            
             favoriteBtn.style.display = currentSearchResult && !isFavorite ? 'inline-block' : 'none';
-        }
-
-        function updateMapFavoriteButton(itemName, league) {
-            const isFavorite = favorites.some(fav =>
-                fav.name.toLowerCase() === itemName.toLowerCase() &&
-                fav.league === league
-            );
-
-            mapFavoriteBtn.style.display = currentSearchResult && !isFavorite ? 'inline-block' : 'none';
         }
 
         function showLoading() {
@@ -889,6 +1348,1286 @@
             // Simple auto-suggest could be added here
             // For now, just basic functionality
         });
+
+        // ===== DYNAMIC LEAGUE LOADING =====
+        let availableLeagues = [];
+
+        async function loadLeagues() {
+            try {
+                const result = await ipcRenderer.invoke('get-leagues');
+                if (result.success && result.data.length > 0) {
+                    availableLeagues = result.data;
+                    updateLeagueSelectors();
+                } else {
+                    // Fallback
+                    availableLeagues = ['Keepers of the Flame', 'Standard', 'Hardcore'];
+                    updateLeagueSelectors();
+                }
+            } catch (error) {
+                console.error('Failed to load leagues:', error);
+                availableLeagues = ['Keepers of the Flame', 'Standard', 'Hardcore'];
+                updateLeagueSelectors();
+            }
+        }
+
+        function updateLeagueSelectors() {
+            const leagueSelectors = [
+                document.getElementById('league'),
+                document.getElementById('craftLeague'),
+                document.getElementById('insightsLeague')
+            ];
+
+            leagueSelectors.forEach(selector => {
+                if (selector) {
+                    const currentValue = selector.value; // Save current selection
+                    selector.innerHTML = '';
+                    availableLeagues.forEach((league, index) => {
+                        const option = document.createElement('option');
+                        option.value = league;
+                        option.textContent = league;
+                        // Set first league (current league) as default if no previous selection
+                        if (index === 0 && !currentValue) {
+                            option.selected = true;
+                        }
+                        selector.appendChild(option);
+                    });
+                    // Restore previous selection if it still exists
+                    if (currentValue && availableLeagues.includes(currentValue)) {
+                        selector.value = currentValue;
+                    }
+                }
+            });
+        }
+
+        // Load leagues on startup
+        loadLeagues();
+
+        // ===== TAB SWITCHING =====
+        const tabs = document.querySelectorAll('.tab');
+        const marketTab = document.getElementById('marketTab');
+        const insightsTab = document.getElementById('insightsTab');
+        const craftingTab = document.getElementById('craftingTab');
+        const guideTab = document.getElementById('guideTab');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Hide all tab contents
+                marketTab.classList.remove('active');
+                insightsTab.classList.remove('active');
+                craftingTab.classList.remove('active');
+                if (guideTab) guideTab.classList.remove('active');
+
+                // Show selected tab
+                if (tabName === 'market') {
+                    marketTab.classList.add('active');
+                } else if (tabName === 'insights') {
+                    insightsTab.classList.add('active');
+                    loadMarketInsights();
+                } else if (tabName === 'crafting') {
+                    craftingTab.classList.add('active');
+                    initializeCrafting();
+                } else if (tabName === 'guide') {
+                    if (guideTab) guideTab.classList.add('active');
+                }
+            });
+        });
+
+        // ===== CRAFTING FUNCTIONALITY =====
+        let craftingInitialized = false;
+        let desiredMods = [];
+        let modCounter = 0;
+
+        const craftingForm = document.getElementById('craftingForm');
+        const modsList = document.getElementById('modsList');
+        const addModBtn = document.getElementById('addModBtn');
+        const craftingLoading = document.getElementById('craftingLoading');
+        const craftingError = document.getElementById('craftingError');
+        const craftingResults = document.getElementById('craftingResults');
+        const craftingResultsContent = document.getElementById('craftingResultsContent');
+
+        async function initializeCrafting() {
+            if (craftingInitialized) return;
+
+            try {
+                const league = document.getElementById('craftLeague').value;
+                const result = await ipcRenderer.invoke('initialize-crafting', league);
+                if (result.success) {
+                    console.log('Crafting data initialized');
+                    craftingInitialized = true;
+                } else {
+                    showCraftingError('Failed to initialize crafting data: ' + result.error);
+                }
+            } catch (err) {
+                console.error('Crafting initialization error:', err);
+            }
+        }
+
+        function addModInput() {
+            const modId = modCounter++;
+            const modDiv = document.createElement('div');
+            modDiv.className = 'mod-input-group';
+            modDiv.setAttribute('data-mod-id', modId);
+
+            // Get current item class
+            const itemClass = document.getElementById('craftItemClass').value;
+
+            modDiv.innerHTML = `
+                <div class="mod-inputs">
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="mod-type" data-mod-id="${modId}" required>
+                            <option value="">Select Type First</option>
+                            <option value="prefix">Prefix</option>
+                            <option value="suffix">Suffix</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mod Name:</label>
+                        <select class="mod-name" data-mod-id="${modId}" required>
+                            <option value="">Select type first...</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-danger btn-small" onclick="removeMod(${modId})">Remove</button>
+                </div>
+            `;
+            modsList.appendChild(modDiv);
+
+            // Add event listener to mod type selector
+            const modTypeSelect = modDiv.querySelector('.mod-type');
+            const modNameSelect = modDiv.querySelector('.mod-name');
+
+            modTypeSelect.addEventListener('change', function() {
+                updateModNameOptions(modNameSelect, this.value, itemClass);
+            });
+        }
+
+        // Update mod name dropdown based on type and item class
+        function updateModNameOptions(selectElement, modType, itemClass) {
+            if (!modType) {
+                selectElement.innerHTML = '<option value="">Select type first...</option>';
+                return;
+            }
+
+            const mods = getModsForItemClass(itemClass, modType);
+
+            if (mods.length === 0) {
+                selectElement.innerHTML = '<option value="">No mods available</option>';
+                return;
+            }
+
+            selectElement.innerHTML = '<option value="">Choose a mod...</option>';
+            mods.forEach(mod => {
+                const option = document.createElement('option');
+                option.value = mod.name;
+                option.textContent = `${mod.name} (${mod.tier}, ilvl ${mod.ilvl}+)`;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Update all mod dropdowns when item class changes
+        function updateAllModDropdowns() {
+            const itemClass = document.getElementById('craftItemClass').value;
+            const modInputs = document.querySelectorAll('.mod-input-group');
+
+            modInputs.forEach(modInput => {
+                const modTypeSelect = modInput.querySelector('.mod-type');
+                const modNameSelect = modInput.querySelector('.mod-name');
+
+                if (modTypeSelect && modTypeSelect.value) {
+                    updateModNameOptions(modNameSelect, modTypeSelect.value, itemClass);
+                }
+            });
+        }
+
+        // Add event listener to item class selector
+        const craftItemClassSelect = document.getElementById('craftItemClass');
+        if (craftItemClassSelect) {
+            craftItemClassSelect.addEventListener('change', updateAllModDropdowns);
+        }
+
+        window.removeMod = function(modId) {
+            const modDiv = document.querySelector(`[data-mod-id="${modId}"]`);
+            if (modDiv) {
+                modDiv.remove();
+            }
+        };
+
+        addModBtn.addEventListener('click', addModInput);
+
+        // Item paste parser
+        const itemPasteArea = document.getElementById('itemPaste');
+        if (itemPasteArea) {
+            itemPasteArea.addEventListener('input', function() {
+                const pastedText = this.value.trim();
+                if (!pastedText) return;
+
+                try {
+                    const parsedData = parsePoEItem(pastedText);
+
+                    // Auto-fill the form fields
+                    if (parsedData.baseName) {
+                        document.getElementById('craftBaseItem').value = parsedData.baseName;
+                    }
+
+                    if (parsedData.itemLevel) {
+                        document.getElementById('craftItemLevel').value = parsedData.itemLevel;
+                    }
+
+                    if (parsedData.itemClass) {
+                        const itemClassSelect = document.getElementById('craftItemClass');
+                        // Try to match the item class
+                        for (let option of itemClassSelect.options) {
+                            if (option.value.toLowerCase().includes(parsedData.itemClass.toLowerCase()) ||
+                                parsedData.itemClass.toLowerCase().includes(option.value.toLowerCase())) {
+                                itemClassSelect.value = option.value;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Visual feedback
+                    itemPasteArea.style.borderColor = '#00ff00';
+                    setTimeout(() => {
+                        itemPasteArea.style.borderColor = '#444';
+                    }, 1000);
+
+                } catch (err) {
+                    console.error('Error parsing item:', err);
+                    itemPasteArea.style.borderColor = '#ff4444';
+                    setTimeout(() => {
+                        itemPasteArea.style.borderColor = '#444';
+                    }, 1000);
+                }
+            });
+        }
+
+        // Parse PoE item text
+        function parsePoEItem(itemText) {
+            const lines = itemText.split('\n').map(line => line.trim()).filter(line => line);
+            const result = {
+                baseName: null,
+                itemLevel: null,
+                itemClass: null,
+                rarity: null
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Parse rarity (first line usually)
+                if (line.startsWith('Rarity:')) {
+                    result.rarity = line.replace('Rarity:', '').trim();
+                }
+
+                // Parse item level
+                if (line.match(/Item Level:|ItemLevel:|ilvl:/i)) {
+                    const ilvlMatch = line.match(/(\d+)/);
+                    if (ilvlMatch) {
+                        result.itemLevel = parseInt(ilvlMatch[1]);
+                    }
+                }
+
+                // Parse base name - usually after rarity line or second non-empty line
+                // For magic/rare items, look for "--------" separator and get the line after
+                if (line === '--------') {
+                    // Base type is usually after the separator
+                    for (let j = i + 1; j < lines.length; j++) {
+                        const nextLine = lines[j];
+                        // Skip requirement lines and look for base
+                        if (!nextLine.match(/Requirements?:|Sockets:|Item Level:|Quality:/i)) {
+                            result.baseName = nextLine;
+                            break;
+                        }
+                    }
+                }
+
+                // For white items, base name is the second line after rarity
+                if (result.rarity && result.rarity.toLowerCase() === 'normal' && i === 1) {
+                    result.baseName = line;
+                }
+
+                // Try to extract item class from item text
+                // Common patterns: "Body Armour", "Ring", "Amulet", etc.
+                if (line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i)) {
+                    const classMatch = line.match(/Body Armour|Helmet|Gloves|Boots|Shield|Ring|Amulet|Belt|Sword|Axe|Mace|Bow|Wand|Dagger|Claw|Sceptre|Staff|Quiver|Jewel/i);
+                    if (classMatch) {
+                        result.itemClass = classMatch[0];
+                    }
+                }
+            }
+
+            // If no base name found yet, try to get it from the name lines
+            if (!result.baseName && lines.length >= 2) {
+                // For magic/rare items: line after the item name is usually the base
+                // Skip the first line (rarity) and second line (item name if rare/magic)
+                if (lines.length >= 3 && result.rarity && result.rarity.toLowerCase() !== 'normal') {
+                    result.baseName = lines[2];
+                }
+            }
+
+            return result;
+        }
+
+        // Add initial mod input
+        addModInput();
+
+        craftingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const baseItem = document.getElementById('craftBaseItem').value;
+            const itemClass = document.getElementById('craftItemClass').value;
+            const league = document.getElementById('craftLeague').value;
+
+            // Collect mods
+            const modInputs = document.querySelectorAll('.mod-input-group');
+            const desiredMods = [];
+
+            modInputs.forEach(modDiv => {
+                const name = modDiv.querySelector('.mod-name').value;
+                const type = modDiv.querySelector('.mod-type').value;
+                if (name) {
+                    desiredMods.push({ name, type });
+                }
+            });
+
+            if (desiredMods.length === 0) {
+                showCraftingError('Please add at least one desired mod');
+                return;
+            }
+
+            // Show loading
+            craftingLoading.style.display = 'block';
+            craftingError.style.display = 'none';
+            craftingResults.style.display = 'none';
+
+            try {
+                const result = await ipcRenderer.invoke('calculate-crafting', {
+                    desiredMods,
+                    baseItemName: baseItem,
+                    itemClass,
+                    league
+                });
+
+                craftingLoading.style.display = 'none';
+
+                if (result.success) {
+                    displayCraftingResults(result.data);
+                } else {
+                    showCraftingError(result.error);
+                }
+            } catch (err) {
+                craftingLoading.style.display = 'none';
+                showCraftingError('Calculation failed: ' + err.message);
+            }
+        });
+
+        function displayCraftingResults(data) {
+            craftingResults.style.display = 'block';
+
+            let html = '';
+
+            // Base recommendation
+            if (data.baseRecommendation) {
+                const base = data.baseRecommendation;
+                html += `
+                    <div class="base-recommendation">
+                        <div class="base-rec-title">💎 Recommended Base</div>
+                        <p><strong>Type:</strong> ${base.baseType.toUpperCase()}</p>
+                        <p><strong>Item:</strong> ${base.itemName}</p>
+                        <p><strong>Cost:</strong> ${formatPrice(base.averageCost, data.preferredCurrency)}</p>
+                        <p><strong>Reason:</strong> ${base.reason}</p>
+                    </div>
+                `;
+            }
+
+            // Total cost summary
+            html += `
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-value">${formatPrice(data.totalCostChaos, data.preferredCurrency)}</div>
+                        <div class="stat-label">Total Estimated Cost</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.methods.length}</div>
+                        <div class="stat-label">Methods Available</div>
+                    </div>
+                </div>
+            `;
+
+            // Methods
+            data.methods.forEach((method, index) => {
+                const isRecommended = index === 0;
+                html += `
+                    <div class="method-card ${isRecommended ? 'recommended' : ''}">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">${method.name}</span>
+                                ${isRecommended ? '<span class="recommended-badge">⭐ RECOMMENDED</span>' : ''}
+                            </div>
+                            <div class="method-cost">${formatPrice(method.averageCost, data.preferredCurrency)}</div>
+                        </div>
+                        <div class="method-description">${method.description}</div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${(method.probability * 100).toFixed(2)}%</div>
+                                <div class="method-stat-label">Success Rate</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${method.expectedAttempts}</div>
+                                <div class="method-stat-label">Avg. Attempts</div>
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: #ffd700;">Currency Needed:</strong>
+                            <ul class="crafting-steps" style="margin-top: 10px;">
+                                ${Object.entries(method.currencyUsed).map(([currency, amount]) =>
+                                    `<li>${Math.ceil(amount)}x ${currency}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <strong style="color: #ffd700;">Steps:</strong>
+                            <ol class="crafting-steps" style="margin-top: 10px;">
+                                ${method.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            });
+
+            craftingResultsContent.innerHTML = html;
+        }
+
+        function formatPrice(chaosValue, preferredCurrency = 'chaos') {
+            const divinePrice = 200; // This should be fetched from poe.ninja
+
+            if (preferredCurrency === 'divine' || chaosValue >= divinePrice * 2) {
+                const divineValue = chaosValue / divinePrice;
+                return `${divineValue.toFixed(2)} Divine`;
+            }
+
+            return `${chaosValue.toFixed(1)} Chaos`;
+        }
+
+        function showCraftingError(message) {
+            craftingError.textContent = message;
+            craftingError.style.display = 'block';
+            setTimeout(() => {
+                craftingError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ===== CRAFTING GUIDE (LEARN TO CRAFT) FUNCTIONALITY =====
+        const analyzeItemBtn = document.getElementById('analyzeItemBtn');
+        const guidePaste = document.getElementById('guidePaste');
+        const guideLoading = document.getElementById('guideLoading');
+        const guideError = document.getElementById('guideError');
+        const guideResults = document.getElementById('guideResults');
+        const guideItemInfo = document.getElementById('guideItemInfo');
+        const guideCraftingSteps = document.getElementById('guideCraftingSteps');
+        const guideTips = document.getElementById('guideTips');
+
+        if (analyzeItemBtn) {
+            analyzeItemBtn.addEventListener('click', function() {
+                const itemText = guidePaste.value.trim();
+
+                if (!itemText) {
+                    showGuideError('Please paste an item first!');
+                    return;
+                }
+
+                try {
+                    guideLoading.style.display = 'block';
+                    guideError.style.display = 'none';
+                    guideResults.style.display = 'none';
+
+                    // Parse the item
+                    const itemData = parsePoEItem(itemText);
+                    const modsOnItem = parseItemMods(itemText);
+
+                    setTimeout(() => {
+                        displayCraftingGuide(itemData, modsOnItem, itemText);
+                        guideLoading.style.display = 'none';
+                        guideResults.style.display = 'block';
+                    }, 500);
+
+                } catch (err) {
+                    guideLoading.style.display = 'none';
+                    showGuideError('Error analyzing item: ' + err.message);
+                }
+            });
+        }
+
+        function parseItemMods(itemText) {
+            const lines = itemText.split('\n').map(line => line.trim()).filter(line => line);
+            const mods = {
+                explicit: [],
+                implicit: [],
+                crafted: []
+            };
+
+            let separatorCount = 0;
+            let pastHeader = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Track separators
+                if (line === '--------') {
+                    separatorCount++;
+                    pastHeader = true;
+                    continue;
+                }
+
+                // Skip non-mod lines
+                if (line.startsWith('Rarity:') ||
+                    line.startsWith('Item Level:') ||
+                    line.match(/^Requirements?:/i) ||
+                    line.match(/^Sockets:/i) ||
+                    line.match(/^Quality:/i) ||
+                    line.match(/^Corrupted$/i) ||
+                    line.match(/^Mirrored$/i)) {
+                    continue;
+                }
+
+                // Skip the item base name (comes right after rarity line)
+                if (!pastHeader) continue;
+
+                // Detect mod lines (they usually start with numbers, +, or certain keywords)
+                if (line.match(/^\+|^\d|^#|increased|reduced|to maximum|Resistance|Damage|Adds|Additional|Cannot|Regenerate|Leeched|Skills|Accuracy|Critical|Attack Speed|Cast Speed|Movement Speed|Attribute|Armour|Evasion|Energy Shield|Life|Mana/i)) {
+                    // Check for crafted mod
+                    if (line.includes('(crafted)') || line.includes(' (crafted)')) {
+                        mods.crafted.push(line.replace(/\(crafted\)/g, '').trim());
+                    }
+                    // Check for implicit mod
+                    else if (line.includes('(implicit)') || separatorCount === 1) {
+                        mods.implicit.push(line.replace(/\(implicit\)/g, '').trim());
+                    }
+                    // Explicit mods come after first separator
+                    else if (separatorCount >= 1) {
+                        mods.explicit.push(line);
+                    }
+                }
+            }
+
+            return mods;
+        }
+
+        function displayCraftingGuide(itemData, modsOnItem, rawText) {
+            // Display item info
+            let infoHTML = `
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; margin-bottom: 10px;">
+                    <strong style="color: #ffd700; font-size: 18px;">${itemData.baseName || 'Unknown Item'}</strong><br>
+                    <span style="color: #aaa;">Item Level: ${itemData.itemLevel || '?'}</span><br>
+                    <span style="color: #aaa;">Item Class: ${itemData.itemClass || 'Unknown'}</span>
+                </div>
+            `;
+
+            if (modsOnItem.implicit.length > 0) {
+                infoHTML += `<div style="margin-bottom: 10px;"><strong style="color: #8888ff;">Implicit Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.implicit.forEach(mod => {
+                    infoHTML += `<li style="color: #aaf;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            if (modsOnItem.explicit.length > 0) {
+                infoHTML += `<div style="margin-bottom: 10px;"><strong style="color: #88ff88;">Explicit Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.explicit.forEach(mod => {
+                    infoHTML += `<li style="color: #afa;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            if (modsOnItem.crafted.length > 0) {
+                infoHTML += `<div><strong style="color: #ffaa00;">Crafted Mods:</strong><ul style="margin: 5px 0;">`;
+                modsOnItem.crafted.forEach(mod => {
+                    infoHTML += `<li style="color: #fa0;">${mod}</li>`;
+                });
+                infoHTML += `</ul></div>`;
+            }
+
+            guideItemInfo.innerHTML = infoHTML;
+
+            // Generate crafting steps based on mods
+            let stepsHTML = generateCraftingSteps(itemData, modsOnItem);
+            guideCraftingSteps.innerHTML = stepsHTML;
+
+            // Generate tips
+            let tipsHTML = generateCraftingTips(itemData, modsOnItem);
+            guideTips.innerHTML = tipsHTML;
+        }
+
+        function detectVendorRecipes(itemData, modsOnItem) {
+            const recipes = [];
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const baseName = (itemData.baseName || '').toLowerCase();
+
+            // Check for weapon types that can use +1 gem recipes
+            const isWand = itemClass.includes('wand') || baseName.includes('wand');
+            const isSceptre = itemClass.includes('sceptre') || baseName.includes('sceptre');
+            const isStaff = itemClass.includes('staff') || baseName.includes('staff');
+            const isRuneDagger = itemClass.includes('rune dagger') || baseName.includes('rune dagger');
+            const isCasterWeapon = isWand || isSceptre || isStaff || isRuneDagger;
+
+            // Check for gem level mods
+            const hasFireGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Fire\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Fire\s+Spell/i)
+            );
+            const hasColdGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Cold\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Cold\s+Spell/i)
+            );
+            const hasLightningGems = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.match(/\+\d+\s+to\s+Level\s+of\s+all\s+Lightning\s+.*?Gems/i) ||
+                m.match(/\+\d+\s+to\s+Level\s+of\s+.*?Lightning\s+Spell/i)
+            );
+
+            // Caster weapon +1 gem recipes (CORRECT METHOD: 40% quality gems)
+            if (isCasterWeapon && (hasFireGems || hasColdGems || hasLightningGems)) {
+                const weaponType = isWand ? 'Wand' : isSceptre ? 'Sceptre' : isStaff ? 'Staff' : 'Rune Dagger';
+
+                if (hasFireGems) {
+                    recipes.push({
+                        name: '+1 to Fire Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Fire gems with 40% total quality (any fire spell gems)'
+                        ],
+                        result: '+1 to Level of all Fire Spell Skill Gems',
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any fire spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'fire'
+                    });
+                }
+                if (hasColdGems) {
+                    recipes.push({
+                        name: '+1 to Cold Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Cold gems with 40% total quality (any cold spell gems)'
+                        ],
+                        result: '+1 to Level of all Cold Spell Skill Gems',
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any cold spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'cold'
+                    });
+                }
+                if (hasLightningGems) {
+                    recipes.push({
+                        name: '+1 to Lightning Spell Gems (Vendor Recipe)',
+                        items: [
+                            `Normal (white) ${weaponType}`,
+                            'Lightning gems with 40% total quality (any lightning spell gems)'
+                        ],
+                        result: '+1 to Level of all Lightning Spell Skill Gems',
+                        cost: '~1c (white base + vendor gems with quality)',
+                        tip: 'Collect any lightning spell gems with quality, when they total 40%+ quality, vendor them with a normal (white) ' + weaponType.toLowerCase(),
+                        element: 'lightning'
+                    });
+                }
+            }
+
+            return recipes;
+        }
+
+        function determineBestCraftingMethod(itemData, modsOnItem, vendorRecipes, budgetMax) {
+            const explicitModCount = modsOnItem.explicit.length;
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+
+            // Priority order (cheapest first):
+            // 1. Vendor Recipe (if applicable) - ~1c
+            // 2. Alt-Regal (1-2 mods) - ~5-20c
+            // 3. Recombinator (2+ mods) - ~10-40c per attempt
+            // 4. Essence (specific mod needed) - ~20-100c
+            // 5. Harvest (if available) - ~50-200c
+            // 6. Chaos Spam (jewelry only, last resort) - ~100-500c
+
+            // Check vendor recipes first
+            if (vendorRecipes.length > 0 && budgetMax >= 1) {
+                return { type: 'vendor', data: vendorRecipes[0], cost: 1 };
+            }
+
+            // Alt-Regal for simple items (1-2 mods)
+            if (explicitModCount <= 2 && budgetMax >= 10) {
+                return { type: 'alt-regal', cost: 15 };
+            }
+
+            // Recombinator for 2+ mods
+            if (explicitModCount >= 2 && budgetMax >= 15) {
+                return { type: 'recombinator', cost: 20 };
+            }
+
+            // Essence for items needing specific mods
+            if (budgetMax >= 30) {
+                return { type: 'essence', cost: 50 };
+            }
+
+            // Harvest for complex items
+            if (budgetMax >= 50) {
+                return { type: 'harvest', cost: 100 };
+            }
+
+            // Chaos spam only for jewelry with high budget
+            if (isJewelry && budgetMax >= 200) {
+                return { type: 'chaos', cost: 300 };
+            }
+
+            // Default to buy from market
+            return { type: 'market', cost: 0 };
+        }
+
+        function generateCraftingSteps(itemData, modsOnItem) {
+            const explicitModCount = modsOnItem.explicit.length;
+            const craftedModCount = modsOnItem.crafted.length;
+            const totalModCount = explicitModCount + craftedModCount;
+            const itemClass = (itemData.itemClass || '').toLowerCase();
+            const isJewelry = itemClass.includes('ring') || itemClass.includes('amulet') || itemClass.includes('belt');
+
+            // Get budget from selector
+            const budget = document.getElementById('craftingBudget')?.value || 'medium';
+            const budgetMax = {
+                'low': 20,
+                'medium': 100,
+                'high': 500,
+                'very-high': 10000
+            }[budget];
+
+            const hasLife = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Life'));
+            const hasResists = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Resistance'));
+            const hasES = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m => m.includes('Energy Shield'));
+
+            // Detect applicable vendor recipes
+            const vendorRecipes = detectVendorRecipes(itemData, modsOnItem);
+
+            // Determine the CHEAPEST/BEST method
+            let bestMethod = determineBestCraftingMethod(itemData, modsOnItem, vendorRecipes, budgetMax);
+
+            let stepsHTML = `<div style="margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 10px;">💰 Most Cost-Effective Method (Within Your Budget)</h3>
+                <p style="color: #aaa; margin-bottom: 15px;">Based on your budget of ${budgetMax}c and item analysis, here's the CHEAPEST way to craft this:</p>
+            </div>`;
+
+            // Method 1: Check market first (ALWAYS recommend this)
+            stepsHTML += `<div style="background: rgba(255,215,0,0.1); padding: 15px; border-left: 4px solid #ffd700; margin-bottom: 15px;">
+                <h4 style="color: #ffd700; margin: 0 0 10px 0;">⭐ Method 1: Buy from Market (CHEAPEST)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Search <strong style="color: #ffd700;">poe.trade</strong> or <strong style="color: #ffd700;">pathofexile.com/trade</strong> for this exact item</li>
+                    <li>Look for items with similar mods (at least ${Math.max(2, explicitModCount - 1)} out of ${explicitModCount} mods)</li>
+                    <li>Compare prices - if it's less than ${totalModCount * 20}c, BUY IT instead of crafting!</li>
+                    <li>You can finish the item with bench crafts or harvest</li>
+                </ol>
+                <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Someone else already took the RNG risk. Often 10x cheaper than crafting!</p>
+            </div>`;
+
+            // Method 2: Vendor Recipes (if applicable)
+            if (vendorRecipes.length > 0) {
+                vendorRecipes.forEach((recipe, index) => {
+                    stepsHTML += `<div style="background: rgba(0,255,127,0.1); padding: 15px; border-left: 4px solid #00ff7f; margin-bottom: 15px;">
+                        <h4 style="color: #00ff7f; margin: 0 0 10px 0;">⭐ Method 2: Vendor Recipe - ${recipe.name}</h4>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Recipe:</strong></p>
+                        <ul style="color: #ddd; line-height: 1.8; margin: 0 0 10px 0;">
+                            ${recipe.items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Result:</strong> ${recipe.result}</p>
+                        <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Cost:</strong> ${recipe.cost}</p>
+                        <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Tip:</strong> ${recipe.tip}</p>
+                        <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>How to use:</strong> Sell all items listed above to ANY vendor at the same time to get the result!</p>
+                    </div>`;
+                });
+            }
+
+            // Method 3: Recombinators (for 2+ explicit mods)
+            let methodNum = vendorRecipes.length > 0 ? 3 : 2;
+            if (explicitModCount >= 2) {
+                stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
+                    <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method ${methodNum}: Recombinator Method (VERY COST-EFFECTIVE)</h4>
+                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Available in Kingsmarch.</p>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li><strong style="color: #ffd700;">Prepare Item 1:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>Cost: ~10-50 Alterations (1-5c total)</li>
+                                <li>Regal it to make rare when you hit the mod</li>
+                            </ul>
+                        </li>
+                        <li><strong style="color: #ffd700;">Prepare Item 2:</strong> Alt-spam another <strong>identical base</strong> (same item type!) until you hit a <strong>different desired mod</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>Cost: ~10-50 Alterations (1-5c total)</li>
+                                <li>Regal it as well</li>
+                            </ul>
+                        </li>
+                        <li><strong style="color: #ffd700;">Recombine:</strong> Use the Recombinator in Kingsmarch
+                            <ul style="margin-top: 5px;">
+                                <li>Costs <strong>Gold + Thaumaturgic Dust</strong> (NOT chaos orbs!)</li>
+                                <li>Select which mods you want to keep from each item</li>
+                                <li>Success chance varies based on mods selected (fewer mods = higher chance)</li>
+                                <li>⚠️ <strong>If it fails, BOTH items are destroyed!</strong></li>
+                            </ul>
+                        </li>
+                        <li><strong style="color: #ffd700;">Repeat if needed:</strong> If recombination fails, craft two new bases and try again</li>
+                        <li>Fill remaining affixes with bench crafts or continue recombining more mods</li>
+                    </ol>
+                    <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Main cost is just alterations (0.1-0.2c each) + base items. Total ~5-20c per attempt, way cheaper than chaos spam!</p>
+                    <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>Pro tip:</strong> Start with 1:1 recombination (1 mod from each item) for best success rate. Can do 2:1 or 3:1 for more mods but lower success.</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Availability:</strong> Check if Kingsmarch Recombinator is available in current league.</p>
+                </div>`;
+                methodNum++;
+            }
+
+            // Method X: Alt-Regal for simple items
+            if (explicitModCount <= 3) {
+                stepsHTML += `<div style="background: rgba(0,150,200,0.1); padding: 15px; border-left: 4px solid #0096c8; margin-bottom: 15px;">
+                    <h4 style="color: #0096c8; margin: 0 0 10px 0;">Method ${methodNum}: Alt-Regal (For Simple Items)</h4>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li>Use <strong>Orbs of Alteration</strong> on white base until you hit 1-2 desired mods</li>
+                        <li>Use <strong>Orb of Augmentation</strong> to add a 2nd mod if needed</li>
+                        <li>Use <strong>Regal Orb</strong> to make it rare (adds 1 random mod)</li>
+                        <li>Finish with crafting bench for missing mods</li>
+                    </ol>
+                    <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> ~20-100 Alterations + 1 Regal = ~5-20 chaos total</p>
+                </div>`;
+                methodNum++;
+            }
+
+            // Method X: Essence crafting (for guaranteed mods)
+            stepsHTML += `<div style="background: rgba(200,100,0,0.1); padding: 15px; border-left: 4px solid #c86400; margin-bottom: 15px;">
+                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method ${methodNum}: Essence Crafting (Guaranteed Mods)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Find the <strong>Essence</strong> that gives you the most important mod (e.g., Essence of Greed for Life)</li>
+                    <li>Spam the essence on your base until you hit 1-2 additional desired mods</li>
+                    <li>Finish with bench crafts or Harvest</li>
+                </ol>
+                <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Depends on essence tier. High-tier essences can be 5-20c each</p>
+                <p style="color: #afa; margin: 5px 0 0 0;">✅ <strong>Good for:</strong> Items where you need one specific high-tier mod guaranteed</p>
+            </div>`;
+            methodNum++;
+
+            // Method X: Harvest Reforge (if available)
+            stepsHTML += `<div style="background: rgba(100,200,100,0.1); padding: 15px; border-left: 4px solid #64c864; margin-bottom: 15px;">
+                <h4 style="color: #64c864; margin: 0 0 10px 0;">Method ${methodNum}: Harvest Reforge (If Available)</h4>
+                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Get a base with any mods (doesn't matter what)</li>
+                    <li>Use <strong>Harvest "Reforge with [type] mods"</strong> crafts:`;
+
+            if (hasLife) stepsHTML += `<br><span style="color: #f88;">• "Reforge with Life mods" for life builds</span>`;
+            if (hasResists) stepsHTML += `<br><span style="color: #88f;">• "Reforge with Cold/Fire/Lightning" for resists</span>`;
+            if (hasES) stepsHTML += `<br><span style="color: #8af;">• "Reforge with Caster mods" for ES</span>`;
+
+            stepsHTML += `</li>
+                    <li>Repeat until you hit 2+ desired mods, then bench craft or continue</li>
+                </ol>
+                <p style="color: #ddd; margin: 10px 0 0 0;">💰 <strong>Cost:</strong> Harvest crafts vary. "Reforge more common" can be 10-50c</p>
+            </div>`;
+            methodNum++;
+
+            // Method X: Chaos spam (only show in specific situations)
+            // Only recommend chaos spam for jewelry or when other methods aren't viable
+            // Note: itemClass already declared at top of function
+            const isInfluenced = [...modsOnItem.explicit, ...modsOnItem.crafted].some(m =>
+                m.includes('Shaper') || m.includes('Elder') || m.includes('Crusader') ||
+                m.includes('Hunter') || m.includes('Warlord') || m.includes('Redeemer')
+            );
+            const showChaosSplam = (isJewelry && explicitModCount >= 4) || (isInfluenced && explicitModCount >= 5);
+
+            if (showChaosSplam) {
+                stepsHTML += `<div style="background: rgba(200,0,0,0.1); padding: 15px; border-left: 4px solid #c80000; margin-bottom: 15px;">
+                    <h4 style="color: #f88; margin: 0 0 10px 0;">Method ${methodNum}: Chaos Spam (USE WITH CAUTION)</h4>
+                    <ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                        <li>Spam <strong>Chaos Orbs</strong> on the item until you hit 2-3 desired mods</li>
+                        <li>Finish with bench craft or harvest</li>
+                    </ol>
+                    <p style="color: #ffa; margin: 10px 0 0 0;">⚠️ <strong>When to use:</strong> ${isJewelry ? 'Jewelry has smaller mod pools, making chaos spam more viable than on armor/weapons.' : 'Influenced items with many mods where other methods are difficult.'}</p>
+                    <p style="color: #f88; margin: 5px 0 0 0;">❌ <strong>Cost Warning:</strong> Expect to use 100-500+ chaos orbs. ONLY do this in late league or if you're wealthy!</p>
+                    <p style="color: #ddd; margin: 5px 0 0 0;">💡 <strong>Better alternative:</strong> Buy from market or use Harvest/Essence crafting instead!</p>
+                </div>`;
+            }
+
+            // Bench crafts section
+            if (craftedModCount > 0) {
+                stepsHTML += `<div style="background: rgba(255,170,0,0.15); padding: 15px; border-left: 4px solid #ffa500; margin-top: 20px;">
+                    <h4 style="color: #ffa500; margin: 0 0 10px 0;">🔧 This Item Has ${craftedModCount} Bench Craft(s)</h4>
+                    <p style="color: #ddd; margin: 0;">The orange "Crafted Mods" you see can be added at your <strong>Hideout Crafting Bench</strong>.</p>
+                    <p style="color: #afa; margin: 10px 0 0 0;">✅ You only need to craft the ${explicitModCount} explicit (green) mods, then add bench crafts at the end!</p>
+                </div>`;
+            }
+
+            return stepsHTML;
+        }
+
+        function generateCraftingTips(itemData, modsOnItem) {
+            const explicitModCount = modsOnItem.explicit.length;
+            const craftedModCount = modsOnItem.crafted.length;
+
+            let tipsHTML = `<h3 style="color: #ffd700; margin-bottom: 10px;">💡 Pro Crafting Tips</h3>
+                <ul style="color: #ddd; line-height: 1.8;">`;
+
+            // Market check tip
+            tipsHTML += `<li>🛒 <strong>ALWAYS Check Trade First:</strong> Search <a href="https://www.pathofexile.com/trade" target="_blank" style="color: #ffd700;">pathofexile.com/trade</a> before crafting. You can often buy similar items for 1/10th the crafting cost!</li>`;
+
+            // Currency efficiency tip
+            tipsHTML += `<li>💰 <strong>Currency Efficiency:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong style="color: #afa;">Alterations = 0.1-0.2c</strong> (super cheap!)</li>
+                    <li><strong style="color: #ffa;">Chaos = 1c</strong> (5-10x more expensive)</li>
+                    <li><strong style="color: #f88;">High-tier Essence = 5-20c</strong> (expensive, but guarantees mod)</li>
+                </ul>
+            </li>`;
+
+            // Recombinator tip
+            if (explicitModCount >= 2) {
+                tipsHTML += `<li>🔮 <strong>Recombinator Strategy:</strong> If Kingsmarch is available, this is THE most cost-effective method! Prepare two bases with desired mods using cheap alterations, then recombine. Costs Gold+Thaumaturgic Dust (NOT chaos orbs). Even with risk of failure, way cheaper than chaos spam!</li>`;
+            }
+
+            // RNG warning
+            tipsHTML += `<li>🎲 <strong>RNG Warning:</strong> Crafting is gambling! Set a budget before you start and STOP if you hit it. Don't spend your last chaos!</li>`;
+
+            // Resource links
+            tipsHTML += `<li>📊 <strong>Essential Crafting Resources:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><a href="https://www.craftofexile.com" target="_blank" style="color: #ffd700;">Craft of Exile</a> - Calculate exact probabilities for crafting methods</li>
+                    <li><a href="https://poedb.tw/us/mod.php" target="_blank" style="color: #ffd700;">PoEDB Mods Database</a> - Look up all mods, tiers, and ilvl requirements</li>
+                    <li><a href="https://www.pathofexile.com/trade" target="_blank" style="color: #ffd700;">Official Trade Site</a> - Always check market prices first!</li>
+                    <li><a href="https://poedb.tw/us/Crafting_Bench" target="_blank" style="color: #ffd700;">Crafting Bench Mods</a> - All available bench crafts</li>
+                </ul>
+            </li>`;
+
+            // ilvl specific tips
+            if (itemData.itemLevel && itemData.itemLevel >= 86) {
+                tipsHTML += `<li>✨ <strong>Excellent ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll T1 mods on all item slots. This is perfect for endgame crafting!</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel >= 82) {
+                tipsHTML += `<li>✅ <strong>Good ilvl!</strong> Your ilvl ${itemData.itemLevel} base can roll most T1 mods. Some slots need ilvl 86 for T1, but this is solid!</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel >= 75) {
+                tipsHTML += `<li>⚠️ <strong>Medium ilvl:</strong> ilvl ${itemData.itemLevel} can roll T2-T3 mods. You won't get T1 mods (need 82-86), but it's fine for budget items!</li>`;
+            } else if (itemData.itemLevel && itemData.itemLevel < 75) {
+                tipsHTML += `<li>❌ <strong>Low ilvl:</strong> ilvl ${itemData.itemLevel} is too low for endgame crafting. You need ilvl 82+ for T1 mods, 75+ for T2 mods.</li>`;
+            }
+
+            // Complexity warning
+            if (explicitModCount >= 5) {
+                tipsHTML += `<li>🎯 <strong>Very Complex Item:</strong> ${explicitModCount} explicit mods = very expensive to craft (easily 100+ chaos). Strongly recommend buying from market instead!</li>`;
+            } else if (explicitModCount >= 3) {
+                tipsHTML += `<li>🎯 <strong>Moderate Complexity:</strong> ${explicitModCount} mods will cost ~30-100c to craft depending on method. Compare with market prices!</li>`;
+            } else {
+                tipsHTML += `<li>✅ <strong>Simple Item:</strong> ${explicitModCount} mods is easy to craft! Alt-spam or recombinators should be very affordable (~10-30c).</li>`;
+            }
+
+            // Bench craft info
+            if (craftedModCount > 0) {
+                tipsHTML += `<li>🔧 <strong>Bench Crafts are FREE:</strong> The ${craftedModCount} crafted mod(s) can be added at your hideout bench for just a few chaos. Focus on getting the explicit mods first!</li>`;
+            }
+
+            // League economy tip
+            tipsHTML += `<li>⏰ <strong>League Timing Matters:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Early League (Week 1-2):</strong> Chaos orbs are expensive. Use alterations + recombinators!</li>
+                    <li><strong>Mid League:</strong> More options available, prices stabilize</li>
+                    <li><strong>Late League:</strong> Currency is cheap, market has lots of items to buy</li>
+                </ul>
+            </li>`;
+
+            // Final tip
+            tipsHTML += `<li>🎓 <strong>Learn by Doing:</strong> Start with cheap bases and simple items. As you learn, you'll waste less currency and get better results!</li>`;
+
+            tipsHTML += `</ul>`;
+
+            return tipsHTML;
+        }
+
+        function showGuideError(message) {
+            guideError.textContent = message;
+            guideError.style.display = 'block';
+            setTimeout(() => {
+                guideError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ===== MARKET INSIGHTS FUNCTIONALITY =====
+        let insightsData = {
+            popular: [],
+            profitable: [],
+            trending: []
+        };
+
+        const insightsLoading = document.getElementById('insightsLoading');
+        const insightsError = document.getElementById('insightsError');
+        const refreshInsightsBtn = document.getElementById('refreshInsightsBtn');
+
+        async function loadMarketInsights() {
+            const league = document.getElementById('insightsLeague').value;
+            if (!league) return;
+
+            insightsLoading.style.display = 'block';
+            insightsError.style.display = 'none';
+
+            // Hide all sections
+            document.getElementById('popularSection').style.display = 'none';
+            document.getElementById('profitableSection').style.display = 'none';
+            document.getElementById('trendingSection').style.display = 'none';
+
+            try {
+                // Fetch all data in parallel
+                const [popularResult, profitableResult, trendingResult] = await Promise.all([
+                    ipcRenderer.invoke('get-popular-items', league, 20),
+                    ipcRenderer.invoke('get-profitable-items', league, 20),
+                    ipcRenderer.invoke('get-trending-items', league, 10)
+                ]);
+
+                if (popularResult.success) {
+                    insightsData.popular = popularResult.data;
+                    document.getElementById('popularCount').textContent = insightsData.popular.length;
+                }
+
+                if (profitableResult.success) {
+                    insightsData.profitable = profitableResult.data;
+                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
+                }
+
+                if (trendingResult.success) {
+                    insightsData.trending = trendingResult.data;
+                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
+                }
+
+                insightsLoading.style.display = 'none';
+
+                // Show first section by default
+                showSection('popular');
+            } catch (error) {
+                insightsLoading.style.display = 'none';
+                showInsightsError('Failed to load market data: ' + error.message);
+            }
+        }
+
+        window.showSection = function(section) {
+            // Hide all sections
+            document.getElementById('popularSection').style.display = 'none';
+            document.getElementById('profitableSection').style.display = 'none';
+            document.getElementById('trendingSection').style.display = 'none';
+
+            // Show selected section
+            if (section === 'popular') {
+                document.getElementById('popularSection').style.display = 'block';
+                displayPopularItems();
+            } else if (section === 'profitable') {
+                document.getElementById('profitableSection').style.display = 'block';
+                displayProfitableItems();
+            } else if (section === 'trending') {
+                document.getElementById('trendingSection').style.display = 'block';
+                displayTrendingItems();
+            }
+        };
+
+        function displayPopularItems() {
+            const container = document.getElementById('popularItemsList');
+            if (insightsData.popular.length === 0) {
+                container.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.popular.forEach((item, index) => {
+                const formattedPrice = formatPriceForDisplay(item.chaosValue);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                            </div>
+                            <div class="method-cost">${formattedPrice}</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${readableBaseType}</div>
+                                <div class="method-stat-label">Type</div>
+                            </div>
+                            ${item.links ? `
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.links}L</div>
+                                <div class="method-stat-label">Links</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <p style="color: #4ade80; margin-top: 10px;">
+                            💡 High demand item - Good for trading and crafting for profit
+                        </p>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function displayProfitableItems() {
+            const container = document.getElementById('profitableItemsList');
+            if (insightsData.profitable.length === 0) {
+                container.innerHTML = '<p style="color: #cccccc; padding: 20px;">No craftable items found. Try refreshing or selecting a different league.</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.profitable.forEach((data, index) => {
+                const item = data.item;
+                const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
+                const formattedSellPrice = formatPriceForDisplay(data.sellPrice);
+                const formattedProfit = formatPriceForDisplay(data.profitMargin);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                                <span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
+                                    ✓ Craftable
+                                </span>
+                            </div>
+                            <div class="method-cost">${formattedProfit} Profit</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${formattedSellPrice}</div>
+                                <div class="method-stat-label">Market Price</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${data.craftingMethod}</div>
+                                <div class="method-stat-label">Suggested Method</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${data.demand}</div>
+                                <div class="method-stat-label">Demand</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
+                            <p style="color: #4ade80; margin: 0;">
+                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%)
+                            </p>
+                            <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
+                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function displayTrendingItems() {
+            const container = document.getElementById('trendingItemsList');
+            if (insightsData.trending.length === 0) {
+                container.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            let html = '';
+            insightsData.trending.forEach((item, index) => {
+                const formattedPrice = formatPriceForDisplay(item.chaosValue);
+                const readableBaseType = formatBaseType(item.baseType || item.name);
+
+                html += `
+                    <div class="method-card">
+                        <div class="method-header">
+                            <div>
+                                <span class="method-name">#${index + 1} ${item.name}</span>
+                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
+                            </div>
+                            <div class="method-cost">${formattedPrice}</div>
+                        </div>
+                        <div class="method-stats">
+                            <div class="method-stat">
+                                <div class="method-stat-value">${item.listingCount || 0}</div>
+                                <div class="method-stat-label">Listings</div>
+                            </div>
+                            <div class="method-stat">
+                                <div class="method-stat-value">${readableBaseType}</div>
+                                <div class="method-stat-label">Type</div>
+                            </div>
+                        </div>
+                        <p style="color: #ffd700; margin-top: 10px;">
+                            📈 Trending - High value and activity
+                        </p>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Helper function to format prices (Chaos vs Divine)
+        function formatPriceForDisplay(chaosValue) {
+            const divinePrice = 200; // Approximate Divine Orb price in Chaos
+
+            if (chaosValue >= divinePrice) {
+                const divineValue = (chaosValue / divinePrice).toFixed(2);
+                return `${divineValue} Divine`;
+            } else if (chaosValue >= 10) {
+                return `${Math.round(chaosValue)} Chaos`;
+            } else {
+                return `${chaosValue.toFixed(1)} Chaos`;
+            }
+        }
+
+        // Helper function to format base type names for readability
+        function formatBaseType(baseType) {
+            if (!baseType || baseType === 'N/A') return 'Base Item';
+
+            // Remove common prefixes that make names too long
+            let formatted = baseType
+                .replace(/^(Metadata\/Items\/)/i, '')
+                .replace(/^(Currency\/)/i, '')
+                .replace(/^(UniqueItems\/)/i, '');
+
+            // Handle camelCase and PascalCase - add spaces
+            formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+            // Handle underscores
+            formatted = formatted.replace(/_/g, ' ');
+
+            // Capitalize first letter of each word
+            formatted = formatted.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+
+            // Truncate if too long
+            if (formatted.length > 25) {
+                formatted = formatted.substring(0, 22) + '...';
+            }
+
+            return formatted;
+        }
+
+        refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+
+        document.getElementById('insightsLeague').addEventListener('change', () => {
+            // Reset counts
+            document.getElementById('popularCount').textContent = '0';
+            document.getElementById('profitableCount').textContent = '0';
+            document.getElementById('trendingCount').textContent = '0';
+        });
+
+        function showInsightsError(message) {
+            insightsError.textContent = message;
+            insightsError.style.display = 'block';
+            setTimeout(() => {
+                insightsError.style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
 </html>
