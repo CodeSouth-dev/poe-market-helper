@@ -612,3 +612,29 @@ ipcMain.handle('clear-craft-cache', async () => {
     return { success: false, error: error.message };
   }
 });
+
+// Get top base items by class
+ipcMain.handle('craft-get-bases-by-class', async (event: any, itemClass: string, itemLevel: number) => {
+  try {
+    const result = await craftOfExileScraper.getTopBasesByClass(itemClass, itemLevel);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Get bases by class error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get available mods for item class
+ipcMain.handle('craft-get-mods-for-class', async (event: any, itemClass: string, itemLevel: number, modType: string) => {
+  try {
+    const result = await craftOfExileScraper.getModsForItemClass(
+      itemClass,
+      itemLevel,
+      modType as any
+    );
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Get mods for class error:', error);
+    return { success: false, error: error.message };
+  }
+});
