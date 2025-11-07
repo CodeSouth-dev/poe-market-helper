@@ -43,6 +43,7 @@ const craftingData_1 = require("./api/craftingData");
 const browserManager_1 = require("./browserManager");
 const poeTradeOfficial_1 = require("./poeTradeOfficial");
 const priceComparison_1 = require("./priceComparison");
+const poeNinjaScraper_1 = require("./poeNinjaScraper");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -270,7 +271,8 @@ let buildDataTimestamp = null;
 electron_1.ipcMain.handle('scrape-builds', async (event, league) => {
     try {
         console.log(`Scraping builds for league: ${league}`);
-        const scrapedData = await poeAPI.scrapeBuilds(league);
+        // Use the enhanced browser-based scraper
+        const scrapedData = await poeNinjaScraper_1.poeNinjaScraper.scrapeBuilds(league);
         // Cache the scraped data
         buildDataCache = scrapedData;
         buildDataTimestamp = new Date();
@@ -424,6 +426,31 @@ electron_1.ipcMain.handle('cleanup-browsers', async () => {
     }
     catch (error) {
         console.error('Cleanup browsers error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ============================================================================
+// Enhanced Build Scraping (Browser-based)
+// ============================================================================
+// Get popular craftable items filtered by wealth
+electron_1.ipcMain.handle('get-popular-craftable-items', async (event, league, minWealth, maxWealth) => {
+    try {
+        const items = await poeNinjaScraper_1.poeNinjaScraper.getPopularCraftableItems(league, minWealth, maxWealth);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get popular craftable items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get build statistics
+electron_1.ipcMain.handle('get-build-stats', async (event, league) => {
+    try {
+        const stats = await poeNinjaScraper_1.poeNinjaScraper.getBuildStats(league);
+        return { success: true, data: stats };
+    }
+    catch (error) {
+        console.error('Get build stats error:', error);
         return { success: false, error: error.message };
     }
 });

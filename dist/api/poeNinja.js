@@ -13,6 +13,13 @@ class PoeNinjaAPI {
         this.timeout = 10000; // 10 seconds
     }
     /**
+     * Get the price of an item (returns median chaos value)
+     */
+    async getItemPrice(itemName, league = 'Standard') {
+        const result = await this.searchItem(itemName, league);
+        return result.medianPrice || 0;
+    }
+    /**
      * Search for an item across different categories
      */
     async searchItem(itemName, league) {
