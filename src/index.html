@@ -1491,6 +1491,16 @@
         let desiredMods = [];
         let modCounter = 0;
 
+        // Track current item's existing mods
+        let currentItemMods = {
+            prefixes: [],
+            suffixes: [],
+            count: {
+                prefixes: 0,
+                suffixes: 0
+            }
+        };
+
         const craftingForm = document.getElementById('craftingForm');
         const modsList = document.getElementById('modsList');
         const addModBtn = document.getElementById('addModBtn');
