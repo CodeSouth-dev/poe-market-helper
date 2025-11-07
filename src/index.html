@@ -2662,6 +2662,33 @@
         const insightsError = document.getElementById('insightsError');
         const refreshInsightsBtn = document.getElementById('refreshInsightsBtn');
 
+        // Define checkCachedMarketInsights BEFORE it's used in tab switching
+        async function checkCachedMarketInsights() {
+            const league = document.getElementById('insightsLeague').value;
+            if (!league) return;
+
+            try {
+                const result = await ipcRenderer.invoke('get-cached-market-insights', league);
+                if (result.success) {
+                    const data = result.data;
+                    insightsData.popular = data.popular;
+                    insightsData.profitable = data.profitable;
+                    insightsData.trending = data.trending;
+
+                    document.getElementById('popularCount').textContent = insightsData.popular.length;
+                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
+                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
+
+                    // Show first section if we have cached data
+                    if (insightsData.popular.length > 0 || insightsData.profitable.length > 0) {
+                        showSection('popular');
+                    }
+                }
+            } catch (error) {
+                console.log('No cached market insights available');
+            }
+        }
+
         async function loadMarketInsights() {
             const league = document.getElementById('insightsLeague').value;
             if (!league) return;
@@ -2699,31 +2726,6 @@
             } catch (error) {
                 insightsLoading.style.display = 'none';
                 showInsightsError('Failed to load market data: ' + error.message);
-            }
-        }
-
-        // Check for cached market insights on tab switch
-        async function checkCachedMarketInsights() {
-            const league = document.getElementById('insightsLeague').value;
-            if (!league) return;
-
-            try {
-                const result = await ipcRenderer.invoke('get-cached-market-insights', league);
-                if (result.success) {
-                    const data = result.data;
-                    insightsData.popular = data.popular;
-                    insightsData.profitable = data.profitable;
-                    insightsData.trending = data.trending;
-
-                    document.getElementById('popularCount').textContent = insightsData.popular.length;
-                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
-                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
-
-                    // Show first section if we have cached data
-                    showSection('popular');
-                }
-            } catch (error) {
-                console.log('No cached market insights available');
             }
         }
 
