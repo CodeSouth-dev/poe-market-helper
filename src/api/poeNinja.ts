@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { defaultRateLimiter } from '../rateLimiter';
 
 export interface PoeNinjaItem {
   name: string;
@@ -171,12 +172,15 @@ export class PoeNinjaAPI {
     };
 
     try {
-      const response = await axios.get<PoeNinjaResponse>(url, {
-        params,
-        timeout: this.timeout,
-        headers: {
-          'User-Agent': 'PoE-Market-Helper/1.0.0'
-        }
+      // Use rate limiter to prevent spam and avoid being blocked
+      const response = await defaultRateLimiter.execute('poe.ninja', async () => {
+        return await axios.get<PoeNinjaResponse>(url, {
+          params,
+          timeout: this.timeout,
+          headers: {
+            'User-Agent': 'PoE-Market-Helper/1.0.0'
+          }
+        });
       });
 
       if (!response.data || !response.data.lines) {
@@ -243,9 +247,11 @@ export class PoeNinjaAPI {
       for (const league of leaguesToTest) {
         try {
           const url = `${this.baseUrl}/currencyoverview`;
-          const response = await axios.get(url, {
-            params: { league, type: 'Currency' },
-            timeout: 5000
+          const response = await defaultRateLimiter.execute('poe.ninja', async () => {
+            return await axios.get(url, {
+              params: { league, type: 'Currency' },
+              timeout: 5000
+            });
           });
 
           if (response.data && response.data.lines && response.data.lines.length > 0) {
@@ -769,12 +775,14 @@ export class PoeNinjaAPI {
       console.log(`Scraping builds from: ${buildsUrl}`);
 
       // Fetch the HTML page
-      const response = await axios.get(buildsUrl, {
-        timeout: this.timeout,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        }
+      const response = await defaultRateLimiter.execute('poe.ninja', async () => {
+        return await axios.get(buildsUrl, {
+          timeout: this.timeout,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        });
       });
 
       const html = response.data;
@@ -789,11 +797,13 @@ export class PoeNinjaAPI {
         const apiUrl = `https://poe.ninja/api/data/builds?league=${league}&type=exp`;
         console.log(`Found builds API: ${apiUrl}`);
 
-        const apiResponse = await axios.get(apiUrl, {
-          timeout: this.timeout,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
+        const apiResponse = await defaultRateLimiter.execute('poe.ninja', async () => {
+          return await axios.get(apiUrl, {
+            timeout: this.timeout,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
         });
 
         return this.parseBuildsApiResponse(apiResponse.data, league);

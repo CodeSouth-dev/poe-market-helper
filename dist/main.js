@@ -40,6 +40,9 @@ const cache_1 = require("./utils/cache");
 const favorites_1 = require("./utils/favorites");
 const craftingCalculator_1 = require("./api/craftingCalculator");
 const craftingData_1 = require("./api/craftingData");
+const browserManager_1 = require("./browserManager");
+const poeTradeOfficial_1 = require("./poeTradeOfficial");
+const priceComparison_1 = require("./priceComparison");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -67,7 +70,9 @@ function createWindow() {
 }
 // App event listeners
 electron_1.app.whenReady().then(createWindow);
-electron_1.app.on('window-all-closed', () => {
+electron_1.app.on('window-all-closed', async () => {
+    // Cleanup browser sessions before quitting
+    await browserManager_1.browserManager.shutdown();
     if (process.platform !== 'darwin') {
         electron_1.app.quit();
     }
@@ -291,4 +296,134 @@ electron_1.ipcMain.handle('get-cached-builds', async (event) => {
         };
     }
     return { success: false, error: 'No cached build data available' };
+});
+// ============================================================================
+// Browser-based Trading Integration (pathofexile.com/trade)
+// ============================================================================
+// Check if user is authenticated with official trade site
+electron_1.ipcMain.handle('poe-trade-check-auth', async () => {
+    try {
+        const isAuth = await poeTradeOfficial_1.poeTradeOfficial.checkAuthentication();
+        return { success: true, data: { authenticated: isAuth } };
+    }
+    catch (error) {
+        console.error('Check auth error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Prompt user to login with visible browser
+electron_1.ipcMain.handle('poe-trade-login', async () => {
+    try {
+        const success = await poeTradeOfficial_1.poeTradeOfficial.promptLogin();
+        return { success: true, data: { loggedIn: success } };
+    }
+    catch (error) {
+        console.error('Login error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get item price from official trade site
+electron_1.ipcMain.handle('poe-trade-get-price', async (event, itemName, league) => {
+    try {
+        const price = await poeTradeOfficial_1.poeTradeOfficial.getItemPrice(itemName, league);
+        return { success: true, data: { itemName, price } };
+    }
+    catch (error) {
+        console.error('Get price error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Compare base prices for crafting
+electron_1.ipcMain.handle('poe-trade-compare-bases', async (event, baseTypes, league) => {
+    try {
+        const comparison = await poeTradeOfficial_1.poeTradeOfficial.compareBasePrices(baseTypes, league);
+        return { success: true, data: comparison };
+    }
+    catch (error) {
+        console.error('Compare bases error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ============================================================================
+// Price Comparison and Profit Analysis
+// ============================================================================
+// Compare item price across all sources
+electron_1.ipcMain.handle('compare-item-price', async (event, itemName, league) => {
+    try {
+        const comparison = await priceComparison_1.priceComparisonService.compareItemPrice(itemName, league);
+        return { success: true, data: comparison };
+    }
+    catch (error) {
+        console.error('Compare price error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Find arbitrage opportunities
+electron_1.ipcMain.handle('find-arbitrage', async (event, itemNames, league, minProfit) => {
+    try {
+        const opportunities = await priceComparison_1.priceComparisonService.findArbitrageOpportunities(itemNames, league, minProfit);
+        return { success: true, data: opportunities };
+    }
+    catch (error) {
+        console.error('Find arbitrage error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Analyze crafting profit
+electron_1.ipcMain.handle('analyze-crafting-profit', async (event, baseItem, craftedItem, craftingCost, league) => {
+    try {
+        const analysis = await priceComparison_1.priceComparisonService.analyzeCraftingProfit(baseItem, craftedItem, craftingCost, league);
+        return { success: true, data: analysis };
+    }
+    catch (error) {
+        console.error('Analyze crafting profit error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Compare multiple crafting routes
+electron_1.ipcMain.handle('compare-crafting-routes', async (event, routes, league) => {
+    try {
+        const analyses = await priceComparison_1.priceComparisonService.compareCraftingRoutes(routes, league);
+        return { success: true, data: analyses };
+    }
+    catch (error) {
+        console.error('Compare crafting routes error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get market summary
+electron_1.ipcMain.handle('get-market-summary', async (event, itemNames, league) => {
+    try {
+        const summary = await priceComparison_1.priceComparisonService.getMarketSummary(itemNames, league);
+        return { success: true, data: summary };
+    }
+    catch (error) {
+        console.error('Get market summary error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ============================================================================
+// Browser Management
+// ============================================================================
+// Get browser session stats
+electron_1.ipcMain.handle('get-browser-stats', async () => {
+    try {
+        const stats = browserManager_1.browserManager.getStats();
+        return { success: true, data: stats };
+    }
+    catch (error) {
+        console.error('Get browser stats error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Cleanup idle browser sessions
+electron_1.ipcMain.handle('cleanup-browsers', async () => {
+    try {
+        await browserManager_1.browserManager.closeAll();
+        return { success: true, message: 'All browser sessions closed' };
+    }
+    catch (error) {
+        console.error('Cleanup browsers error:', error);
+        return { success: false, error: error.message };
+    }
 });
