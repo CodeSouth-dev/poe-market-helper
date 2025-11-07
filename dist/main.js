@@ -218,3 +218,36 @@ electron_1.ipcMain.handle('get-build-craftable-items', async (event, league, lim
         return { success: false, error: error.message };
     }
 });
+// Scrape builds from poe.ninja (manual refresh only)
+let buildDataCache = null;
+let buildDataTimestamp = null;
+electron_1.ipcMain.handle('scrape-builds', async (event, league) => {
+    try {
+        console.log(`Scraping builds for league: ${league}`);
+        const scrapedData = await poeAPI.scrapeBuilds(league);
+        // Cache the scraped data
+        buildDataCache = scrapedData;
+        buildDataTimestamp = new Date();
+        return {
+            success: true,
+            data: scrapedData,
+            cached: false,
+            timestamp: buildDataTimestamp
+        };
+    }
+    catch (error) {
+        console.error('Scrape builds error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-cached-builds', async (event) => {
+    if (buildDataCache && buildDataTimestamp) {
+        return {
+            success: true,
+            data: buildDataCache,
+            cached: true,
+            timestamp: buildDataTimestamp
+        };
+    }
+    return { success: false, error: 'No cached build data available' };
+});

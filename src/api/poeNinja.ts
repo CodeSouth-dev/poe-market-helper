@@ -31,6 +31,12 @@ export interface BuildItem {
     prefixes: string[];
     suffixes: string[];
   };
+  buildUsage: {
+    totalBuilds: number; // Total builds in sample
+    buildsUsingThis: number; // Number of builds using this item/mod combo
+    popularityPercent: number; // % of builds using this
+    topBuilds: string[]; // Names of popular builds using this
+  };
   craftingStrategy: {
     method: string;
     steps: string[];
@@ -38,6 +44,35 @@ export interface BuildItem {
     difficulty: 'Easy' | 'Medium' | 'Hard' | 'Very Hard';
     successRate: string;
   };
+}
+
+export interface BuildSnapshot {
+  name: string; // Build/Character name
+  class: string; // Ascendancy class
+  level: number;
+  mainSkill: string;
+  popularity: number; // How many people playing this
+  items: {
+    slot: string; // "Ring", "Amulet", "Weapon", etc.
+    name: string;
+    baseType: string;
+    mods: string[];
+  }[];
+}
+
+export interface BuildScrapedData {
+  league: string;
+  timestamp: Date;
+  totalBuilds: number;
+  builds: BuildSnapshot[];
+  popularItems: Map<string, {
+    name: string;
+    baseType: string;
+    slot: string;
+    usageCount: number;
+    usagePercent: number;
+    commonMods: string[];
+  }>;
 }
 
 export interface PoeNinjaResponse {
@@ -507,6 +542,12 @@ export class PoeNinjaAPI {
       count: item.count || item.listingCount || 0,
       listingCount: item.listingCount || 0,
       mods: this.extractModInfo(item, strategy.method),
+      buildUsage: {
+        totalBuilds: 0, // Will be populated from scraped data if available
+        buildsUsingThis: 0,
+        popularityPercent: 0,
+        topBuilds: []
+      },
       craftingStrategy: strategy
     };
   }
@@ -713,6 +754,169 @@ export class PoeNinjaAPI {
       explicit: [...prefixes, ...suffixes],
       prefixes,
       suffixes
+    };
+  }
+
+  /**
+   * Scrape build data from poe.ninja/builds
+   * NOTE: This is a manual refresh operation - not called automatically
+   * Data is cached after scraping
+   */
+  async scrapeBuilds(league: string): Promise<BuildScrapedData> {
+    const buildsUrl = `https://poe.ninja/builds/${league.toLowerCase().replace(/\s+/g, '-')}`;
+
+    try {
+      console.log(`Scraping builds from: ${buildsUrl}`);
+
+      // Fetch the HTML page
+      const response = await axios.get(buildsUrl, {
+        timeout: this.timeout,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+
+      const html = response.data;
+
+      // poe.ninja builds page is React-based, so we need to extract data from the page
+      // The builds data is usually in a script tag or loaded via API
+      // Let's try to find the builds API endpoint they use
+
+      // Check if there's a builds API endpoint
+      const buildsApiMatch = html.match(/\/api\/data\/builds\?league=([^"'&]+)/);
+      if (buildsApiMatch) {
+        const apiUrl = `https://poe.ninja/api/data/builds?league=${league}&type=exp`;
+        console.log(`Found builds API: ${apiUrl}`);
+
+        const apiResponse = await axios.get(apiUrl, {
+          timeout: this.timeout,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+
+        return this.parseBuildsApiResponse(apiResponse.data, league);
+      }
+
+      // Fallback: Try to parse from embedded JSON data
+      const scriptMatch = html.match(/<script[^>]*>window\.__NEXT_DATA__\s*=\s*({.+?})<\/script>/);
+      if (scriptMatch) {
+        const nextData = JSON.parse(scriptMatch[1]);
+        return this.parseNextDataBuilds(nextData, league);
+      }
+
+      // If we can't find structured data, return empty result
+      console.warn('Could not find builds data in page');
+      return {
+        league,
+        timestamp: new Date(),
+        totalBuilds: 0,
+        builds: [],
+        popularItems: new Map()
+      };
+
+    } catch (error: any) {
+      console.error('Failed to scrape builds:', error.message);
+      throw new Error(`Failed to fetch build data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Parse builds data from poe.ninja API response
+   */
+  private parseBuildsApiResponse(data: any, league: string): BuildScrapedData {
+    const builds: BuildSnapshot[] = [];
+    const itemUsageMap = new Map<string, any>();
+
+    // Parse build entries
+    if (data && Array.isArray(data)) {
+      data.forEach((buildEntry: any) => {
+        const build: BuildSnapshot = {
+          name: buildEntry.name || buildEntry.character || 'Unknown',
+          class: buildEntry.class || buildEntry.ascendancy || 'Unknown',
+          level: buildEntry.level || 100,
+          mainSkill: buildEntry.mainSkill || buildEntry.skill || 'Unknown',
+          popularity: buildEntry.count || 1,
+          items: []
+        };
+
+        // Parse items if available
+        if (buildEntry.items) {
+          Object.keys(buildEntry.items).forEach(slot => {
+            const item = buildEntry.items[slot];
+            if (item && item.name) {
+              const itemData = {
+                slot,
+                name: item.name,
+                baseType: item.baseType || item.typeLine || item.name,
+                mods: item.explicitMods || item.mods || []
+              };
+              build.items.push(itemData);
+
+              // Track item usage
+              const key = `${slot}:${item.baseType || item.name}`;
+              if (!itemUsageMap.has(key)) {
+                itemUsageMap.set(key, {
+                  name: item.name,
+                  baseType: item.baseType || item.name,
+                  slot,
+                  usageCount: 0,
+                  commonMods: []
+                });
+              }
+              itemUsageMap.get(key).usageCount++;
+            }
+          });
+        }
+
+        builds.push(build);
+      });
+    }
+
+    // Calculate usage percentages
+    const totalBuilds = builds.length;
+    const popularItems = new Map();
+    itemUsageMap.forEach((itemData, key) => {
+      popularItems.set(key, {
+        ...itemData,
+        usagePercent: (itemData.usageCount / totalBuilds) * 100
+      });
+    });
+
+    return {
+      league,
+      timestamp: new Date(),
+      totalBuilds,
+      builds,
+      popularItems
+    };
+  }
+
+  /**
+   * Parse builds data from Next.js page data
+   */
+  private parseNextDataBuilds(nextData: any, league: string): BuildScrapedData {
+    // Try to find builds data in the Next.js data structure
+    const builds: BuildSnapshot[] = [];
+
+    try {
+      const pageProps = nextData?.props?.pageProps;
+      if (pageProps && pageProps.builds) {
+        // Parse whatever structure we find
+        // This will need to be adapted based on actual page structure
+        console.log('Found builds in pageProps');
+      }
+    } catch (error) {
+      console.warn('Could not parse Next.js data:', error);
+    }
+
+    return {
+      league,
+      timestamp: new Date(),
+      totalBuilds: builds.length,
+      builds,
+      popularItems: new Map()
     };
   }
 }

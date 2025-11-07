@@ -669,8 +669,15 @@
                 </div>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <button type="button" id="refreshInsightsBtn" class="btn-success" style="width: 100%;">🔄 Load/Refresh Market Data</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <button type="button" id="refreshInsightsBtn" class="btn-success">🔄 Load Market Data</button>
+                <button type="button" id="scrapeBuildsBtn" class="btn-success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔍 Scrape Builds Data</button>
+            </div>
+
+            <div id="buildDataStatus" style="background: rgba(139, 92, 246, 0.15); border: 2px solid #8b5cf6; padding: 12px; margin-bottom: 20px; border-radius: 8px; display: none;">
+                <p style="color: #8b5cf6; margin: 0; font-size: 0.9em;">
+                    <strong>Build Data:</strong> <span id="buildDataInfo">Not loaded</span>
+                </p>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
@@ -2992,6 +2999,74 @@
         } else {
             console.error('Refresh insights button not found');
         }
+
+        // Setup scrape builds button
+        const scrapeBuildsBtn = document.getElementById('scrapeBuildsBtn');
+        const buildDataStatus = document.getElementById('buildDataStatus');
+        const buildDataInfo = document.getElementById('buildDataInfo');
+
+        if (scrapeBuildsBtn) {
+            scrapeBuildsBtn.addEventListener('click', async () => {
+                const league = document.getElementById('insightsLeague').value;
+                if (!league) {
+                    showInsightsError('Please select a league first');
+                    return;
+                }
+
+                // Show loading state
+                scrapeBuildsBtn.disabled = true;
+                scrapeBuildsBtn.textContent = '⏳ Scraping builds...';
+                buildDataStatus.style.display = 'block';
+                buildDataInfo.textContent = 'Scraping data from poe.ninja/builds...';
+
+                try {
+                    const result = await ipcRenderer.invoke('scrape-builds', league);
+
+                    if (result.success) {
+                        const data = result.data;
+                        const timestamp = new Date(result.timestamp);
+                        const timeStr = timestamp.toLocaleTimeString();
+
+                        buildDataInfo.textContent = `Loaded ${data.totalBuilds} builds at ${timeStr}`;
+                        buildDataInfo.style.color = '#4ade80';
+
+                        console.log('Build data scraped:', data);
+
+                        // Optionally reload market data to incorporate build info
+                        await loadMarketInsights();
+                    } else {
+                        buildDataInfo.textContent = `Failed: ${result.error}`;
+                        buildDataInfo.style.color = '#ef4444';
+                        showInsightsError('Failed to scrape builds: ' + result.error);
+                    }
+                } catch (error) {
+                    buildDataInfo.textContent = `Error: ${error.message}`;
+                    buildDataInfo.style.color = '#ef4444';
+                    showInsightsError('Error scraping builds: ' + error.message);
+                } finally {
+                    scrapeBuildsBtn.disabled = false;
+                    scrapeBuildsBtn.textContent = '🔍 Scrape Builds Data';
+                }
+            });
+        }
+
+        // Check for cached build data on load
+        async function checkCachedBuilds() {
+            try {
+                const result = await ipcRenderer.invoke('get-cached-builds');
+                if (result.success) {
+                    const timestamp = new Date(result.timestamp);
+                    const timeStr = timestamp.toLocaleTimeString();
+                    buildDataStatus.style.display = 'block';
+                    buildDataInfo.textContent = `Using cached data from ${timeStr} (${result.data.totalBuilds} builds)`;
+                    buildDataInfo.style.color = '#8b5cf6';
+                }
+            } catch (error) {
+                console.log('No cached build data available');
+            }
+        }
+
+        checkCachedBuilds();
 
         // Setup league selector with auto-load
         const insightsLeagueSelect = document.getElementById('insightsLeague');
