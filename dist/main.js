@@ -46,6 +46,9 @@ const priceComparison_1 = require("./priceComparison");
 const poeNinjaScraper_1 = require("./poeNinjaScraper");
 const poedbScraper_1 = require("./poedbScraper");
 const craftOfExileScraper_1 = require("./craftOfExileScraper");
+const pobImporter_1 = require("./pobImporter");
+const liveSearch_1 = require("./liveSearch");
+const fossilOptimizer_1 = require("./fossilOptimizer");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -74,8 +77,9 @@ function createWindow() {
 // App event listeners
 electron_1.app.whenReady().then(createWindow);
 electron_1.app.on('window-all-closed', async () => {
-    // Cleanup browser sessions before quitting
+    // Cleanup browser sessions and live searches before quitting
     await browserManager_1.browserManager.shutdown();
+    liveSearch_1.liveSearchManager.shutdown();
     if (process.platform !== 'darwin') {
         electron_1.app.quit();
     }
@@ -612,5 +616,136 @@ electron_1.ipcMain.handle('craft-get-mods-for-class', async (event, itemClass, i
     catch (error) {
         console.error('Get mods for class error:', error);
         return { success: false, error: error.message };
+    }
+});
+// ==================== Path of Building Import ====================
+// Import PoB code
+electron_1.ipcMain.handle('pob-import', async (event, pobCode, league) => {
+    try {
+        const result = await pobImporter_1.pobImporter.importBuild(pobCode, league);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('PoB import error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get PoB build summary (quick overview)
+electron_1.ipcMain.handle('pob-get-summary', async (event, pobCode, league) => {
+    try {
+        const result = await pobImporter_1.pobImporter.getBuildSummary(pobCode, league);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('PoB summary error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Live Search & Notifications ====================
+// Create live search
+electron_1.ipcMain.handle('live-search-create', async (event, filter) => {
+    try {
+        const searchId = await liveSearch_1.liveSearchManager.createSearch(filter);
+        return { success: true, searchId };
+    }
+    catch (error) {
+        console.error('Create live search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Stop live search
+electron_1.ipcMain.handle('live-search-stop', async (event, searchId) => {
+    try {
+        const stopped = liveSearch_1.liveSearchManager.stopSearch(searchId);
+        return { success: stopped };
+    }
+    catch (error) {
+        console.error('Stop live search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Resume live search
+electron_1.ipcMain.handle('live-search-resume', async (event, searchId) => {
+    try {
+        const resumed = liveSearch_1.liveSearchManager.resumeSearch(searchId);
+        return { success: resumed };
+    }
+    catch (error) {
+        console.error('Resume live search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Delete live search
+electron_1.ipcMain.handle('live-search-delete', async (event, searchId) => {
+    try {
+        const deleted = liveSearch_1.liveSearchManager.deleteSearch(searchId);
+        return { success: deleted };
+    }
+    catch (error) {
+        console.error('Delete live search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get all active searches
+electron_1.ipcMain.handle('live-search-get-active', async () => {
+    try {
+        const searches = liveSearch_1.liveSearchManager.getActiveSearches();
+        return { success: true, data: searches };
+    }
+    catch (error) {
+        console.error('Get active searches error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get results for a search
+electron_1.ipcMain.handle('live-search-get-results', async (event, searchId) => {
+    try {
+        const results = liveSearch_1.liveSearchManager.getResults(searchId);
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get search results error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Create underpriced search
+electron_1.ipcMain.handle('live-search-underpriced', async (event, itemName, typicalPrice, discount, league) => {
+    try {
+        const searchId = await liveSearch_1.liveSearchManager.createUnderpricedSearch(itemName, typicalPrice, discount, league);
+        return { success: true, searchId };
+    }
+    catch (error) {
+        console.error('Create underpriced search error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get live search statistics
+electron_1.ipcMain.handle('live-search-stats', async () => {
+    try {
+        const stats = liveSearch_1.liveSearchManager.getStatistics();
+        return { success: true, data: stats };
+    }
+    catch (error) {
+        console.error('Get search stats error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Fossil Optimization ====================
+// Find best fossil combination
+electron_1.ipcMain.handle('fossil-optimize', async (event, baseItem, desiredMods, league) => {
+    try {
+        const result = await fossilOptimizer_1.fossilOptimizer.findBestCombination(baseItem, desiredMods, league);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Fossil optimization error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Listen for new listings from live search
+liveSearch_1.liveSearchManager.on('newListing', (data) => {
+    // Send notification to frontend
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('live-search-new-listing', data);
     }
 });
