@@ -51,19 +51,17 @@ export class PoeNinjaAPI {
       'UniqueFlask',
       'UniqueJewel',
       'UniqueMap',
-      'Gem',
+      'SkillGem',
       'Currency',
       'Fragment',
       'Essence',
       'DivinationCard',
-      'Prophecy',
       'Oil',
       'Incubator',
       'Scarab',
       'Fossil',
       'Resonator',
-      'Beast',
-      'Vial'
+      'Beast'
     ];
 
     // Search through each category
@@ -225,7 +223,7 @@ export class PoeNinjaAPI {
       'UniqueAccessory',
       'UniqueJewel',
       'UniqueFlask',
-      'Gem'
+      'SkillGem'
     ];
 
     for (const category of categories) {
@@ -333,7 +331,7 @@ export class PoeNinjaAPI {
       'UniqueWeapon',
       'UniqueArmour',
       'UniqueAccessory',
-      'Gem'
+      'SkillGem'
     ];
 
     for (const category of categories) {
