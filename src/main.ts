@@ -15,6 +15,7 @@ import { pobImporter } from './pobImporter';
 import { liveSearchManager } from './liveSearch';
 import { fossilOptimizer } from './fossilOptimizer';
 import { automatedBaseAnalyzer } from './automatedBaseAnalyzer';
+import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -858,6 +859,74 @@ ipcMain.handle('automated-analyzer-get-recommendations-by-class', async (event: 
     return { success: true, data: results };
   } catch (error: any) {
     console.error('Get recommendations by class error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Currency & Materials Pricing ====================
+
+// Get all currency and materials pricing
+ipcMain.handle('currency-get-all-pricing', async (event: any, league: string) => {
+  try {
+    const result = await currencyMaterialsScraper.scrapeAllPricing(league || 'Standard');
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Get all pricing error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get specific category pricing
+ipcMain.handle('currency-get-category', async (event: any, category: string, league: string) => {
+  try {
+    const result = await currencyMaterialsScraper.getCategoryPricing(category, league || 'Standard');
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Get category pricing error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get price for specific item
+ipcMain.handle('currency-get-price', async (event: any, itemName: string, league: string) => {
+  try {
+    const price = await currencyMaterialsScraper.getPrice(itemName, league || 'Standard');
+    return { success: true, data: price };
+  } catch (error: any) {
+    console.error('Get item price error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Search for currency/materials
+ipcMain.handle('currency-search', async (event: any, query: string, league: string) => {
+  try {
+    const results = await currencyMaterialsScraper.searchItems(query, league || 'Standard');
+    return { success: true, data: results };
+  } catch (error: any) {
+    console.error('Search currency error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get most expensive items
+ipcMain.handle('currency-get-most-expensive', async (event: any, limit: number, league: string) => {
+  try {
+    const results = await currencyMaterialsScraper.getMostExpensive(limit || 20, league || 'Standard');
+    return { success: true, data: results };
+  } catch (error: any) {
+    console.error('Get most expensive error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get rising items (investment opportunities)
+ipcMain.handle('currency-get-rising', async (event: any, minChange: number, league: string) => {
+  try {
+    const results = await currencyMaterialsScraper.getRisingItems(minChange || 5, league || 'Standard');
+    return { success: true, data: results };
+  } catch (error: any) {
+    console.error('Get rising items error:', error);
     return { success: false, error: error.message };
   }
 });
