@@ -178,6 +178,8 @@ electron_1.ipcMain.handle('get-leagues', async () => {
         return { success: false, error: error.message };
     }
 });
+// Cache for market insights data (manual refresh only)
+let marketInsightsCache = null;
 electron_1.ipcMain.handle('get-popular-items', async (event, league, limit = 20) => {
     try {
         const items = await poeAPI.getPopularItems(league, limit);
@@ -217,6 +219,45 @@ electron_1.ipcMain.handle('get-build-craftable-items', async (event, league, lim
         console.error('Get build craftable items error:', error);
         return { success: false, error: error.message };
     }
+});
+// Load all market insights data with caching
+electron_1.ipcMain.handle('load-market-insights', async (event, league) => {
+    try {
+        console.log(`Loading market insights for league: ${league}`);
+        // Fetch all data in parallel
+        const [popularResult, profitableResult, trendingResult] = await Promise.all([
+            poeAPI.getPopularItems(league, 20),
+            poeAPI.getBuildCraftableItems(league, 20),
+            poeAPI.getTrendingItems(league, 10)
+        ]);
+        // Cache the results
+        marketInsightsCache = {
+            popular: popularResult,
+            profitable: profitableResult,
+            trending: trendingResult,
+            league,
+            timestamp: new Date()
+        };
+        return {
+            success: true,
+            data: marketInsightsCache,
+            cached: false
+        };
+    }
+    catch (error) {
+        console.error('Load market insights error:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('get-cached-market-insights', async (event, league) => {
+    if (marketInsightsCache && marketInsightsCache.league === league) {
+        return {
+            success: true,
+            data: marketInsightsCache,
+            cached: true
+        };
+    }
+    return { success: false, error: 'No cached market insights for this league' };
 });
 // Scrape builds from poe.ninja (manual refresh only)
 let buildDataCache = null;

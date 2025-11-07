@@ -1475,7 +1475,8 @@
                     marketTab.classList.add('active');
                 } else if (tabName === 'insights') {
                     insightsTab.classList.add('active');
-                    loadMarketInsights();
+                    // Check for cached data instead of auto-loading
+                    checkCachedMarketInsights();
                 } else if (tabName === 'crafting') {
                     craftingTab.classList.add('active');
                     initializeCrafting();
@@ -2674,35 +2675,55 @@
             document.getElementById('trendingSection').style.display = 'none';
 
             try {
-                // Fetch all data in parallel
-                const [popularResult, profitableResult, trendingResult] = await Promise.all([
-                    ipcRenderer.invoke('get-popular-items', league, 20),
-                    ipcRenderer.invoke('get-build-craftable-items', league, 20),
-                    ipcRenderer.invoke('get-trending-items', league, 10)
-                ]);
+                // Use new cached endpoint
+                const result = await ipcRenderer.invoke('load-market-insights', league);
 
-                if (popularResult.success) {
-                    insightsData.popular = popularResult.data;
+                if (result.success) {
+                    const data = result.data;
+                    insightsData.popular = data.popular;
+                    insightsData.profitable = data.profitable;
+                    insightsData.trending = data.trending;
+
                     document.getElementById('popularCount').textContent = insightsData.popular.length;
-                }
-
-                if (profitableResult.success) {
-                    insightsData.profitable = profitableResult.data;
                     document.getElementById('profitableCount').textContent = insightsData.profitable.length;
-                }
-
-                if (trendingResult.success) {
-                    insightsData.trending = trendingResult.data;
                     document.getElementById('trendingCount').textContent = insightsData.trending.length;
+
+                    insightsLoading.style.display = 'none';
+
+                    // Show first section by default
+                    showSection('popular');
+                } else {
+                    insightsLoading.style.display = 'none';
+                    showInsightsError('Failed to load market data: ' + result.error);
                 }
-
-                insightsLoading.style.display = 'none';
-
-                // Show first section by default
-                showSection('popular');
             } catch (error) {
                 insightsLoading.style.display = 'none';
                 showInsightsError('Failed to load market data: ' + error.message);
+            }
+        }
+
+        // Check for cached market insights on tab switch
+        async function checkCachedMarketInsights() {
+            const league = document.getElementById('insightsLeague').value;
+            if (!league) return;
+
+            try {
+                const result = await ipcRenderer.invoke('get-cached-market-insights', league);
+                if (result.success) {
+                    const data = result.data;
+                    insightsData.popular = data.popular;
+                    insightsData.profitable = data.profitable;
+                    insightsData.trending = data.trending;
+
+                    document.getElementById('popularCount').textContent = insightsData.popular.length;
+                    document.getElementById('profitableCount').textContent = insightsData.profitable.length;
+                    document.getElementById('trendingCount').textContent = insightsData.trending.length;
+
+                    // Show first section if we have cached data
+                    showSection('popular');
+                }
+            } catch (error) {
+                console.log('No cached market insights available');
             }
         }
 
@@ -3068,7 +3089,7 @@
 
         checkCachedBuilds();
 
-        // Setup league selector with auto-load
+        // Setup league selector - NO auto-load, only check cache
         const insightsLeagueSelect = document.getElementById('insightsLeague');
         if (insightsLeagueSelect) {
             insightsLeagueSelect.addEventListener('change', () => {
@@ -3077,13 +3098,13 @@
                 document.getElementById('profitableCount').textContent = '0';
                 document.getElementById('trendingCount').textContent = '0';
 
-                // Auto-load data when league changes
-                const league = insightsLeagueSelect.value;
-                if (league) {
-                    loadMarketInsights();
-                }
+                // Check for cached data instead of auto-loading
+                checkCachedMarketInsights();
             });
         }
+
+        // Check for cached data on initial load
+        checkCachedMarketInsights();
 
         // Setup wealth input to trigger filtering
         const currentWealthInput = document.getElementById('currentWealth');
