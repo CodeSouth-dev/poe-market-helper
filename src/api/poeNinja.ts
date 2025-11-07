@@ -176,18 +176,17 @@ export class PoeNinjaAPI {
       'UniqueAccessory',
       'UniqueFlask',
       'UniqueJewel',
-      'Gem',
+      'SkillGem',
       'Currency',
       'Fragment',
       'Essence',
       'DivinationCard',
-      'Prophecy',
       'Oil',
       'Incubator',
       'Fossil',
       'Resonator',
       'Beast',
-      'Vial'
+      'Scarab'
     ];
   }
 
