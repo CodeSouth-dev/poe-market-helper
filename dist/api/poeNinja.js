@@ -203,16 +203,21 @@ class PoeNinjaAPI {
     }
     /**
      * Get items with best profit margins for crafting
-     * ONLY returns craftable base types (normal/magic/rare non-corrupted), NOT:
-     * - Unique items (drop-only uniques like Headhunter/Mageblood)
-     * - Corrupted items (cannot be crafted on)
-     * - Special items (influenced, fractured, synthesized)
-     * Includes 6-link bases as they are part of the crafting process
+     * Returns all craftable base types including:
+     * - Normal/magic/rare items
+     * - Fractured items (locked mods, rest craftable)
+     * - Synthesized items (special implicit, explicit mods craftable)
+     * - Influenced items (Shaper/Elder/Conqueror - prime crafting bases)
+     * - 4/5/6-link items (part of crafting process)
+     *
+     * EXCLUDES:
+     * - Unique items (already excluded via BaseType category)
+     * - Corrupted items (cannot be modified)
      */
     async getProfitableItems(league, limit = 20) {
         const allItems = [];
-        // ONLY use BaseType - these are craftable rare items
-        // Uniques like Headhunter/Mageblood are NOT craftable!
+        // ONLY use BaseType - these are craftable items
+        // Uniques are in separate categories (UniqueWeapon, UniqueArmour, etc.)
         try {
             const baseTypes = await this.searchCategory('', league, 'BaseType');
             allItems.push(...baseTypes);
@@ -227,32 +232,17 @@ class PoeNinjaAPI {
             if (!(item.chaosValue > 20 && item.listingCount && item.listingCount > 3)) {
                 return false;
             }
-            // Filter out non-craftable items:
-            // 1. Corrupted items (cannot be crafted on)
-            // 2. Items with special mods/variants that indicate they're not normal/magic/rare bases
+            // Only exclude corrupted items - they cannot be modified
             const variant = (item.variant || '').toLowerCase();
-            // Exclude corrupted items
             if (variant.includes('corrupt')) {
                 return false;
             }
-            // Exclude items with special mods/variants (these are not craftable bases)
-            if (variant.includes('fractured') || variant.includes('synthesised') ||
-                variant.includes('synthesized') || variant.includes('unique')) {
-                return false;
-            }
-            // Exclude items that look like they have specific influenced mods
-            // (influenced items are typically finished crafts)
-            if (variant.includes('shaper') || variant.includes('elder') ||
-                variant.includes('crusader') || variant.includes('redeemer') ||
-                variant.includes('hunter') || variant.includes('warlord')) {
-                return false;
-            }
-            // Only allow items with no variant, or variants that indicate normal/magic/rare bases
-            // Common acceptable variants: empty, links (4/5/6), item level indicators
-            const acceptableVariantPattern = /^(|[456][\s-]?link|ilvl?\s*\d+)$/i;
-            if (variant && !acceptableVariantPattern.test(variant)) {
-                return false;
-            }
+            // Everything else in BaseType category is craftable:
+            // - Normal/magic/rare bases
+            // - Fractured bases (locked mods but rest is craftable)
+            // - Synthesized bases (implicit locked, explicit craftable)
+            // - Influenced bases (Shaper/Elder/Conqueror - valuable crafting bases)
+            // - Any link count (4/5/6-link are all craftable)
             return true;
         })
             .map(item => {
