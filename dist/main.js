@@ -208,3 +208,13 @@ electron_1.ipcMain.handle('get-trending-items', async (event, league, limit = 10
         return { success: false, error: error.message };
     }
 });
+electron_1.ipcMain.handle('get-build-craftable-items', async (event, league, limit = 20) => {
+    try {
+        const items = await poeAPI.getBuildCraftableItems(league, limit);
+        return { success: true, data: items };
+    }
+    catch (error) {
+        console.error('Get build craftable items error:', error);
+        return { success: false, error: error.message };
+    }
+});

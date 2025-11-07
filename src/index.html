@@ -2670,7 +2670,7 @@
                 // Fetch all data in parallel
                 const [popularResult, profitableResult, trendingResult] = await Promise.all([
                     ipcRenderer.invoke('get-popular-items', league, 20),
-                    ipcRenderer.invoke('get-profitable-items', league, 20),
+                    ipcRenderer.invoke('get-build-craftable-items', league, 20),
                     ipcRenderer.invoke('get-trending-items', league, 10)
                 ]);
 
@@ -2780,8 +2780,8 @@
             let showingFiltered = false;
 
             if (currentWealth !== Infinity) {
-                filteredItems = insightsData.profitable.filter(data => {
-                    const estimatedCraftCost = data.sellPrice - data.profitMargin;
+                filteredItems = insightsData.profitable.filter(buildItem => {
+                    const estimatedCraftCost = buildItem.craftingStrategy.estimatedCost;
                     return estimatedCraftCost <= currentWealth;
                 });
                 showingFiltered = true;
@@ -2810,15 +2810,15 @@
             }
 
             let html = filterInfoHtml;
-            filteredItems.forEach((data, index) => {
-                const item = data.item;
-                const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
-                const formattedSellPrice = formatPriceForDisplay(data.sellPrice);
-                const formattedProfit = formatPriceForDisplay(data.profitMargin);
-                const readableBaseType = formatBaseType(item.baseType || item.name);
+            filteredItems.forEach((buildItem, index) => {
+                const sellPrice = buildItem.chaosValue;
+                const estimatedCraftCost = buildItem.craftingStrategy.estimatedCost;
+                const profitMargin = sellPrice - estimatedCraftCost;
+                const profitPercent = ((profitMargin / sellPrice) * 100).toFixed(1);
+                const roi = ((profitMargin / estimatedCraftCost) * 100).toFixed(0);
 
-                // Calculate estimated craft cost
-                const estimatedCraftCost = data.sellPrice - data.profitMargin;
+                const formattedSellPrice = formatPriceForDisplay(sellPrice);
+                const formattedProfit = formatPriceForDisplay(profitMargin);
                 const formattedCraftCost = formatPriceForDisplay(estimatedCraftCost);
 
                 // Determine affordability status
@@ -2827,19 +2827,38 @@
                     ? '<span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">✓ Affordable</span>'
                     : '<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">⚠ Over Budget</span>';
 
+                // Difficulty color
+                const difficultyColors = {
+                    'Easy': '#4ade80',
+                    'Medium': '#facc15',
+                    'Hard': '#fb923c',
+                    'Very Hard': '#ef4444'
+                };
+                const difficultyColor = difficultyColors[buildItem.craftingStrategy.difficulty] || '#888';
+
+                // Build mods display
+                const modsHtml = buildItem.mods.explicit.slice(0, 5).map(mod =>
+                    `<div style="color: #8b5cf6; font-size: 0.85em; margin: 3px 0;">• ${mod}</div>`
+                ).join('');
+
+                // Build crafting steps
+                const stepsHtml = buildItem.craftingStrategy.steps.map(step =>
+                    `<div style="color: #cccccc; font-size: 0.9em; margin: 8px 0; padding-left: 10px;">${step}</div>`
+                ).join('');
+
                 html += `
                     <div class="method-card" style="${!isAffordable ? 'opacity: 0.6;' : ''}">
                         <div class="method-header">
                             <div>
-                                <span class="method-name">#${index + 1} ${item.name}</span>
-                                ${item.variant ? `<span style="color: #999; margin-left: 10px;">${item.variant}</span>` : ''}
-                                <span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
-                                    ✓ Craftable
+                                <span class="method-name">#${index + 1} ${buildItem.name}</span>
+                                <span style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
+                                    ${buildItem.itemClass}
                                 </span>
                                 ${affordabilityBadge}
                             </div>
                             <div class="method-cost">${formattedProfit} Profit</div>
                         </div>
+
                         <div class="method-stats">
                             <div class="method-stat">
                                 <div class="method-stat-value" style="color: #ffd700;">${formattedCraftCost}</div>
@@ -2850,20 +2869,32 @@
                                 <div class="method-stat-label">Sell Price</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.craftingMethod}</div>
-                                <div class="method-stat-label">Method</div>
+                                <div class="method-stat-value" style="color: ${difficultyColor};">${buildItem.craftingStrategy.difficulty}</div>
+                                <div class="method-stat-label">Difficulty</div>
                             </div>
                             <div class="method-stat">
-                                <div class="method-stat-value">${data.demand}</div>
-                                <div class="method-stat-label">Demand</div>
+                                <div class="method-stat-value">${buildItem.craftingStrategy.successRate}</div>
+                                <div class="method-stat-label">Success Rate</div>
                             </div>
                         </div>
+
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; border-radius: 5px;">
+                            <p style="color: #8b5cf6; margin: 0 0 8px 0; font-weight: bold;">📜 Example Mods (Target)</p>
+                            ${modsHtml}
+                            ${buildItem.mods.explicit.length > 5 ? '<div style="color: #888; font-size: 0.85em; margin-top: 3px;">...and more</div>' : ''}
+                        </div>
+
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(255, 215, 0, 0.1); border-left: 3px solid #ffd700; border-radius: 5px;">
+                            <p style="color: #ffd700; margin: 0 0 8px 0; font-weight: bold;">🔨 Crafting Method: ${buildItem.craftingStrategy.method}</p>
+                            ${stepsHtml}
+                        </div>
+
                         <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
                             <p style="color: #4ade80; margin: 0;">
-                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%) • <strong>ROI:</strong> ${((data.profitMargin / estimatedCraftCost) * 100).toFixed(0)}%
+                                💰 <strong>Profit:</strong> ${formattedProfit} (${profitPercent}%) • <strong>ROI:</strong> ${roi}%
                             </p>
                             <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
-                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType} • ${item.listingCount || 0} listings
+                                ${buildItem.baseType} • ${buildItem.listingCount} listings on market
                             </p>
                         </div>
                     </div>
