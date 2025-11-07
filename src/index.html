@@ -655,12 +655,22 @@
         <section class="crafting-input-section">
             <h2 style="color: #ffd700; margin-bottom: 20px;">📊 Market Insights & Profit Opportunities</h2>
 
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label for="insightsLeague">League:</label>
-                <select id="insightsLeague">
-                    <option value="">Loading leagues...</option>
-                </select>
-                <button type="button" id="refreshInsightsBtn" style="margin-left: 10px;">Refresh Data</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="insightsLeague">League:</label>
+                    <select id="insightsLeague">
+                        <option value="">Loading leagues...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="currentWealth">💰 Current Wealth (Chaos Orbs):</label>
+                    <input type="number" id="currentWealth" placeholder="Enter your budget (e.g., 500)" min="0" value="1000" style="width: 100%;">
+                    <p style="color: #888; font-size: 11px; margin-top: 3px;">Only show crafts you can afford</p>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <button type="button" id="refreshInsightsBtn" class="btn-success" style="width: 100%;">🔄 Load/Refresh Market Data</button>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
@@ -2761,16 +2771,64 @@
                 return;
             }
 
-            let html = '';
-            insightsData.profitable.forEach((data, index) => {
+            // Get current wealth filter
+            const currentWealthInput = document.getElementById('currentWealth');
+            const currentWealth = currentWealthInput ? parseFloat(currentWealthInput.value) || Infinity : Infinity;
+
+            // Filter items by wealth
+            let filteredItems = insightsData.profitable;
+            let showingFiltered = false;
+
+            if (currentWealth !== Infinity) {
+                filteredItems = insightsData.profitable.filter(data => {
+                    const estimatedCraftCost = data.sellPrice - data.profitMargin;
+                    return estimatedCraftCost <= currentWealth;
+                });
+                showingFiltered = true;
+            }
+
+            // Show filter info
+            let filterInfoHtml = '';
+            if (showingFiltered) {
+                const affordableCount = filteredItems.length;
+                const totalCount = insightsData.profitable.length;
+                filterInfoHtml = `
+                    <div style="background: rgba(74, 222, 128, 0.15); border: 2px solid #4ade80; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                        <p style="color: #4ade80; margin: 0; font-weight: bold;">
+                            💰 Budget Filter Active: ${formatPriceForDisplay(currentWealth)} available
+                        </p>
+                        <p style="color: #cccccc; margin: 5px 0 0 0;">
+                            Showing ${affordableCount} of ${totalCount} craftable items within your budget
+                        </p>
+                    </div>
+                `;
+            }
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = filterInfoHtml + '<p style="color: #cccccc; padding: 20px;">No craftable items found within your budget. Try increasing your wealth or refreshing data.</p>';
+                return;
+            }
+
+            let html = filterInfoHtml;
+            filteredItems.forEach((data, index) => {
                 const item = data.item;
                 const profitPercent = ((data.profitMargin / data.sellPrice) * 100).toFixed(1);
                 const formattedSellPrice = formatPriceForDisplay(data.sellPrice);
                 const formattedProfit = formatPriceForDisplay(data.profitMargin);
                 const readableBaseType = formatBaseType(item.baseType || item.name);
 
+                // Calculate estimated craft cost
+                const estimatedCraftCost = data.sellPrice - data.profitMargin;
+                const formattedCraftCost = formatPriceForDisplay(estimatedCraftCost);
+
+                // Determine affordability status
+                const isAffordable = estimatedCraftCost <= currentWealth;
+                const affordabilityBadge = isAffordable
+                    ? '<span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">✓ Affordable</span>'
+                    : '<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">⚠ Over Budget</span>';
+
                 html += `
-                    <div class="method-card">
+                    <div class="method-card" style="${!isAffordable ? 'opacity: 0.6;' : ''}">
                         <div class="method-header">
                             <div>
                                 <span class="method-name">#${index + 1} ${item.name}</span>
@@ -2778,33 +2836,34 @@
                                 <span style="background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px;">
                                     ✓ Craftable
                                 </span>
+                                ${affordabilityBadge}
                             </div>
                             <div class="method-cost">${formattedProfit} Profit</div>
                         </div>
                         <div class="method-stats">
                             <div class="method-stat">
+                                <div class="method-stat-value" style="color: #ffd700;">${formattedCraftCost}</div>
+                                <div class="method-stat-label">Est. Craft Cost</div>
+                            </div>
+                            <div class="method-stat">
                                 <div class="method-stat-value">${formattedSellPrice}</div>
-                                <div class="method-stat-label">Market Price</div>
+                                <div class="method-stat-label">Sell Price</div>
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${data.craftingMethod}</div>
-                                <div class="method-stat-label">Suggested Method</div>
+                                <div class="method-stat-label">Method</div>
                             </div>
                             <div class="method-stat">
                                 <div class="method-stat-value">${data.demand}</div>
                                 <div class="method-stat-label">Demand</div>
                             </div>
-                            <div class="method-stat">
-                                <div class="method-stat-value">${item.listingCount || 0}</div>
-                                <div class="method-stat-label">Listings</div>
-                            </div>
                         </div>
                         <div style="margin-top: 15px; padding: 12px; background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; border-radius: 5px;">
                             <p style="color: #4ade80; margin: 0;">
-                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%)
+                                💰 <strong>Profit Margin:</strong> ${formattedProfit} (${profitPercent}%) • <strong>ROI:</strong> ${((data.profitMargin / estimatedCraftCost) * 100).toFixed(0)}%
                             </p>
                             <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 0.9em;">
-                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType}
+                                ${item.levelRequired ? `Level ${item.levelRequired} • ` : ''}${readableBaseType} • ${item.listingCount || 0} listings
                             </p>
                         </div>
                     </div>
@@ -2896,14 +2955,40 @@
             return formatted;
         }
 
-        refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+        // Setup refresh button with null check
+        if (refreshInsightsBtn) {
+            refreshInsightsBtn.addEventListener('click', loadMarketInsights);
+        } else {
+            console.error('Refresh insights button not found');
+        }
 
-        document.getElementById('insightsLeague').addEventListener('change', () => {
-            // Reset counts
-            document.getElementById('popularCount').textContent = '0';
-            document.getElementById('profitableCount').textContent = '0';
-            document.getElementById('trendingCount').textContent = '0';
-        });
+        // Setup league selector with auto-load
+        const insightsLeagueSelect = document.getElementById('insightsLeague');
+        if (insightsLeagueSelect) {
+            insightsLeagueSelect.addEventListener('change', () => {
+                // Reset counts
+                document.getElementById('popularCount').textContent = '0';
+                document.getElementById('profitableCount').textContent = '0';
+                document.getElementById('trendingCount').textContent = '0';
+
+                // Auto-load data when league changes
+                const league = insightsLeagueSelect.value;
+                if (league) {
+                    loadMarketInsights();
+                }
+            });
+        }
+
+        // Setup wealth input to trigger filtering
+        const currentWealthInput = document.getElementById('currentWealth');
+        if (currentWealthInput) {
+            currentWealthInput.addEventListener('input', () => {
+                // Re-display items with new filter if data already loaded
+                if (insightsData.profitable.length > 0) {
+                    displayProfitableItems();
+                }
+            });
+        }
 
         function showInsightsError(message) {
             insightsError.textContent = message;
