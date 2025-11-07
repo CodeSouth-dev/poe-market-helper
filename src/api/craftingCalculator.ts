@@ -135,6 +135,10 @@ export class CraftingCalculator {
     const beastMethod = await this.calculateBeastcrafting(desiredMods, baseItem, league);
     if (beastMethod) methods.push(beastMethod);
 
+    // 10. Recombinators (combine two items)
+    const recombinatorMethod = await this.calculateRecombinator(desiredMods, baseItem, league);
+    if (recombinatorMethod) methods.push(recombinatorMethod);
+
     // Sort by cost
     methods.sort((a, b) => a.averageCost - b.averageCost);
 
@@ -618,6 +622,94 @@ export class CraftingCalculator {
     }
 
     return null;
+  }
+
+  /**
+   * Calculate Recombinator crafting method
+   * Combines two items to create one item with mods from both
+   */
+  private async calculateRecombinator(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Recombinators are best for 2-4 desired mods
+    if (desiredMods.length < 2 || desiredMods.length > 4) {
+      return null;
+    }
+
+    // Check if recombinators are available (they were removed after Sentinel league)
+    // For now, we'll calculate but note availability
+    const recombinatorPrice = this.currencyPrices.get('Armour Recombinator')?.chaosValue || 100;
+
+    // Calculate probability based on mod doubling strategy
+    // With mod doubling (same mod on both items), success rate increases significantly
+    const prefixes = desiredMods.filter(m => m.type === 'prefix');
+    const suffixes = desiredMods.filter(m => m.type === 'suffix');
+
+    // Probability distribution for recombinators:
+    // With 3 total affixes -> 10% for 3 final mods (without doubling)
+    // With 4 total affixes (mod doubling) -> 30% for 3 final mods
+    // With 5 total affixes -> 57% for 3 final mods
+    // With 6 total affixes -> 72% for 3 final mods
+
+    let successProbability = 0;
+    let strategy = '';
+    let expectedAttempts = 1;
+
+    if (desiredMods.length === 2) {
+      // 2 mods: Use 1p/1s on each item, recombine
+      // With doubling: ~30% chance to keep both mods
+      successProbability = 0.3;
+      expectedAttempts = Math.ceil(1 / successProbability);
+      strategy = 'Craft two items with 1 mod each (same mod on both), then recombine';
+    } else if (desiredMods.length === 3) {
+      // 3 mods: Use mod doubling strategy
+      // Craft item A with 2 mods, item B with 1 doubled mod
+      // 4 total affixes with doubling -> ~30% for 3 final
+      successProbability = 0.3;
+      expectedAttempts = Math.ceil(1 / successProbability);
+      strategy = 'Craft two items with overlapping mods, use mod doubling';
+    } else if (desiredMods.length === 4) {
+      // 4 mods: More difficult, need 5-6 total affixes
+      // 5 total -> 57% for 3 final, need good luck for 4
+      // Better: 6 total affixes -> 72% for 3, ~28% for 4 (estimated)
+      successProbability = 0.15; // Getting all 4 is harder
+      expectedAttempts = Math.ceil(1 / successProbability);
+      strategy = 'Craft items with 3 mods each, use mod doubling for key mods';
+    }
+
+    // Cost calculation: need to craft two base items + recombinator
+    const chaosPrice = this.currencyPrices.get('Chaos Orb')?.chaosValue || 1;
+    const baseCraftCost = 50 * chaosPrice; // Estimate for crafting each base item
+    const totalBaseCost = baseCraftCost * 2; // Two items needed
+    const recombinatorCost = recombinatorPrice * expectedAttempts;
+    const averageCost = totalBaseCost * expectedAttempts + recombinatorCost;
+
+    return {
+      method: 'harvest', // Using 'harvest' as a catch-all for special methods
+      name: 'Recombinator',
+      description: 'Combine two items to merge their modifiers',
+      probability: successProbability,
+      averageCost,
+      currencyUsed: {
+        [`${baseItem.item_class} Recombinator`]: expectedAttempts,
+        'Chaos Orb (for base crafting)': Math.floor(totalBaseCost / chaosPrice) * expectedAttempts
+      },
+      steps: [
+        `⚠️ NOTE: Recombinators were removed after Sentinel league and may not be available`,
+        `Strategy: ${strategy}`,
+        `1. Craft Item A: ${baseItem.name} with ${prefixes.length > 0 ? prefixes.map(p => p.name).join(', ') : 'desired prefixes'}`,
+        `2. Craft Item B: ${baseItem.name} with ${suffixes.length > 0 ? suffixes.map(s => s.name).join(', ') : 'desired suffixes'}`,
+        `3. Use ${baseItem.item_class} Recombinator to combine both items`,
+        `4. Result will have some combination of mods from both items`,
+        `Expected attempts: ${expectedAttempts}`,
+        `💡 MOD DOUBLING: Having the same mod on both items increases success rate by ~3x!`,
+        `💡 STRATEGY: Use alteration/essence to craft each base, then recombine`,
+        `📊 Probability: With mod doubling, 3-4 total affixes -> ~30% for desired outcome`
+      ],
+      expectedAttempts
+    };
   }
 
   /**
