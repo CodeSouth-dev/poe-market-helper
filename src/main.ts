@@ -8,6 +8,7 @@ import { getCraftingDataLoader } from './api/craftingData';
 import { browserManager } from './browserManager';
 import { poeTradeOfficial } from './poeTradeOfficial';
 import { priceComparisonService } from './priceComparison';
+import { poeNinjaScraper } from './poeNinjaScraper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -268,7 +269,8 @@ let buildDataTimestamp: Date | null = null;
 ipcMain.handle('scrape-builds', async (event: any, league: string) => {
   try {
     console.log(`Scraping builds for league: ${league}`);
-    const scrapedData = await poeAPI.scrapeBuilds(league);
+    // Use the enhanced browser-based scraper
+    const scrapedData = await poeNinjaScraper.scrapeBuilds(league);
 
     // Cache the scraped data
     buildDataCache = scrapedData;
@@ -427,6 +429,32 @@ ipcMain.handle('cleanup-browsers', async () => {
     return { success: true, message: 'All browser sessions closed' };
   } catch (error: any) {
     console.error('Cleanup browsers error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ============================================================================
+// Enhanced Build Scraping (Browser-based)
+// ============================================================================
+
+// Get popular craftable items filtered by wealth
+ipcMain.handle('get-popular-craftable-items', async (event: any, league: string, minWealth: number, maxWealth: number) => {
+  try {
+    const items = await poeNinjaScraper.getPopularCraftableItems(league, minWealth, maxWealth);
+    return { success: true, data: items };
+  } catch (error: any) {
+    console.error('Get popular craftable items error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get build statistics
+ipcMain.handle('get-build-stats', async (event: any, league: string) => {
+  try {
+    const stats = await poeNinjaScraper.getBuildStats(league);
+    return { success: true, data: stats };
+  } catch (error: any) {
+    console.error('Get build stats error:', error);
     return { success: false, error: error.message };
   }
 });

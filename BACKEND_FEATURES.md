@@ -8,6 +8,8 @@ This document describes the new backend features added to the PoE Market Helper,
 - ✅ Rate limiting to prevent spam and API blocks
 - ✅ Automatic browser session management with cleanup
 - ✅ Path of Exile official trade site integration with login support
+- ✅ **Enhanced poe.ninja build scraper** (browser-based React rendering)
+- ✅ **Wealth-filtered craftable items** (filter by your chaos budget)
 - ✅ Price comparison across multiple sources
 - ✅ Arbitrage opportunity detection
 - ✅ Crafting profit analysis
@@ -165,7 +167,72 @@ const result = await ipcRenderer.invoke('poe-trade-compare-bases', bases, 'Stand
 // }
 ```
 
-### 4. Price Comparison Service (`src/priceComparison.ts`)
+### 4. Enhanced Build Scraper (`src/poeNinjaScraper.ts`)
+
+Browser-based scraper that properly loads poe.ninja's React app to extract build data.
+
+**Features:**
+- Scrapes actual rendered build data (not just HTML)
+- Tracks popular items across builds
+- Filters craftable items by wealth range
+- Estimates item values based on type and influence
+- Build statistics (top classes, skills, average level)
+
+**IPC Handlers:**
+
+#### Get Popular Craftable Items (Wealth Filtered)
+```javascript
+// Get items you can afford to craft
+const result = await ipcRenderer.invoke(
+  'get-popular-craftable-items',
+  'Standard',  // league
+  10,          // min chaos (your minimum budget)
+  500          // max chaos (your maximum budget)
+);
+// Returns: {
+//   success: true,
+//   data: [
+//     {
+//       name: "Steel Ring",
+//       usage: 45,  // number of builds using this
+//       estimatedValue: 500,
+//       craftingDifficulty: "Very Hard"
+//     },
+//     ...
+//   ]
+// }
+```
+
+#### Get Build Statistics
+```javascript
+// See what's popular in the meta
+const result = await ipcRenderer.invoke('get-build-stats', 'Standard');
+// Returns: {
+//   success: true,
+//   data: {
+//     topClasses: [
+//       { class: "Pathfinder", count: 23 },
+//       { class: "Juggernaut", count: 18 },
+//       ...
+//     ],
+//     topSkills: [
+//       { skill: "Lightning Strike", count: 31 },
+//       { skill: "Righteous Fire", count: 22 },
+//       ...
+//     ],
+//     averageLevel: 95.3
+//   }
+// }
+```
+
+#### Scrape Builds (Enhanced)
+```javascript
+// Now uses headless browser for better data extraction
+const result = await ipcRenderer.invoke('scrape-builds', 'Standard');
+// Returns build data with items and usage statistics
+```
+
+### 5. Price Comparison Service (`src/priceComparison.ts`)
 
 Compares prices across multiple sources (poe.ninja, official trade site) and identifies profitable opportunities.
 
@@ -352,6 +419,32 @@ Generate recommendation
 Return comparison
 ```
 
+### Build Scraper Flow
+
+```
+Request Build Data
+    ↓
+Create headless browser session
+    ↓
+Navigate to poe.ninja/builds (rate-limited)
+    ↓
+Wait for React app to render (networkidle0)
+    ↓
+Extract build rows from DOM
+    ↓
+Parse: name, class, level, skills, items
+    ↓
+Track item usage across builds
+    ↓
+Filter by wealth range (optional)
+    ↓
+Estimate crafting values
+    ↓
+Close browser, return data
+    ↓
+Cache for future requests
+```
+
 ## Performance & Safety
 
 ### Rate Limiting
@@ -391,7 +484,47 @@ if (comparison.success) {
 }
 ```
 
-### 2. Arbitrage Bot
+### 2. Find Items to Craft Based on Your Wealth
+
+```javascript
+// I have 200 chaos to spend - what should I craft?
+const myBudget = 200;
+
+// Get popular items in my price range
+const result = await ipcRenderer.invoke(
+  'get-popular-craftable-items',
+  'Standard',
+  50,        // min: 50c (don't want cheap items)
+  myBudget   // max: 200c (my budget)
+);
+
+if (result.success) {
+  console.log(`\n💰 Items you can craft with ${myBudget}c:\n`);
+
+  result.data.forEach((item, i) => {
+    console.log(`${i + 1}. ${item.name}`);
+    console.log(`   Used by ${item.usage} builds`);
+    console.log(`   Estimated value: ${item.estimatedValue}c`);
+    console.log(`   Difficulty: ${item.craftingDifficulty}`);
+    console.log('');
+  });
+
+  // Get the most popular affordable item
+  const bestChoice = result.data[0];
+  console.log(`🎯 Best choice: ${bestChoice.name}`);
+  console.log(`   ${bestChoice.usage} builds are using this!`);
+}
+
+// Also check what builds are popular
+const stats = await ipcRenderer.invoke('get-build-stats', 'Standard');
+if (stats.success) {
+  console.log('\n📊 Current Meta:');
+  console.log('Top Classes:', stats.data.topClasses.slice(0, 3).map(c => c.class).join(', '));
+  console.log('Top Skills:', stats.data.topSkills.slice(0, 3).map(s => s.skill).join(', '));
+}
+```
+
+### 3. Arbitrage Bot
 
 ```javascript
 // Find items with price differences between sources
@@ -416,7 +549,7 @@ if (opportunities.success) {
 }
 ```
 
-### 3. Crafting Profit Calculator
+### 4. Crafting Profit Calculator
 
 ```javascript
 // Check if a crafting project is profitable
