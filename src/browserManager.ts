@@ -5,7 +5,7 @@
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { Browser, Page, PuppeteerLaunchOptions } from 'puppeteer';
+import { Browser, Page, LaunchOptions } from 'puppeteer';
 
 // Use dynamic import for puppeteer-extra to avoid issues if not installed
 let puppeteerExtra: any;
@@ -96,7 +96,7 @@ export class BrowserManager {
   private async launchBrowser(sessionId: string, headless: boolean): Promise<Browser> {
     const userDataDir = path.join(SESSION_DIR, sessionId);
 
-    const options: PuppeteerLaunchOptions = {
+    const options: LaunchOptions = {
       headless: headless ? 'new' : false,
       userDataDir,
       args: [
