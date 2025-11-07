@@ -1861,9 +1861,9 @@
                         craftBaseItem.value = topBase.name;
                     }
 
-                    // Display all suggestions
+                    // Display all suggestions (top 3 only - verified craftable bases)
                     let html = '';
-                    result.data.slice(0, 5).forEach((base, index) => {
+                    result.data.slice(0, 3).forEach((base, index) => {
                         const isTop = index === 0;
                         html += `
                             <div style="padding: 8px; margin-bottom: 6px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; cursor: pointer; border: 1px solid ${isTop ? '#ffd700' : '#555'};" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => d.style.border = '1px solid #555'); this.style.border = '1px solid #ffd700';">
@@ -1871,7 +1871,7 @@
                                     ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}
                                 </div>
                                 <div style="color: #aaa; font-size: 12px; margin-top: 4px;">
-                                    ${base.reason || 'Popular choice for this slot'}
+                                    ${base.reason || 'Popular craftable base for this slot'}
                                 </div>
                             </div>
                         `;

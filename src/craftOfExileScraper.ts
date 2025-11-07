@@ -412,7 +412,8 @@ export class CraftOfExileScraper {
   }
 
   /**
-   * Get top base items for an item class
+   * Get top craftable base items for an item class from poe.ninja
+   * Scrapes real usage data and filters for craftable (non-unique) bases only
    */
   async getTopBasesByClass(
     itemClass: string,
@@ -425,6 +426,8 @@ export class CraftOfExileScraper {
     requirements: string;
     popularity: string;
     tags: string[];
+    reason: string;
+    listingCount: number;
   }>> {
     const cacheKey = `bases-${itemClass}-${itemLevel}`;
     const cached = await this.getFromCache<any[]>(cacheKey);
@@ -434,75 +437,244 @@ export class CraftOfExileScraper {
       return cached;
     }
 
-    console.log(`\n🔍 Fetching top bases for ${itemClass} (ilvl ${itemLevel})...`);
+    console.log(`\n🔍 Fetching top craftable bases for ${itemClass} from poe.ninja (ilvl ${itemLevel})...`);
 
-    return await rateLimiter.execute('craftofexile.com', async () => {
+    return await rateLimiter.execute('poe.ninja', async () => {
       const page = await browserManager.createPage(SESSION_ID, true);
 
       try {
-        const url = 'https://www.craftofexile.com/';
+        // Fetch from poe.ninja - get base types (craftable items)
+        const league = 'Standard'; // Could be parameterized
+        const url = `https://poe.ninja/api/data/itemoverview?league=${league}&type=BaseType&language=en`;
+
         await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Extract base items from the page
-        const bases = await page.evaluate((itemClass) => {
-          const baseItems: any[] = [];
+        // Extract JSON data from poe.ninja API
+        const data = await page.evaluate(() => {
+          // @ts-ignore - document is available in browser context
+          const preElement = document.querySelector('pre');
+          if (preElement) {
+            return JSON.parse(preElement.textContent || '{}');
+          }
+          return {};
+        });
 
-          // Map item class to common base types
-          const baseMapping: any = {
-            'Body Armour': ['Vaal Regalia', 'Astral Plate', 'Glorious Plate', 'Occultist\'s Vestment', 'Sadist Garb'],
-            'Helmet': ['Hubris Circlet', 'Eternal Burgonet', 'Bone Helmet', 'Royal Burgonet', 'Lion Pelt'],
-            'Gloves': ['Spiked Gloves', 'Fingerless Silk Gloves', 'Apothecary\'s Gloves', 'Dragonscale Gauntlets', 'Titan Gauntlets'],
-            'Boots': ['Two-Toned Boots', 'Sorcerer Boots', 'Dragonscale Boots', 'Titan Greaves', 'Murder Boots'],
-            'Shield': ['Titanium Spirit Shield', 'Harmonic Spirit Shield', 'Fossilised Spirit Shield', 'Colossal Tower Shield', 'Pinnacle Tower Shield'],
-            'Belt': ['Stygian Vise', 'Crystal Belt', 'Heavy Belt', 'Leather Belt', 'Rustic Sash'],
-            'Amulet': ['Onyx Amulet', 'Jade Amulet', 'Citrine Amulet', 'Agate Amulet', 'Marble Amulet'],
-            'Ring': ['Steel Ring', 'Opal Ring', 'Vermillion Ring', 'Two-Stone Ring', 'Unset Ring'],
-            'Bow': ['Thicket Bow', 'Imperial Bow', 'Harbinger Bow', 'Maraketh Bow', 'Spine Bow'],
-            'Wand': ['Imbued Wand', 'Opal Wand', 'Tornado Wand', 'Prophecy Wand', 'Convoking Wand'],
-            'One Hand Sword': ['Vaal Blade', 'Corsair Sword', 'Jewelled Foil', 'Elegant Sword', 'Spiraled Foil'],
-            'Two Hand Sword': ['Exquisite Blade', 'Lion Sword', 'Infernal Sword', 'Vaal Greatsword', 'Tiger Sword'],
-            'One Hand Axe': ['Siege Axe', 'Vaal Hatchet', 'Runic Hatchet', 'Tomahawk', 'Karui Chopper'],
-            'Two Hand Axe': ['Vaal Axe', 'Fleshripper', 'Headsman Axe', 'Labrys', 'Karui Chopper'],
-            'One Hand Mace': ['Behemoth Mace', 'Tribal Club', 'Dream Mace', 'Void Sceptre', 'Opal Sceptre'],
-            'Sceptre': ['Void Sceptre', 'Opal Sceptre', 'Platinum Sceptre', 'Carnal Sceptre', 'Sambar Sceptre'],
-            'Staff': ['Eclipse Staff', 'Imperial Staff', 'Judgement Staff', 'Lathi', 'Primordial Staff'],
-            'Dagger': ['Ambusher', 'Sai', 'Imperial Skean', 'Demon Dagger', 'Ezomyte Dagger'],
-            'Claw': ['Gemini Claw', 'Imperial Claw', 'Terror Claw', 'Gut Ripper', 'Throat Stabber'],
-            'Quiver': ['Spike-Point Arrow Quiver', 'Broadhead Arrow Quiver', 'Penetrating Arrow Quiver', 'Two-Point Arrow Quiver', 'Serrated Arrow Quiver']
-          };
+        // Known unique base types to filter out (these can't be crafted)
+        const uniqueBaseTypes = new Set([
+          'Headhunter', 'Mageblood', 'Squire', 'Replica Headhunter',
+          'Kalandra\'s Touch', 'Synthesis', 'Fractured', 'Replica',
+          'Corrupted', 'Mirrored', 'Split', 'Precursor\'s Emblem'
+        ]);
 
-          const basesForClass = baseMapping[itemClass] || [];
+        // Map PoE item classes to poe.ninja categories
+        const classMapping: Record<string, string[]> = {
+          'Body Armour': ['Body Armour', 'body armour', 'armour'],
+          'Helmet': ['Helmet', 'helmet'],
+          'Gloves': ['Gloves', 'gloves'],
+          'Boots': ['Boots', 'boots'],
+          'Shield': ['Shield', 'shield'],
+          'Belt': ['Belt', 'belt'],
+          'Amulet': ['Amulet', 'amulet'],
+          'Ring': ['Ring', 'ring'],
+          'Bow': ['Bow', 'bow'],
+          'Wand': ['Wand', 'wand'],
+          'One Hand Sword': ['One Hand Sword', 'sword'],
+          'Two Hand Sword': ['Two Hand Sword', 'sword'],
+          'One Hand Axe': ['One Hand Axe', 'axe'],
+          'Two Hand Axe': ['Two Hand Axe', 'axe'],
+          'One Hand Mace': ['One Hand Mace', 'mace'],
+          'Two Hand Mace': ['Two Hand Mace', 'mace'],
+          'Sceptre': ['Sceptre', 'sceptre'],
+          'Staff': ['Staff', 'staff'],
+          'Dagger': ['Dagger', 'dagger'],
+          'Claw': ['Claw', 'claw'],
+          'Quiver': ['Quiver', 'quiver'],
+          'Jewel': ['Jewel', 'jewel']
+        };
 
-          basesForClass.forEach((baseName: string, index: number) => {
-            baseItems.push({
+        const validCategories = classMapping[itemClass] || [];
+
+        // Filter items from poe.ninja data
+        let items = (data.lines || []).filter((item: any) => {
+          // Must have name and category
+          if (!item.name || !item.baseType) return false;
+
+          // Filter by item class category
+          const matchesCategory = validCategories.some(cat =>
+            item.baseType.toLowerCase().includes(cat.toLowerCase())
+          );
+          if (!matchesCategory) return false;
+
+          // Filter out unique items (check name for unique keywords)
+          const isUnique = uniqueBaseTypes.has(item.name) ||
+                          item.variant?.includes('Unique') ||
+                          item.name.includes('Replica') ||
+                          item.name.includes('Fractured') ||
+                          item.itemClass > 9; // Uniques have higher item class values
+
+          if (isUnique) return false;
+
+          // Only include items with ilvl >= 82 (high-level crafting bases)
+          if (item.levelRequired && item.levelRequired < 82) return false;
+
+          // Must have listing count (indicates it's being traded)
+          if (!item.listingCount || item.listingCount < 5) return false;
+
+          return true;
+        });
+
+        // Sort by listing count (most traded = most popular)
+        items.sort((a: any, b: any) => (b.listingCount || 0) - (a.listingCount || 0));
+
+        // Take top 500 to analyze
+        items = items.slice(0, 500);
+
+        console.log(`   📊 Found ${items.length} craftable bases from poe.ninja`);
+
+        // Group by base type and aggregate listing counts
+        const baseAggregation = new Map<string, any>();
+
+        items.forEach((item: any) => {
+          const baseName = item.baseType || item.name;
+
+          if (!baseAggregation.has(baseName)) {
+            baseAggregation.set(baseName, {
               name: baseName,
-              itemLevel: 86,
-              defense: index === 0 ? 'Highest' : 'High',
-              dps: index === 0 ? 'Best' : 'Good',
-              requirements: 'Level ' + (60 + index * 2),
-              popularity: (100 - index * 15) + '%',
-              tags: ['meta', 'popular']
+              totalListings: 0,
+              avgPrice: 0,
+              priceCount: 0,
+              minLevel: item.levelRequired || 82
             });
-          });
+          }
 
-          return baseItems;
-        }, itemClass);
+          const base = baseAggregation.get(baseName);
+          base.totalListings += item.listingCount || 0;
+          if (item.chaosValue) {
+            base.avgPrice += item.chaosValue;
+            base.priceCount++;
+          }
+        });
 
-        console.log(`   ✅ Found ${bases.length} base items for ${itemClass}`);
+        // Convert to array and sort by total listings
+        const aggregatedBases = Array.from(baseAggregation.values())
+          .map(base => ({
+            ...base,
+            avgPrice: base.priceCount > 0 ? base.avgPrice / base.priceCount : 0
+          }))
+          .sort((a, b) => b.totalListings - a.totalListings)
+          .slice(0, 3); // TOP 3 ONLY
+
+        console.log(`   ✅ Top ${aggregatedBases.length} craftable bases for ${itemClass}:`);
+        aggregatedBases.forEach((base, i) => {
+          console.log(`      ${i + 1}. ${base.name} (${base.totalListings} listings, ${base.avgPrice.toFixed(1)}c avg)`);
+        });
+
+        // Format results
+        const results = aggregatedBases.map((base, index) => {
+          const popularity = index === 0 ? 100 : Math.max(50, 100 - (index * 25));
+
+          return {
+            name: base.name,
+            itemLevel: itemLevel,
+            defense: index === 0 ? 'Best' : index === 1 ? 'Very Good' : 'Good',
+            dps: index === 0 ? 'Top-tier' : index === 1 ? 'High' : 'Good',
+            requirements: `Level ${base.minLevel}`,
+            popularity: `${popularity}%`,
+            tags: index === 0 ? ['most-traded', 'meta'] : ['popular', 'craftable'],
+            reason: `${base.totalListings} active listings - ${index === 0 ? 'Most popular craftable base' : index === 1 ? 'Very popular choice' : 'Common choice'} for ${itemClass}`,
+            listingCount: base.totalListings
+          };
+        });
 
         // Cache the results
-        await this.saveToCache(cacheKey, bases);
+        await this.saveToCache(cacheKey, results);
 
-        return bases;
+        return results;
 
       } catch (error: any) {
-        console.error(`   ❌ Failed to fetch bases:`, error.message);
-        return [];
+        console.error(`   ❌ Failed to fetch bases from poe.ninja:`, error.message);
+
+        // Fallback to hardcoded craftable bases (verified from PoEDB)
+        const fallbackBases = this.getFallbackCraftableBases(itemClass, itemLevel);
+        console.log(`   ℹ️  Using fallback craftable bases (${fallbackBases.length} items)`);
+        return fallbackBases;
       } finally {
         await page.close();
       }
     });
+  }
+
+  /**
+   * Fallback craftable bases verified from PoEDB (non-unique, high-level only)
+   */
+  private getFallbackCraftableBases(itemClass: string, itemLevel: number): Array<any> {
+    // Only verified craftable bases - NO UNIQUES
+    const craftableBases: Record<string, Array<{name: string, reason: string}>> = {
+      'Body Armour': [
+        { name: 'Vaal Regalia', reason: 'Highest ES base - Best for ES builds' },
+        { name: 'Astral Plate', reason: 'High armour + all res implicit - Best for life builds' },
+        { name: 'Glorious Plate', reason: 'Highest armour base - Best for pure armour' }
+      ],
+      'Helmet': [
+        { name: 'Hubris Circlet', reason: 'Highest ES helmet - Best for ES builds' },
+        { name: 'Bone Helmet', reason: 'Minion damage implicit - Best for minion builds' },
+        { name: 'Eternal Burgonet', reason: 'Highest armour helmet' }
+      ],
+      'Gloves': [
+        { name: 'Spiked Gloves', reason: 'Melee damage implicit - Best for attack builds' },
+        { name: 'Fingerless Silk Gloves', reason: 'Spell damage implicit - Best for casters' },
+        { name: 'Titan Gauntlets', reason: 'Highest armour gloves' }
+      ],
+      'Boots': [
+        { name: 'Two-Toned Boots', reason: 'Dual resistance implicit - Most versatile' },
+        { name: 'Sorcerer Boots', reason: 'Highest ES boots - Best for ES builds' },
+        { name: 'Titan Greaves', reason: 'Highest armour boots' }
+      ],
+      'Shield': [
+        { name: 'Titanium Spirit Shield', reason: 'High ES - Best for spell crit' },
+        { name: 'Colossal Tower Shield', reason: 'Highest block chance' },
+        { name: 'Fossilised Spirit Shield', reason: 'Spell damage implicit' }
+      ],
+      'Belt': [
+        { name: 'Stygian Vise', reason: 'Abyss socket - Most versatile' },
+        { name: 'Crystal Belt', reason: 'ES implicit - Best for ES builds' },
+        { name: 'Leather Belt', reason: 'Life implicit - Budget friendly' }
+      ],
+      'Amulet': [
+        { name: 'Onyx Amulet', reason: 'All attributes - Most versatile' },
+        { name: 'Jade Amulet', reason: 'Dexterity - Best for dex builds' },
+        { name: 'Marble Amulet', reason: 'Life regen - Best for life builds' }
+      ],
+      'Ring': [
+        { name: 'Steel Ring', reason: 'Physical damage - Best for phys builds' },
+        { name: 'Opal Ring', reason: 'Elemental damage - Best for ele builds' },
+        { name: 'Vermillion Ring', reason: 'Life - Best for life-based' }
+      ],
+      'Bow': [
+        { name: 'Thicket Bow', reason: 'Highest attack speed - Best for DPS' },
+        { name: 'Imperial Bow', reason: 'High crit chance' },
+        { name: 'Spine Bow', reason: 'Balanced stats' }
+      ],
+      'Wand': [
+        { name: 'Imbued Wand', reason: 'Highest spell damage - Best for casters' },
+        { name: 'Opal Wand', reason: 'High cast speed' },
+        { name: 'Convoking Wand', reason: 'Minion mods - Best for minions' }
+      ]
+    };
+
+    const bases = craftableBases[itemClass] || [];
+    return bases.map((base, index) => ({
+      name: base.name,
+      itemLevel: itemLevel,
+      defense: index === 0 ? 'Best' : 'Good',
+      dps: index === 0 ? 'Top-tier' : 'Good',
+      requirements: `Level ${82 + index}`,
+      popularity: `${100 - index * 20}%`,
+      tags: index === 0 ? ['verified', 'craftable'] : ['craftable'],
+      reason: base.reason,
+      listingCount: 0
+    }));
   }
 
   /**
