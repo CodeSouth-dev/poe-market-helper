@@ -506,8 +506,71 @@ class CraftingCalculator {
         return null;
     }
     /**
+     * Helper: Calculate optimal p/s combinations for recombinator crafting
+     * Returns suggested prefix/suffix counts for each item
+     */
+    getOptimalRecombinatorCombination(prefixCount, suffixCount) {
+        const totalPrefixes = prefixCount;
+        const totalSuffixes = suffixCount;
+        // Optimal strategy: Use mod doubling by having overlapping mods
+        // For 2 desired mods of same type: 1p/0s + 1p/0s (double the mod)
+        // For mixed types: distribute evenly
+        let itemA = '';
+        let itemB = '';
+        if (prefixCount === 2 && suffixCount === 0) {
+            // 2 prefixes: Double 1 mod
+            itemA = '1p/0s';
+            itemB = '1p/0s';
+        }
+        else if (prefixCount === 0 && suffixCount === 2) {
+            // 2 suffixes: Double 1 mod
+            itemA = '0p/1s';
+            itemB = '0p/1s';
+        }
+        else if (prefixCount === 1 && suffixCount === 1) {
+            // 1p + 1s: Simple combination
+            itemA = '1p/0s';
+            itemB = '0p/1s';
+        }
+        else if (prefixCount === 3 && suffixCount === 0) {
+            // 3 prefixes: 2p on one, 1p doubled on both
+            itemA = '2p/0s';
+            itemB = '1p/0s';
+        }
+        else if (prefixCount === 0 && suffixCount === 3) {
+            // 3 suffixes: 2s on one, 1s doubled on both
+            itemA = '0p/2s';
+            itemB = '0p/1s';
+        }
+        else if (prefixCount === 2 && suffixCount === 1) {
+            // 2p + 1s: Double 1 prefix
+            itemA = '1p/1s';
+            itemB = '1p/0s';
+        }
+        else if (prefixCount === 1 && suffixCount === 2) {
+            // 1p + 2s: Double 1 suffix
+            itemA = '1p/1s';
+            itemB = '0p/1s';
+        }
+        else {
+            // Fallback: distribute evenly
+            const itemAPrefixes = Math.ceil(prefixCount / 2);
+            const itemBPrefixes = prefixCount - itemAPrefixes;
+            const itemASuffixes = Math.ceil(suffixCount / 2);
+            const itemBSuffixes = suffixCount - itemASuffixes;
+            itemA = `${itemAPrefixes}p/${itemASuffixes}s`;
+            itemB = `${itemBPrefixes}p/${itemBSuffixes}s`;
+        }
+        return { itemA, itemB, totalPrefixes, totalSuffixes };
+    }
+    /**
      * Calculate Recombinator crafting method
      * Combines two items to create one item with mods from both
+     *
+     * Notation: p = prefix, s = suffix
+     * Example: 1p/0s + 2p/1s means Item A has 1 prefix, 0 suffixes
+     *          and Item B has 2 prefixes, 1 suffix (3TP/1TS total)
+     * Success Rate: Always 1/3 for hitting desired mods
      */
     async calculateRecombinator(desiredMods, baseItem, league) {
         // Recombinators are best for 2-4 desired mods
@@ -517,40 +580,43 @@ class CraftingCalculator {
         // Check if recombinators are available (they were removed after Sentinel league)
         // For now, we'll calculate but note availability
         const recombinatorPrice = this.currencyPrices.get('Armour Recombinator')?.chaosValue || 100;
-        // Calculate probability based on mod doubling strategy
-        // With mod doubling (same mod on both items), success rate increases significantly
+        // Count prefixes and suffixes
         const prefixes = desiredMods.filter(m => m.type === 'prefix');
         const suffixes = desiredMods.filter(m => m.type === 'suffix');
-        // Probability distribution for recombinators:
-        // With 3 total affixes -> 10% for 3 final mods (without doubling)
-        // With 4 total affixes (mod doubling) -> 30% for 3 final mods
-        // With 5 total affixes -> 57% for 3 final mods
-        // With 6 total affixes -> 72% for 3 final mods
-        let successProbability = 0;
-        let strategy = '';
-        let expectedAttempts = 1;
-        if (desiredMods.length === 2) {
-            // 2 mods: Use 1p/1s on each item, recombine
-            // With doubling: ~30% chance to keep both mods
-            successProbability = 0.3;
-            expectedAttempts = Math.ceil(1 / successProbability);
-            strategy = 'Craft two items with 1 mod each (same mod on both), then recombine';
+        const prefixCount = prefixes.length;
+        const suffixCount = suffixes.length;
+        // Success rate is always 1/3 for recombinators
+        const successProbability = 1 / 3;
+        const expectedAttempts = Math.ceil(1 / successProbability); // = 3
+        // Get optimal combination
+        const combination = this.getOptimalRecombinatorCombination(prefixCount, suffixCount);
+        // Build strategy description using p/s notation
+        const strategyNotation = `${combination.itemA} + ${combination.itemB} → ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS`;
+        // Build detailed strategy based on desired mods
+        let detailedStrategy = '';
+        if (prefixCount === 2 && suffixCount === 0) {
+            detailedStrategy = `Craft Item A with 1 desired prefix, craft Item B with the SAME prefix (mod doubling). Result: 2TP/0TS`;
         }
-        else if (desiredMods.length === 3) {
-            // 3 mods: Use mod doubling strategy
-            // Craft item A with 2 mods, item B with 1 doubled mod
-            // 4 total affixes with doubling -> ~30% for 3 final
-            successProbability = 0.3;
-            expectedAttempts = Math.ceil(1 / successProbability);
-            strategy = 'Craft two items with overlapping mods, use mod doubling';
+        else if (prefixCount === 0 && suffixCount === 2) {
+            detailedStrategy = `Craft Item A with 1 desired suffix, craft Item B with the SAME suffix (mod doubling). Result: 0TP/2TS`;
         }
-        else if (desiredMods.length === 4) {
-            // 4 mods: More difficult, need 5-6 total affixes
-            // 5 total -> 57% for 3 final, need good luck for 4
-            // Better: 6 total affixes -> 72% for 3, ~28% for 4 (estimated)
-            successProbability = 0.15; // Getting all 4 is harder
-            expectedAttempts = Math.ceil(1 / successProbability);
-            strategy = 'Craft items with 3 mods each, use mod doubling for key mods';
+        else if (prefixCount === 1 && suffixCount === 1) {
+            detailedStrategy = `Craft Item A with the desired prefix (1p/0s), craft Item B with the desired suffix (0p/1s). Result: 1TP/1TS`;
+        }
+        else if (prefixCount === 3 && suffixCount === 0) {
+            detailedStrategy = `Craft Item A with 2 desired prefixes (2p/0s), craft Item B with 1 of those prefixes doubled (1p/0s). Result: 3TP/0TS`;
+        }
+        else if (prefixCount === 0 && suffixCount === 3) {
+            detailedStrategy = `Craft Item A with 2 desired suffixes (0p/2s), craft Item B with 1 of those suffixes doubled (0p/1s). Result: 0TP/3TS`;
+        }
+        else if (prefixCount === 2 && suffixCount === 1) {
+            detailedStrategy = `Craft Item A with 1 prefix + 1 suffix (1p/1s), craft Item B with 1 prefix doubled (1p/0s). Result: 2TP/1TS`;
+        }
+        else if (prefixCount === 1 && suffixCount === 2) {
+            detailedStrategy = `Craft Item A with 1 prefix + 1 suffix (1p/1s), craft Item B with 1 suffix doubled (0p/1s). Result: 1TP/2TS`;
+        }
+        else {
+            detailedStrategy = `Craft Item A: ${combination.itemA}, craft Item B: ${combination.itemB}. Result: ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS`;
         }
         // Cost calculation: need to craft two base items + recombinator
         const chaosPrice = this.currencyPrices.get('Chaos Orb')?.chaosValue || 1;
@@ -558,10 +624,40 @@ class CraftingCalculator {
         const totalBaseCost = baseCraftCost * 2; // Two items needed
         const recombinatorCost = recombinatorPrice * expectedAttempts;
         const averageCost = totalBaseCost * expectedAttempts + recombinatorCost;
+        // Build specific crafting steps with mod names
+        const itemAMods = [];
+        const itemBMods = [];
+        // Distribute mods based on optimal combination
+        if (combination.itemA.includes('2p')) {
+            itemAMods.push(...prefixes.slice(0, 2).map(p => p.name));
+        }
+        else if (combination.itemA.includes('1p')) {
+            itemAMods.push(prefixes[0]?.name || 'prefix');
+        }
+        if (combination.itemA.includes('2s')) {
+            itemAMods.push(...suffixes.slice(0, 2).map(s => s.name));
+        }
+        else if (combination.itemA.includes('1s')) {
+            itemAMods.push(suffixes[0]?.name || 'suffix');
+        }
+        if (combination.itemB.includes('2p')) {
+            itemBMods.push(...prefixes.slice(0, 2).map(p => p.name));
+        }
+        else if (combination.itemB.includes('1p')) {
+            // Use the same mod for doubling if possible
+            itemBMods.push(prefixes[prefixCount > 1 && combination.itemA.includes('1p') ? 0 : Math.min(1, prefixCount - 1)]?.name || 'prefix');
+        }
+        if (combination.itemB.includes('2s')) {
+            itemBMods.push(...suffixes.slice(0, 2).map(s => s.name));
+        }
+        else if (combination.itemB.includes('1s')) {
+            // Use the same mod for doubling if possible
+            itemBMods.push(suffixes[suffixCount > 1 && combination.itemA.includes('1s') ? 0 : Math.min(1, suffixCount - 1)]?.name || 'suffix');
+        }
         return {
             method: 'harvest', // Using 'harvest' as a catch-all for special methods
-            name: 'Recombinator',
-            description: 'Combine two items to merge their modifiers',
+            name: `Recombinator (${strategyNotation})`,
+            description: `Combine two items to merge their modifiers using mod doubling strategy`,
             probability: successProbability,
             averageCost,
             currencyUsed: {
@@ -570,15 +666,25 @@ class CraftingCalculator {
             },
             steps: [
                 `⚠️ NOTE: Recombinators were removed after Sentinel league and may not be available`,
-                `Strategy: ${strategy}`,
-                `1. Craft Item A: ${baseItem.name} with ${prefixes.length > 0 ? prefixes.map(p => p.name).join(', ') : 'desired prefixes'}`,
-                `2. Craft Item B: ${baseItem.name} with ${suffixes.length > 0 ? suffixes.map(s => s.name).join(', ') : 'desired suffixes'}`,
+                `📊 Strategy: ${strategyNotation}`,
+                `💡 ${detailedStrategy}`,
+                ``,
+                `Crafting Steps:`,
+                `1. Craft Item A (${combination.itemA}): ${baseItem.name} with [${itemAMods.join(', ')}]`,
+                `   • Use Essence/Alteration spam to hit these mods`,
+                ``,
+                `2. Craft Item B (${combination.itemB}): ${baseItem.name} with [${itemBMods.join(', ')}]`,
+                `   • ${itemAMods.some(mod => itemBMods.includes(mod)) ? '⭐ Double one mod from Item A for higher success rate!' : 'Use Essence/Alteration spam to hit these mods'}`,
+                ``,
                 `3. Use ${baseItem.item_class} Recombinator to combine both items`,
-                `4. Result will have some combination of mods from both items`,
-                `Expected attempts: ${expectedAttempts}`,
-                `💡 MOD DOUBLING: Having the same mod on both items increases success rate by ~3x!`,
-                `💡 STRATEGY: Use alteration/essence to craft each base, then recombine`,
-                `📊 Probability: With mod doubling, 3-4 total affixes -> ~30% for desired outcome`
+                `   • The recombinator will randomly select mods from both items`,
+                `   • Success rate: 1/3 (always)`,
+                `   • Expected attempts: ${expectedAttempts}`,
+                ``,
+                `💡 MOD DOUBLING TIP: Having the same mod on both items does NOT increase your chance`,
+                `   but it does increase the pool size, giving you more total affixes to work with`,
+                ``,
+                `Result: ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS total affixes across both items`
             ],
             expectedAttempts
         };
