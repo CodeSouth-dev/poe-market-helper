@@ -50,6 +50,9 @@ const pobImporter_1 = require("./pobImporter");
 const liveSearch_1 = require("./liveSearch");
 const fossilOptimizer_1 = require("./fossilOptimizer");
 const automatedBaseAnalyzer_1 = require("./automatedBaseAnalyzer");
+const currencyMaterialsScraper_1 = require("./currencyMaterialsScraper");
+const pohxCraftingScraper_1 = require("./pohxCraftingScraper");
+const maxRollCraftingScraper_1 = require("./maxRollCraftingScraper");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -826,6 +829,229 @@ electron_1.ipcMain.handle('automated-analyzer-get-recommendations-by-class', asy
     }
     catch (error) {
         console.error('Get recommendations by class error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Currency & Materials Pricing ====================
+// Get all currency and materials pricing
+electron_1.ipcMain.handle('currency-get-all-pricing', async (event, league) => {
+    try {
+        const result = await currencyMaterialsScraper_1.currencyMaterialsScraper.scrapeAllPricing(league || 'Standard');
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Get all pricing error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get specific category pricing
+electron_1.ipcMain.handle('currency-get-category', async (event, category, league) => {
+    try {
+        const result = await currencyMaterialsScraper_1.currencyMaterialsScraper.getCategoryPricing(category, league || 'Standard');
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Get category pricing error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get price for specific item
+electron_1.ipcMain.handle('currency-get-price', async (event, itemName, league) => {
+    try {
+        const price = await currencyMaterialsScraper_1.currencyMaterialsScraper.getPrice(itemName, league || 'Standard');
+        return { success: true, data: price };
+    }
+    catch (error) {
+        console.error('Get item price error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Search for currency/materials
+electron_1.ipcMain.handle('currency-search', async (event, query, league) => {
+    try {
+        const results = await currencyMaterialsScraper_1.currencyMaterialsScraper.searchItems(query, league || 'Standard');
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Search currency error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get most expensive items
+electron_1.ipcMain.handle('currency-get-most-expensive', async (event, limit, league) => {
+    try {
+        const results = await currencyMaterialsScraper_1.currencyMaterialsScraper.getMostExpensive(limit || 20, league || 'Standard');
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get most expensive error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get rising items (investment opportunities)
+electron_1.ipcMain.handle('currency-get-rising', async (event, minChange, league) => {
+    try {
+        const results = await currencyMaterialsScraper_1.currencyMaterialsScraper.getRisingItems(minChange || 5, league || 'Standard');
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get rising items error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Pohx Crafting Guides ====================
+// Scrape all crafting guides from pohx.net
+electron_1.ipcMain.handle('pohx-scrape-all-guides', async (event) => {
+    try {
+        const result = await pohxCraftingScraper_1.pohxCraftingScraper.scrapeAllGuides();
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Scrape Pohx guides error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get all sections
+electron_1.ipcMain.handle('pohx-get-all-sections', async (event) => {
+    try {
+        const sections = await pohxCraftingScraper_1.pohxCraftingScraper.getAllSections();
+        return { success: true, data: sections };
+    }
+    catch (error) {
+        console.error('Get Pohx sections error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get guides for a specific section
+electron_1.ipcMain.handle('pohx-get-section', async (event, sectionName) => {
+    try {
+        const guides = await pohxCraftingScraper_1.pohxCraftingScraper.getSection(sectionName);
+        return { success: true, data: guides };
+    }
+    catch (error) {
+        console.error('Get Pohx section error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get guides by item type
+electron_1.ipcMain.handle('pohx-get-by-item-type', async (event, itemType) => {
+    try {
+        const guides = await pohxCraftingScraper_1.pohxCraftingScraper.getGuidesByItemType(itemType);
+        return { success: true, data: guides };
+    }
+    catch (error) {
+        console.error('Get Pohx guides by item type error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get guides by difficulty
+electron_1.ipcMain.handle('pohx-get-by-difficulty', async (event, difficulty) => {
+    try {
+        const guides = await pohxCraftingScraper_1.pohxCraftingScraper.getGuidesByDifficulty(difficulty);
+        return { success: true, data: guides };
+    }
+    catch (error) {
+        console.error('Get Pohx guides by difficulty error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Search Pohx guides
+electron_1.ipcMain.handle('pohx-search', async (event, keyword) => {
+    try {
+        const guides = await pohxCraftingScraper_1.pohxCraftingScraper.searchGuides(keyword);
+        return { success: true, data: guides };
+    }
+    catch (error) {
+        console.error('Search Pohx guides error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== MaxRoll Crafting Guides ====================
+// Scrape all crafting guides from maxroll.gg
+electron_1.ipcMain.handle('maxroll-scrape-all-guides', async (event) => {
+    try {
+        const result = await maxRollCraftingScraper_1.maxRollCraftingScraper.scrapeAllGuides();
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Scrape MaxRoll guides error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get all sections
+electron_1.ipcMain.handle('maxroll-get-all-sections', async (event) => {
+    try {
+        const sections = await maxRollCraftingScraper_1.maxRollCraftingScraper.getAllSections();
+        return { success: true, data: sections };
+    }
+    catch (error) {
+        console.error('Get MaxRoll sections error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get general crafting tips
+electron_1.ipcMain.handle('maxroll-get-general-tips', async (event) => {
+    try {
+        const tips = await maxRollCraftingScraper_1.maxRollCraftingScraper.getGeneralTips();
+        return { success: true, data: tips };
+    }
+    catch (error) {
+        console.error('Get MaxRoll tips error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get methods by category
+electron_1.ipcMain.handle('maxroll-get-by-category', async (event, category) => {
+    try {
+        const methods = await maxRollCraftingScraper_1.maxRollCraftingScraper.getMethodsByCategory(category);
+        return { success: true, data: methods };
+    }
+    catch (error) {
+        console.error('Get MaxRoll methods by category error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get basic crafting methods
+electron_1.ipcMain.handle('maxroll-get-basic-methods', async (event) => {
+    try {
+        const methods = await maxRollCraftingScraper_1.maxRollCraftingScraper.getBasicMethods();
+        return { success: true, data: methods };
+    }
+    catch (error) {
+        console.error('Get MaxRoll basic methods error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get intermediate crafting methods
+electron_1.ipcMain.handle('maxroll-get-intermediate-methods', async (event) => {
+    try {
+        const methods = await maxRollCraftingScraper_1.maxRollCraftingScraper.getIntermediateMethods();
+        return { success: true, data: methods };
+    }
+    catch (error) {
+        console.error('Get MaxRoll intermediate methods error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Search MaxRoll methods
+electron_1.ipcMain.handle('maxroll-search', async (event, keyword) => {
+    try {
+        const methods = await maxRollCraftingScraper_1.maxRollCraftingScraper.searchMethods(keyword);
+        return { success: true, data: methods };
+    }
+    catch (error) {
+        console.error('Search MaxRoll methods error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get method by name
+electron_1.ipcMain.handle('maxroll-get-method-by-name', async (event, name) => {
+    try {
+        const method = await maxRollCraftingScraper_1.maxRollCraftingScraper.getMethodByName(name);
+        return { success: true, data: method };
+    }
+    catch (error) {
+        console.error('Get MaxRoll method by name error:', error);
         return { success: false, error: error.message };
     }
 });
