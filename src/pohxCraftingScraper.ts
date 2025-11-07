@@ -126,7 +126,57 @@ export class PohxCraftingScraper {
         // Wait for content to load
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Extract all crafting guides
+        // Check for tabs, accordions, or buttons to expand all sections
+        console.log('   🔍 Looking for tabs/sections to expand...');
+        await page.evaluate(() => {
+          // @ts-ignore - document is available in browser context
+          const tabs = document.querySelectorAll('[role="tab"], .tab, [class*="tab"], button[class*="section"]');
+          console.log(`Found ${tabs.length} tabs/buttons`);
+
+          // Click all tabs to load their content
+          tabs.forEach((tab: any, index: number) => {
+            console.log(`Clicking tab ${index + 1}: ${tab.textContent?.trim()}`);
+            tab.click?.();
+          });
+
+          // @ts-ignore
+          const accordions = document.querySelectorAll('[class*="accordion"], [class*="collapse"], [class*="expand"], details');
+          console.log(`Found ${accordions.length} accordions`);
+
+          // Expand all accordions/collapsible sections
+          accordions.forEach((accordion: any, index: number) => {
+            console.log(`Expanding section ${index + 1}`);
+            if (accordion.tagName === 'DETAILS') {
+              accordion.open = true;
+            } else {
+              accordion.click?.();
+            }
+          });
+        });
+
+        // Wait for all content to load after clicking
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check for links to other crafting pages
+        const subPages = await page.evaluate(() => {
+          // @ts-ignore - document and window available in browser context
+          const links = document.querySelectorAll('a[href*="craft"], a[href*="guide"]');
+          const pages: string[] = [];
+
+          links.forEach((link: any) => {
+            const href = link.href;
+            // @ts-ignore
+            if (href && href.includes('pohx.net') && href !== window.location.href) {
+              pages.push(href);
+            }
+          });
+
+          return [...new Set(pages)]; // Remove duplicates
+        });
+
+        console.log(`   📄 Found ${subPages.length} sub-pages to scrape`);
+
+        // Extract all crafting guides from main page
         const craftingData = await page.evaluate(() => {
           const sections: any = {};
 
@@ -173,7 +223,71 @@ export class PohxCraftingScraper {
           };
         });
 
-        console.log(`   ✅ Extracted ${Object.keys(craftingData.sections).length} sections`);
+        console.log(`   ✅ Extracted ${Object.keys(craftingData.sections).length} sections from main page`);
+
+        // Scrape sub-pages if found (limit to first 10 to avoid overwhelming)
+        for (let i = 0; i < Math.min(subPages.length, 10); i++) {
+          const subPageUrl = subPages[i];
+          console.log(`   📄 Scraping sub-page ${i + 1}/${Math.min(subPages.length, 10)}: ${subPageUrl}`);
+
+          try {
+            await page.goto(subPageUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Extract content from sub-page
+            const subPageData = await page.evaluate(() => {
+              const sections: any = {};
+              // @ts-ignore
+              const allElements = document.querySelectorAll('h1, h2, h3, h4, p, ul, ol, li');
+              let currentSection = 'SubPage Content';
+              sections[currentSection] = [];
+
+              allElements.forEach((elem: any) => {
+                const text = elem.textContent?.trim();
+                if (!text) return;
+
+                if (elem.tagName === 'H2' || elem.tagName === 'H3') {
+                  currentSection = text;
+                  if (!sections[currentSection]) {
+                    sections[currentSection] = [];
+                  }
+                } else {
+                  if (!sections[currentSection]) {
+                    sections[currentSection] = [];
+                  }
+                  sections[currentSection].push({
+                    type: elem.tagName.toLowerCase(),
+                    content: text
+                  });
+                }
+              });
+
+              return { sections };
+            });
+
+            // Merge sub-page sections into main data
+            for (const [sectionName, content] of Object.entries(subPageData.sections)) {
+              if (!craftingData.sections[sectionName]) {
+                craftingData.sections[sectionName] = content;
+              } else {
+                // Append to existing section
+                craftingData.sections[sectionName] = [
+                  ...(craftingData.sections[sectionName] as any[]),
+                  ...(content as any[])
+                ];
+              }
+            }
+
+            console.log(`      ✅ Added content from sub-page`);
+
+            // Rate limit between sub-pages
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error: any) {
+            console.error(`      ❌ Failed to scrape sub-page: ${error.message}`);
+          }
+        }
+
+        console.log(`   ✅ Total sections after all pages: ${Object.keys(craftingData.sections).length}`);
 
         // Parse the sections into structured guides
         const structuredData = this.parseScrapedData(craftingData);

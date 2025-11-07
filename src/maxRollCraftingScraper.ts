@@ -140,6 +140,53 @@ export class MaxRollCraftingScraper {
           // Ignore popup errors
         }
 
+        // Expand all tabs/sections
+        console.log('   🔍 Expanding all tabs and sections...');
+        await page.evaluate(() => {
+          // @ts-ignore
+          const tabs = document.querySelectorAll('[role="tab"], .tab, button[class*="tab"]');
+          console.log(`Found ${tabs.length} tabs`);
+
+          tabs.forEach((tab: any, index: number) => {
+            console.log(`Clicking tab ${index + 1}: ${tab.textContent?.trim()}`);
+            tab.click?.();
+          });
+
+          // @ts-ignore
+          const accordions = document.querySelectorAll('[class*="accordion"], [class*="collapse"], details, [class*="expand"]');
+          console.log(`Found ${accordions.length} collapsible sections`);
+
+          accordions.forEach((accordion: any) => {
+            if (accordion.tagName === 'DETAILS') {
+              accordion.open = true;
+            } else {
+              accordion.click?.();
+            }
+          });
+        });
+
+        // Wait for expanded content
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check for navigation links to other crafting pages
+        const subPages = await page.evaluate(() => {
+          // @ts-ignore - document and window available in browser context
+          const links = document.querySelectorAll('a[href*="crafting"], a[href*="craft"], nav a, .menu a');
+          const pages: string[] = [];
+
+          links.forEach((link: any) => {
+            const href = link.href;
+            // @ts-ignore
+            if (href && href.includes('maxroll.gg') && href !== window.location.href) {
+              pages.push(href);
+            }
+          });
+
+          return [...new Set(pages)];
+        });
+
+        console.log(`   📄 Found ${subPages.length} potential sub-pages`);
+
         // Extract all crafting content
         const craftingData = await page.evaluate(() => {
           const sections: any[] = [];
@@ -262,8 +309,71 @@ export class MaxRollCraftingScraper {
           };
         });
 
-        console.log(`   ✅ Extracted ${craftingData.sections.length} sections`);
+        console.log(`   ✅ Extracted ${craftingData.sections.length} sections from main page`);
         console.log(`   ✅ Found ${craftingData.generalTips.length} general tips`);
+
+        // Scrape sub-pages that are specifically crafting-related (limit to 5)
+        const relevantSubPages = subPages.filter(url =>
+          url.includes('/crafting') && !url.includes('#')
+        ).slice(0, 5);
+
+        for (let i = 0; i < relevantSubPages.length; i++) {
+          const subPageUrl = relevantSubPages[i];
+          console.log(`   📄 Scraping sub-page ${i + 1}/${relevantSubPages.length}: ${subPageUrl}`);
+
+          try {
+            await page.goto(subPageUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Extract from sub-page
+            const subPageData = await page.evaluate(() => {
+              const sections: any[] = [];
+              // @ts-ignore
+              const mainContent = document.querySelector('main, article, .content');
+              if (!mainContent) return { sections: [], generalTips: [] };
+
+              // @ts-ignore
+              const headings = mainContent.querySelectorAll('h2, h3, h4');
+              let currentSection: any = null;
+
+              // @ts-ignore
+              mainContent.querySelectorAll('h2, h3, h4, p, ul, li').forEach((elem: any) => {
+                const text = elem.textContent?.trim();
+                if (!text) return;
+
+                if (elem.tagName === 'H2' || elem.tagName === 'H3') {
+                  if (currentSection) sections.push(currentSection);
+                  currentSection = {
+                    title: text,
+                    description: '',
+                    methods: [],
+                    tips: []
+                  };
+                } else if (currentSection && elem.tagName === 'P') {
+                  if (currentSection.description.length < 500) {
+                    currentSection.description += ' ' + text;
+                  }
+                } else if (currentSection && elem.tagName === 'LI') {
+                  currentSection.tips.push(text);
+                }
+              });
+
+              if (currentSection) sections.push(currentSection);
+              return { sections, generalTips: [] };
+            });
+
+            // Merge into main data
+            craftingData.sections.push(...subPageData.sections);
+            console.log(`      ✅ Added ${subPageData.sections.length} sections from sub-page`);
+
+            // Rate limit
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error: any) {
+            console.error(`      ❌ Failed to scrape sub-page: ${error.message}`);
+          }
+        }
+
+        console.log(`   ✅ Total sections after all pages: ${craftingData.sections.length}`);
 
         // Parse and categorize methods
         const allMethods = this.extractAllMethods(craftingData);
