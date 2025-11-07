@@ -234,21 +234,29 @@ export class SmartCraftingOptimizer {
       });
     }
 
-    // Recombinator (if risk mode)
-    if (goal.riskMode) {
+    // Recombinator - available as a regular strategy
+    // Adjust difficulty and description based on budget
+    const isHighBudget = goal.budget > 500;
+    const isMidBudget = goal.budget >= 100 && goal.budget <= 500;
+
+    if (goal.desiredMods.length >= 2) {
       methods.push({
-        name: 'Recombinator Crafting',
+        name: isHighBudget ? 'Recombinator (High-End)' : 'Recombinator Crafting',
         source: 'recombinator',
-        category: 'Advanced',
-        description: 'Combine two items to create a powerful result',
+        category: isMidBudget ? 'Intermediate' : 'Advanced',
+        description: isHighBudget
+          ? 'Combine two items to create mirror-tier results with impossible mod combinations'
+          : 'Combine two items with different mod pools to create a better item',
         steps: [
-          'Craft or buy two items with desired mod pools',
-          'Use recombinator to combine them',
-          'Result has chance to combine best mods from both items',
-          'High risk but can create mirror-tier items'
+          'Craft or buy first base with half of your desired mods',
+          'Craft or buy second base with the other half of desired mods',
+          'Ensure both items are same base type and similar item levels',
+          'Use Recombinator to combine both items',
+          'Result randomly combines mods from both - may need multiple attempts',
+          isHighBudget ? 'Can create impossible combinations worth multiple divines' : 'Finish with bench crafts if needed'
         ],
-        difficulty: 'expert',
-        estimatedCost: 'very-high'
+        difficulty: isHighBudget ? 'expert' : isMidBudget ? 'advanced' : 'intermediate',
+        estimatedCost: isHighBudget ? 'very-high' : isMidBudget ? 'high' : 'medium'
       });
     }
 
@@ -403,61 +411,96 @@ export class SmartCraftingOptimizer {
    * Assess risk level
    */
   private assessRiskLevel(method: any): 'safe' | 'moderate' | 'high' | 'extreme' {
-    if (method.source === 'recombinator') return 'extreme';
+    // Recombinators have varying risk based on difficulty/budget
+    if (method.source === 'recombinator') {
+      if (method.difficulty === 'expert') return 'extreme';
+      if (method.difficulty === 'advanced') return 'high';
+      return 'moderate'; // Intermediate recombinator use
+    }
     if (method.difficulty === 'expert') return 'high';
     if (method.difficulty === 'advanced') return 'moderate';
     return 'safe';
   }
 
   /**
-   * Generate recombinator strategy for high-risk crafting
+   * Generate recombinator strategy (adapts to budget and risk mode)
    */
   private async generateRecombinatorStrategy(goal: CraftingGoal): Promise<RecombinatorStrategy> {
     const recombPrice = this.currencyPrices.get('recombinator') || 50;
-    const baseCost = 100; // Cost to craft/buy the two base items
+    const isHighBudget = goal.budget > 500;
+    const baseCost = isHighBudget ? 300 : 100; // Higher base cost for expensive items
     const totalCost = baseCost + recombPrice;
 
+    const riskLevel: 'high' | 'extreme' = isHighBudget ? 'extreme' : 'high';
+    const successRate = isHighBudget ? 0.2 : 0.3; // Lower success for complex combinations
+    const profitMultiplier = isHighBudget ? 15 : 6; // Higher profit potential for expensive items
+
     return {
-      name: `Recombinator Elite ${goal.itemClass}`,
-      description: `Combine two ${goal.itemClass} items to create a powerful result with your desired mods`,
+      name: isHighBudget ? `Recombinator Elite ${goal.itemClass}` : `Recombinator ${goal.itemClass}`,
+      description: isHighBudget
+        ? `Combine two ${goal.itemClass} items to create mirror-tier results with impossible mod combinations`
+        : `Combine two ${goal.itemClass} items to merge different mod pools into one powerful item`,
       steps: [
-        `Step 1: Craft or buy first ${goal.baseItem} with ${goal.desiredMods.slice(0, 2).join(' + ')}`,
-        `Step 2: Craft or buy second ${goal.baseItem} with ${goal.desiredMods.slice(2, 4).join(' + ')}`,
+        `Step 1: Craft or buy first ${goal.baseItem} with ${goal.desiredMods.slice(0, Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
+        `Step 2: Craft or buy second ${goal.baseItem} with ${goal.desiredMods.slice(Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
         'Step 3: Ensure both items have same base type and similar item levels',
-        'Step 4: Use Recombinator to combine them',
-        'Step 5: Result will randomly combine mods from both items',
-        'Step 6: If successful, finish with bench crafts or harvests',
-        'Step 7: If failed, repeat process or try alternative method'
+        'Step 4: Match quality and links on both items for best results',
+        'Step 5: Use Recombinator to combine them',
+        'Step 6: Result will randomly combine mods from both items',
+        isHighBudget
+          ? 'Step 7: Can create impossible combinations worth divines - consider selling if hit'
+          : 'Step 7: If successful, finish with bench crafts; if failed, repeat or try simpler method'
       ],
       requirements: [
         `Two ${goal.baseItem} bases (ilvl ${goal.itemLevel}+)`,
-        'Recombinator (from Sentinel league or trade)',
+        'Recombinator (from trade or Sentinel league content)',
         'Crafting materials for both bases (essences, fossils, or harvest crafts)',
-        'Budget for multiple attempts (success rate varies)'
+        isHighBudget
+          ? 'Large budget for multiple attempts - expect 3-5 tries on average'
+          : 'Budget for 2-3 attempts recommended'
       ],
       baseItems: {
         item1: `${goal.baseItem} with prefixes`,
         item2: `${goal.baseItem} with suffixes`,
-        combinedResult: `Elite ${goal.baseItem} with best mods from both`
+        combinedResult: isHighBudget
+          ? `Mirror-tier ${goal.baseItem} with impossible mods`
+          : `Powerful ${goal.baseItem} with merged mods`
       },
       estimatedCost: totalCost,
-      successRate: 0.25, // 25% to get desired result
-      profitPotential: totalCost * 10, // 10x potential if you hit jackpot
-      riskLevel: 'extreme',
-      warnings: [
-        '⚠️ Recombinators can brick both items (total loss)',
-        '⚠️ Result is random - you may need many attempts',
-        '⚠️ Very expensive - only use with high-value bases',
-        '⚠️ Consider buying the finished item instead if budget is limited'
-      ],
-      tips: [
-        '💡 Use items with exact mods you want to maximize chance of keeping them',
-        '💡 Match item levels and quality on both items',
-        '💡 Higher tier mods have better chance to transfer',
-        '💡 Can create impossible-to-craft combinations',
-        '💡 Best for creating mirror-tier items worth multiple divines',
-        '💡 Practice on cheap bases first to understand mechanics'
-      ]
+      successRate,
+      profitPotential: totalCost * profitMultiplier,
+      riskLevel,
+      warnings: isHighBudget
+        ? [
+            '⚠️ EXTREME RISK: Recombinators can brick both items (total loss)',
+            '⚠️ Success rate is low - budget for multiple attempts',
+            '⚠️ Very expensive - only for high-value crafting projects',
+            '⚠️ Consider buying the finished item instead if available on trade',
+            '⚠️ Practice mechanics on cheap items first'
+          ]
+        : [
+            '⚠️ Recombinators can brick both items if result is bad',
+            '⚠️ Result is random - may need 2-3 attempts',
+            '⚠️ Make sure both bases have good mods before combining',
+            '⚠️ Can waste currency if unlucky - have backup plan'
+          ],
+      tips: isHighBudget
+        ? [
+            '💡 Use items with EXACT mods you want to maximize chance of keeping them',
+            '💡 Match item levels, quality, and links on both items',
+            '💡 Higher tier mods have better chance to transfer',
+            '💡 Can create impossible-to-craft combinations',
+            '💡 Best for mirror-tier items worth multiple divines',
+            '💡 Research recombinator mechanics thoroughly first'
+          ]
+        : [
+            '💡 Split your desired mods between two items for best results',
+            '💡 Use cheaper crafting methods (essences) on both bases',
+            '💡 Match item levels for consistent mod tiers',
+            '💡 Can combine prefixes from one item with suffixes from another',
+            '💡 Great for mid-tier crafting when you need 4-5 specific mods',
+            '💡 Test on cheap bases first to understand the mechanics'
+          ]
     };
   }
 
