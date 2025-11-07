@@ -428,6 +428,12 @@ export class CraftOfExileScraper {
     tags: string[];
     reason: string;
     listingCount: number;
+    chaosValue: number;
+    lowConfidence?: boolean;
+    sparkline?: {
+      totalChange: number;
+      data: number[];
+    };
   }>> {
     const cacheKey = `bases-${itemClass}-${itemLevel}`;
     const cached = await this.getFromCache<any[]>(cacheKey);
@@ -532,7 +538,7 @@ export class CraftOfExileScraper {
 
         console.log(`   📊 Found ${items.length} craftable bases from poe.ninja`);
 
-        // Group by base type and aggregate listing counts
+        // Group by base type and aggregate listing counts + economy data
         const baseAggregation = new Map<string, any>();
 
         items.forEach((item: any) => {
@@ -544,7 +550,10 @@ export class CraftOfExileScraper {
               totalListings: 0,
               avgPrice: 0,
               priceCount: 0,
-              minLevel: item.levelRequired || 82
+              minLevel: item.levelRequired || 82,
+              lowConfidence: false,
+              hasSparkline: false,
+              sparklineData: null
             });
           }
 
@@ -553,6 +562,20 @@ export class CraftOfExileScraper {
           if (item.chaosValue) {
             base.avgPrice += item.chaosValue;
             base.priceCount++;
+          }
+
+          // Capture low confidence flag (indicates low sellability)
+          if (item.lowConfidenceSparkline || item.lowConfidence) {
+            base.lowConfidence = true;
+          }
+
+          // Capture sparkline data (price trend)
+          if (item.sparkline && !base.hasSparkline) {
+            base.hasSparkline = true;
+            base.sparklineData = {
+              totalChange: item.sparkline.totalChange || 0,
+              data: item.sparkline.data || []
+            };
           }
         });
 
@@ -567,12 +590,20 @@ export class CraftOfExileScraper {
 
         console.log(`   ✅ Top ${aggregatedBases.length} craftable bases for ${itemClass}:`);
         aggregatedBases.forEach((base, i) => {
-          console.log(`      ${i + 1}. ${base.name} (${base.totalListings} listings, ${base.avgPrice.toFixed(1)}c avg)`);
+          const confidenceStr = base.lowConfidence ? ' ⚠️ LOW CONFIDENCE' : '';
+          const trendStr = base.sparklineData ? ` (${base.sparklineData.totalChange > 0 ? '📈' : '📉'} ${base.sparklineData.totalChange.toFixed(1)}%)` : '';
+          console.log(`      ${i + 1}. ${base.name} (${base.totalListings} listings, ${base.avgPrice.toFixed(1)}c${trendStr}${confidenceStr})`);
         });
 
-        // Format results
+        // Format results with economy data
         const results = aggregatedBases.map((base, index) => {
           const popularity = index === 0 ? 100 : Math.max(50, 100 - (index * 25));
+
+          // Build reason with sellability info
+          let reason = `${base.totalListings} active listings - ${index === 0 ? 'Most popular craftable base' : index === 1 ? 'Very popular choice' : 'Common choice'} for ${itemClass}`;
+          if (base.lowConfidence) {
+            reason += ' ⚠️ Low sellability - may be harder to sell';
+          }
 
           return {
             name: base.name,
@@ -582,8 +613,11 @@ export class CraftOfExileScraper {
             requirements: `Level ${base.minLevel}`,
             popularity: `${popularity}%`,
             tags: index === 0 ? ['most-traded', 'meta'] : ['popular', 'craftable'],
-            reason: `${base.totalListings} active listings - ${index === 0 ? 'Most popular craftable base' : index === 1 ? 'Very popular choice' : 'Common choice'} for ${itemClass}`,
-            listingCount: base.totalListings
+            reason: reason,
+            listingCount: base.totalListings,
+            chaosValue: base.avgPrice,
+            lowConfidence: base.lowConfidence,
+            sparkline: base.sparklineData
           };
         });
 
@@ -673,7 +707,10 @@ export class CraftOfExileScraper {
       popularity: `${100 - index * 20}%`,
       tags: index === 0 ? ['verified', 'craftable'] : ['craftable'],
       reason: base.reason,
-      listingCount: 0
+      listingCount: 0,
+      chaosValue: 0,
+      lowConfidence: false,
+      sparkline: undefined
     }));
   }
 

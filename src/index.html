@@ -1861,17 +1861,39 @@
                         craftBaseItem.value = topBase.name;
                     }
 
-                    // Display all suggestions (top 3 only - verified craftable bases)
+                    // Display all suggestions (top 3 only - verified craftable bases with economy data)
                     let html = '';
                     result.data.slice(0, 3).forEach((base, index) => {
                         const isTop = index === 0;
+                        const lowConfWarning = base.lowConfidence ? ' <span style="color: #ff6b6b;">⚠️ Low Sellability</span>' : '';
+                        const priceStr = base.chaosValue > 0 ? `${base.chaosValue.toFixed(1)}c` : 'N/A';
+                        const trendIcon = base.sparkline && base.sparkline.totalChange !== 0 ?
+                            (base.sparkline.totalChange > 0 ? '📈' : '📉') : '';
+                        const trendPct = base.sparkline && base.sparkline.totalChange !== 0 ?
+                            ` ${base.sparkline.totalChange > 0 ? '+' : ''}${base.sparkline.totalChange.toFixed(1)}%` : '';
+
                         html += `
-                            <div style="padding: 8px; margin-bottom: 6px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; cursor: pointer; border: 1px solid ${isTop ? '#ffd700' : '#555'};" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => d.style.border = '1px solid #555'); this.style.border = '1px solid #ffd700';">
-                                <div style="color: ${isTop ? '#ffd700' : '#ffffff'}; font-weight: ${isTop ? 'bold' : 'normal'};">
-                                    ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}
-                                </div>
-                                <div style="color: #aaa; font-size: 12px; margin-top: 4px;">
-                                    ${base.reason || 'Popular craftable base for this slot'}
+                            <div style="padding: 10px; margin-bottom: 8px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; border: 1px solid ${isTop ? '#ffd700' : '#555'};">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1; cursor: pointer;" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => { const inner = d.querySelector('div'); if(inner) inner.style.border = 'none'; }); this.style.border = '2px solid #ffd700';">
+                                        <div style="color: ${isTop ? '#ffd700' : '#ffffff'}; font-weight: ${isTop ? 'bold' : 'normal'}; font-size: 14px;">
+                                            ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}${lowConfWarning}
+                                        </div>
+                                        <div style="color: #aaa; font-size: 11px; margin-top: 4px;">
+                                            ${base.reason || 'Popular craftable base for this slot'}
+                                        </div>
+                                        <div style="margin-top: 6px; display: flex; gap: 12px; font-size: 11px;">
+                                            <span style="color: #4CAF50;">💰 ${priceStr}</span>
+                                            <span style="color: #2196F3;">📊 ${base.listingCount} listed</span>
+                                            ${trendIcon ? `<span style="color: ${base.sparkline.totalChange > 0 ? '#4CAF50' : '#ff6b6b'};">${trendIcon}${trendPct}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <button
+                                        style="margin-left: 8px; padding: 4px 8px; background: rgba(33, 150, 243, 0.8); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;"
+                                        onclick="event.stopPropagation(); ipcRenderer.invoke('open-trade-site', '${base.name.replace(/'/g, "\\'")}', document.getElementById('craftLeague').value);"
+                                        title="View on pathofexile.com/trade">
+                                        🔍 Trade
+                                    </button>
                                 </div>
                             </div>
                         `;

@@ -49,6 +49,7 @@ const craftOfExileScraper_1 = require("./craftOfExileScraper");
 const pobImporter_1 = require("./pobImporter");
 const liveSearch_1 = require("./liveSearch");
 const fossilOptimizer_1 = require("./fossilOptimizer");
+const automatedBaseAnalyzer_1 = require("./automatedBaseAnalyzer");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -618,6 +619,25 @@ electron_1.ipcMain.handle('craft-get-mods-for-class', async (event, itemClass, i
         return { success: false, error: error.message };
     }
 });
+// Open trade site for base item
+electron_1.ipcMain.handle('open-trade-site', async (event, baseName, league) => {
+    try {
+        const { shell } = require('electron');
+        // Construct trade site URL with base item search
+        // For pathofexile.com/trade, we need to use the official trade API
+        const encodedBaseName = encodeURIComponent(baseName);
+        const tradeLeague = league || 'Standard';
+        // Open in browser - pathofexile.com/trade with pre-filled search
+        const tradeUrl = `https://www.pathofexile.com/trade/search/${tradeLeague}?q={"query":{"type":"${encodedBaseName}","filters":{"misc_filters":{"filters":{"ilvl":{"min":82}}}}}}`;
+        console.log(`🔍 Opening trade site for: ${baseName} in ${tradeLeague}`);
+        await shell.openExternal(tradeUrl);
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Open trade site error:', error);
+        return { success: false, error: error.message };
+    }
+});
 // ==================== Path of Building Import ====================
 // Import PoB code
 electron_1.ipcMain.handle('pob-import', async (event, pobCode, league) => {
@@ -739,6 +759,73 @@ electron_1.ipcMain.handle('fossil-optimize', async (event, baseItem, desiredMods
     }
     catch (error) {
         console.error('Fossil optimization error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Automated Base Analyzer ====================
+// Start automated base analysis
+electron_1.ipcMain.handle('automated-analyzer-start', async (event) => {
+    try {
+        await automatedBaseAnalyzer_1.automatedBaseAnalyzer.startAutomatedAnalysis();
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Start automated analyzer error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Stop automated base analysis
+electron_1.ipcMain.handle('automated-analyzer-stop', async (event) => {
+    try {
+        automatedBaseAnalyzer_1.automatedBaseAnalyzer.stopAutomatedAnalysis();
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Stop automated analyzer error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Run analysis now (manual trigger)
+electron_1.ipcMain.handle('automated-analyzer-run-now', async (event, league) => {
+    try {
+        const results = await automatedBaseAnalyzer_1.automatedBaseAnalyzer.runFullAnalysis(league);
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Run automated analysis error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get all BUY recommendations
+electron_1.ipcMain.handle('automated-analyzer-get-buy-recommendations', async (event) => {
+    try {
+        const results = await automatedBaseAnalyzer_1.automatedBaseAnalyzer.getBuyRecommendations();
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get BUY recommendations error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get all CRAFT recommendations
+electron_1.ipcMain.handle('automated-analyzer-get-craft-recommendations', async (event) => {
+    try {
+        const results = await automatedBaseAnalyzer_1.automatedBaseAnalyzer.getCraftRecommendations();
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get CRAFT recommendations error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get recommendations for specific item class
+electron_1.ipcMain.handle('automated-analyzer-get-recommendations-by-class', async (event, itemClass) => {
+    try {
+        const results = await automatedBaseAnalyzer_1.automatedBaseAnalyzer.getRecommendationsForClass(itemClass);
+        return { success: true, data: results };
+    }
+    catch (error) {
+        console.error('Get recommendations by class error:', error);
         return { success: false, error: error.message };
     }
 });
