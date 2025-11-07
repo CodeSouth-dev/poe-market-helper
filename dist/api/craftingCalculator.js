@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CraftingCalculator = void 0;
 const craftingData_1 = require("./craftingData");
 const poeNinja_1 = require("./poeNinja");
+const currencyPriceService_1 = require("../services/currencyPriceService");
+const probabilityCalculator_1 = require("../utils/probabilityCalculator");
 /**
  * Core crafting calculation engine
  * Calculates probabilities and costs for different crafting methods
@@ -10,57 +12,15 @@ const poeNinja_1 = require("./poeNinja");
 class CraftingCalculator {
     constructor() {
         this.dataLoader = (0, craftingData_1.getCraftingDataLoader)();
+        this.currencyService = (0, currencyPriceService_1.getCurrencyPriceService)();
         this.poeNinja = new poeNinja_1.PoeNinjaAPI();
-        this.currencyPrices = new Map();
     }
     /**
      * Initialize the calculator by loading data
      */
     async initialize(league) {
         await this.dataLoader.loadAll();
-        await this.loadCurrencyPrices(league);
-    }
-    /**
-     * Load currency prices from poe.ninja
-     */
-    async loadCurrencyPrices(league) {
-        try {
-            const result = await this.poeNinja.searchCategory('', league, 'Currency');
-            for (const item of result) {
-                this.currencyPrices.set(item.name, {
-                    name: item.name,
-                    chaosValue: item.chaosValue,
-                    divineValue: item.divineValue,
-                    count: item.count,
-                    listingCount: item.listingCount
-                });
-            }
-            // Also load fossils, essences, and other crafting currency
-            const fossilResult = await this.poeNinja.searchCategory('', league, 'Fossil');
-            for (const item of fossilResult) {
-                this.currencyPrices.set(item.name, {
-                    name: item.name,
-                    chaosValue: item.chaosValue,
-                    divineValue: item.divineValue,
-                    count: item.count,
-                    listingCount: item.listingCount
-                });
-            }
-            const essenceResult = await this.poeNinja.searchCategory('', league, 'Essence');
-            for (const item of essenceResult) {
-                this.currencyPrices.set(item.name, {
-                    name: item.name,
-                    chaosValue: item.chaosValue,
-                    divineValue: item.divineValue,
-                    count: item.count,
-                    listingCount: item.listingCount
-                });
-            }
-            console.log(`Loaded ${this.currencyPrices.size} currency prices`);
-        }
-        catch (error) {
-            console.error('Error loading currency prices:', error);
-        }
+        await this.currencyService.loadPrices(league);
     }
     /**
      * Main method: Calculate best crafting method for desired mods
@@ -120,7 +80,7 @@ class CraftingCalculator {
         const bestMethod = methods[0];
         const baseRecommendation = await this.recommendBaseType(desiredMods, baseItemName, itemClass, league, bestMethod);
         const totalCostChaos = baseRecommendation.averageCost + bestMethod.averageCost;
-        const divinePrice = this.currencyPrices.get('Divine Orb')?.chaosValue || 200;
+        const divinePrice = this.currencyService.getPrice('Divine Orb');
         const totalCostDivine = totalCostChaos / divinePrice;
         return {
             desiredMods,
@@ -140,18 +100,18 @@ class CraftingCalculator {
      */
     async calculateChaosSpam(desiredMods, baseItem, league) {
         const availableMods = this.dataLoader.getModsForItemClass(baseItem.item_class, baseItem.tags);
-        const probability = this.calculateModProbability(desiredMods, availableMods, baseItem.tags);
-        if (probability === 0) {
+        const probResult = (0, probabilityCalculator_1.calculateWeightedModProbability)(desiredMods, availableMods, baseItem.tags);
+        if (probResult.successRate === 0) {
             return null;
         }
-        const chaosPrice = this.currencyPrices.get('Chaos Orb')?.chaosValue || 1;
-        const expectedAttempts = Math.ceil(1 / probability);
+        const chaosPrice = this.currencyService.getPrice('Chaos Orb');
+        const expectedAttempts = probResult.expectedAttempts;
         const averageCost = expectedAttempts * chaosPrice;
         return {
             method: 'chaos',
             name: 'Chaos Spam',
             description: `Use Chaos Orbs to reroll the item until desired mods are hit`,
-            probability,
+            probability: probResult.successRate,
             averageCost,
             currencyUsed: {
                 'Chaos Orb': expectedAttempts
@@ -178,7 +138,7 @@ class CraftingCalculator {
             return null;
         }
         const fossilCost = bestCombination.fossils.reduce((total, fossilName) => {
-            const price = this.currencyPrices.get(fossilName)?.chaosValue || 1;
+            const price = this.currencyService.getPrice(fossilName);
             return total + price;
         }, 0);
         const resonatorPrice = this.getResonatorPrice(bestCombination.resonator);
@@ -243,7 +203,7 @@ class CraftingCalculator {
         if (probability === 0 && remainingMods.length > 0) {
             return null;
         }
-        const essencePrice = this.currencyPrices.get(bestEssence.name)?.chaosValue || 1;
+        const essencePrice = this.currencyService.getPrice(bestEssence.name);
         const expectedAttempts = Math.ceil(1 / probability);
         const averageCost = expectedAttempts * essencePrice;
         return {
@@ -279,8 +239,8 @@ class CraftingCalculator {
         if (probability === 0) {
             return null;
         }
-        const alterationPrice = this.currencyPrices.get('Orb of Alteration')?.chaosValue || 0.1;
-        const augmentPrice = this.currencyPrices.get('Orb of Augmentation')?.chaosValue || 0.05;
+        const alterationPrice = this.currencyService.getPrice('Orb of Alteration');
+        const augmentPrice = this.currencyService.getPrice('Orb of Augmentation');
         const expectedAttempts = Math.ceil(1 / probability);
         const averageCost = expectedAttempts * (alterationPrice + augmentPrice * 0.5);
         return {
@@ -333,7 +293,7 @@ class CraftingCalculator {
         }
         if (probability === 0)
             return null;
-        const exaltPrice = this.currencyPrices.get('Exalted Orb')?.chaosValue || 180;
+        const exaltPrice = this.currencyService.getPrice('Exalted Orb');
         const expectedAttempts = Math.ceil(1 / probability);
         const averageCost = expectedAttempts * exaltPrice;
         return {
@@ -408,7 +368,7 @@ class CraftingCalculator {
         // Veiled chaos is mainly useful for specific unveil-able mods
         // For now, return null unless we can determine veiled mods are desired
         // This would require additional data about which mods are unveil-able
-        const veiledPrice = this.currencyPrices.get('Veiled Chaos Orb')?.chaosValue || 50;
+        const veiledPrice = this.currencyService.getPrice('Veiled Chaos Orb');
         // Simplified: only recommend if looking for 1-2 specific mods
         if (desiredMods.length > 2)
             return null;
@@ -454,8 +414,8 @@ class CraftingCalculator {
      */
     async calculateBeastcrafting(desiredMods, baseItem, league) {
         // Beast prices from poe.ninja
-        const craicicChimeralPrice = this.currencyPrices.get('Craicic Chimeral')?.chaosValue || 30;
-        const fenumalHybridPrice = this.currencyPrices.get('Fenumal Hybrid Arachnid')?.chaosValue || 15;
+        const craicicChimeralPrice = this.currencyService.getPrice('Craicic Chimeral');
+        const fenumalHybridPrice = this.currencyService.getPrice('Fenumal Hybrid Arachnid');
         // Check if any desired mods match common beast craft patterns
         const modTexts = desiredMods.map(m => m.name.toLowerCase()).join(' ');
         // Imprint beast (Craicic Chimeral) - useful for alt+regal crafting
@@ -579,7 +539,7 @@ class CraftingCalculator {
         }
         // Check if recombinators are available (they were removed after Sentinel league)
         // For now, we'll calculate but note availability
-        const recombinatorPrice = this.currencyPrices.get('Armour Recombinator')?.chaosValue || 100;
+        const recombinatorPrice = this.currencyService.getPrice('Armour Recombinator');
         // Count prefixes and suffixes
         const prefixes = desiredMods.filter(m => m.type === 'prefix');
         const suffixes = desiredMods.filter(m => m.type === 'suffix');
@@ -619,7 +579,7 @@ class CraftingCalculator {
             detailedStrategy = `Craft Item A: ${combination.itemA}, craft Item B: ${combination.itemB}. Result: ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS`;
         }
         // Cost calculation: need to craft two base items + recombinator
-        const chaosPrice = this.currencyPrices.get('Chaos Orb')?.chaosValue || 1;
+        const chaosPrice = this.currencyService.getPrice('Chaos Orb');
         const baseCraftCost = 50 * chaosPrice; // Estimate for crafting each base item
         const totalBaseCost = baseCraftCost * 2; // Two items needed
         const recombinatorCost = recombinatorPrice * expectedAttempts;
@@ -715,64 +675,17 @@ class CraftingCalculator {
      * Helper: Calculate probability with custom mod pool
      */
     calculateModProbabilityWithPool(desiredMods, modPool, itemTags) {
-        const prefixes = desiredMods.filter(m => m.type === 'prefix');
-        const suffixes = desiredMods.filter(m => m.type === 'suffix');
-        const availablePrefixes = modPool.filter(m => m.type === 'prefix');
-        const availableSuffixes = modPool.filter(m => m.type === 'suffix');
-        if (availablePrefixes.length === 0 || availableSuffixes.length === 0) {
-            return 0;
-        }
-        let probability = 1;
-        for (const prefix of prefixes) {
-            const matchingMods = availablePrefixes.filter(m => m.name.toLowerCase().includes(prefix.name.toLowerCase()));
-            if (matchingMods.length === 0)
-                return 0;
-            probability *= matchingMods.length / availablePrefixes.length;
-        }
-        for (const suffix of suffixes) {
-            const matchingMods = availableSuffixes.filter(m => m.name.toLowerCase().includes(suffix.name.toLowerCase()));
-            if (matchingMods.length === 0)
-                return 0;
-            probability *= matchingMods.length / availableSuffixes.length;
-        }
-        return probability;
+        const result = (0, probabilityCalculator_1.calculateWeightedModProbability)(desiredMods, modPool, itemTags);
+        return result.successRate;
     }
     /**
      * Calculate probability of hitting desired mods
      */
     calculateModProbability(desiredMods, availableMods, itemTags, magicItem = false) {
-        // Simplified probability calculation
-        // In reality, this is more complex with weighted pools
-        const prefixes = desiredMods.filter(m => m.type === 'prefix');
-        const suffixes = desiredMods.filter(m => m.type === 'suffix');
-        const availablePrefixes = availableMods.filter(m => m.type === 'prefix');
-        const availableSuffixes = availableMods.filter(m => m.type === 'suffix');
-        if (availablePrefixes.length === 0 || availableSuffixes.length === 0) {
-            return 0;
-        }
-        // For magic items (alteration), max 1 prefix and 1 suffix
-        const maxPrefixes = magicItem ? 1 : 3;
-        const maxSuffixes = magicItem ? 1 : 3;
-        if (prefixes.length > maxPrefixes || suffixes.length > maxSuffixes) {
-            return 0;
-        }
-        // Simplified probability calculation
-        // Real calculation would involve weighted pools and tag interactions
-        let probability = 1;
-        for (const prefix of prefixes) {
-            const matchingMods = availablePrefixes.filter(m => m.name.toLowerCase().includes(prefix.name.toLowerCase()));
-            if (matchingMods.length === 0)
-                return 0;
-            // Simplified: assume equal weights
-            probability *= matchingMods.length / availablePrefixes.length;
-        }
-        for (const suffix of suffixes) {
-            const matchingMods = availableSuffixes.filter(m => m.name.toLowerCase().includes(suffix.name.toLowerCase()));
-            if (matchingMods.length === 0)
-                return 0;
-            probability *= matchingMods.length / availableSuffixes.length;
-        }
-        return probability;
+        const result = magicItem
+            ? (0, probabilityCalculator_1.calculateSimpleModProbability)(desiredMods, availableMods, itemTags, true)
+            : (0, probabilityCalculator_1.calculateWeightedModProbability)(desiredMods, availableMods, itemTags);
+        return result.successRate;
     }
     /**
      * Find best fossil combination for desired mods
@@ -810,7 +723,7 @@ class CraftingCalculator {
      * Get resonator price by type
      */
     getResonatorPrice(resonatorType) {
-        const price = this.currencyPrices.get(resonatorType)?.chaosValue;
+        const price = this.currencyService.getPrice(resonatorType) || 0;
         if (price)
             return price;
         // Fallback prices
@@ -863,7 +776,7 @@ class CraftingCalculator {
      * Format cost for display
      */
     formatCost(chaosValue, preferredCurrency = 'chaos') {
-        const divinePrice = this.currencyPrices.get('Divine Orb')?.chaosValue || 200;
+        const divinePrice = this.currencyService.getPrice('Divine Orb');
         if (preferredCurrency === 'divine' || chaosValue >= divinePrice * 2) {
             const divineValue = chaosValue / divinePrice;
             return `${divineValue.toFixed(2)} Divine`;

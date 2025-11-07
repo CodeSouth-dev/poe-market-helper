@@ -14,6 +14,15 @@
 import { pohxCraftingScraper, CraftingGuide } from './pohxCraftingScraper';
 import { maxRollCraftingScraper, MaxRollCraftingMethod } from './maxRollCraftingScraper';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
+import { getCurrencyPriceService } from './services/currencyPriceService';
+import { validateCraftingGoal, formatValidationResult } from './utils/validators';
+import {
+  METHOD_SCORING_WEIGHTS,
+  DIFFICULTY_SCORES,
+  SOURCE_SCORES,
+  BUDGET_TIERS,
+  RECOMBINATOR_COSTS,
+} from './config/craftingConstants';
 
 export interface CraftingGoal {
   baseItem: string;
@@ -63,14 +72,20 @@ export interface RecombinatorStrategy {
 }
 
 export class SmartCraftingOptimizer {
-  private currencyPrices: Map<string, number> = new Map();
+  private currencyService = getCurrencyPriceService();
 
   /**
    * Get the optimal crafting strategy for a given goal
    */
   async getOptimalStrategy(goal: CraftingGoal): Promise<OptimizedStrategy> {
+    // Validate input
+    const validation = validateCraftingGoal(goal);
+    if (!validation.isValid) {
+      throw new Error(`Invalid crafting goal:\n${formatValidationResult(validation)}`);
+    }
+
     // Load currency prices for cost calculation
-    await this.loadCurrencyPrices(goal.league);
+    await this.currencyService.loadPrices(goal.league);
 
     // Gather all available methods
     const allMethods = await this.gatherAllMethods(goal);
@@ -99,39 +114,11 @@ export class SmartCraftingOptimizer {
 
   /**
    * Load real-time currency prices
+   * Now handled by centralized currency service
    */
   private async loadCurrencyPrices(league: string) {
-    try {
-      const pricing = await currencyMaterialsScraper.scrapeAllPricing(league);
-
-      // Map common currency names to prices
-      const allItems = [
-        ...pricing.currency,
-        ...pricing.fossils,
-        ...pricing.essences,
-        ...pricing.resonators,
-        ...pricing.scarabs,
-        ...pricing.oils,
-        ...pricing.catalysts,
-        ...pricing.vials
-      ];
-
-      allItems.forEach(item => {
-        this.currencyPrices.set(item.name.toLowerCase(), item.chaosValue);
-      });
-
-      // Add common aliases
-      this.currencyPrices.set('chaos', 1);
-      this.currencyPrices.set('divine', this.currencyPrices.get('divine orb') || 200);
-      this.currencyPrices.set('exalted', this.currencyPrices.get('exalted orb') || 20);
-      this.currencyPrices.set('vaal', this.currencyPrices.get('vaal orb') || 1.5);
-      this.currencyPrices.set('alchemy', this.currencyPrices.get('orb of alchemy') || 0.1);
-      this.currencyPrices.set('alteration', this.currencyPrices.get('orb of alteration') || 0.05);
-      this.currencyPrices.set('chaos orb', 1);
-
-    } catch (error) {
-      console.error('Failed to load currency prices:', error);
-    }
+    // Currency prices are loaded via centralized service in getOptimalStrategy
+    // This method kept for backward compatibility
   }
 
   /**
@@ -281,29 +268,35 @@ export class SmartCraftingOptimizer {
   private scoreMethod(method: any, goal: CraftingGoal): number {
     let score = 100;
 
-    // Budget alignment
+    // Budget alignment (weighted)
     const estimatedCost = this.estimateCost(method);
-    if (estimatedCost > goal.budget) {
-      score -= 50; // Penalize if over budget
-    } else if (estimatedCost < goal.budget * 0.3) {
-      score += 20; // Bonus for efficiency
+    const budgetScore = estimatedCost > goal.budget
+      ? -50 // Penalize if over budget
+      : estimatedCost < goal.budget * 0.3
+        ? 20 // Bonus for efficiency
+        : 0;
+    score += budgetScore * METHOD_SCORING_WEIGHTS.BUDGET_ALIGNMENT;
+
+    // Difficulty alignment (weighted)
+    const difficultyScore = DIFFICULTY_SCORES[method.difficulty.toUpperCase()] || 0;
+    if (method.difficulty === 'expert' && goal.budget < BUDGET_TIERS.LOW) {
+      score -= 30; // Extra penalty for expert methods with low budget
     }
+    score += difficultyScore * METHOD_SCORING_WEIGHTS.DIFFICULTY_FIT;
 
-    // Difficulty alignment (prefer easier methods for beginners)
-    if (method.difficulty === 'beginner') score += 10;
-    if (method.difficulty === 'expert' && goal.budget < 500) score -= 30;
+    // Source quality (weighted)
+    const sourceScore = SOURCE_SCORES[method.source.toUpperCase()] || 0;
+    score += sourceScore * METHOD_SCORING_WEIGHTS.SOURCE_CREDIBILITY;
 
-    // Source quality
-    if (method.source === 'pohx') score += 15; // Pohx guides are well-tested
-    if (method.source === 'maxroll') score += 10;
-
-    // Mod alignment (check if method targets desired mods)
+    // Mod alignment (weighted) - check if method targets desired mods
     const methodText = (method.name + ' ' + method.description + ' ' + (method.steps?.join(' ') || '')).toLowerCase();
+    let modMatchScore = 0;
     goal.desiredMods.forEach(mod => {
       if (methodText.includes(mod.toLowerCase())) {
-        score += 20;
+        modMatchScore += 20;
       }
     });
+    score += modMatchScore * METHOD_SCORING_WEIGHTS.MOD_TARGETING;
 
     // Risk mode bonus
     if (goal.riskMode && method.source === 'recombinator') {
@@ -328,7 +321,7 @@ export class SmartCraftingOptimizer {
       const unit = match[2];
 
       if (unit.startsWith('d')) {
-        return value * (this.currencyPrices.get('divine') || 200);
+        return value * this.currencyService.getPrice('Divine Orb');
       }
       return value;
     }
@@ -426,7 +419,7 @@ export class SmartCraftingOptimizer {
    * Generate recombinator strategy (adapts to budget and risk mode)
    */
   private async generateRecombinatorStrategy(goal: CraftingGoal): Promise<RecombinatorStrategy> {
-    const recombPrice = this.currencyPrices.get('recombinator') || 50;
+    const recombPrice = RECOMBINATOR_COSTS.BASE_COST;
     const isHighBudget = goal.budget > 500;
     const baseCost = isHighBudget ? 300 : 100; // Higher base cost for expensive items
     const totalCost = baseCost + recombPrice;
