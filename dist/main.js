@@ -45,6 +45,7 @@ const poeTradeOfficial_1 = require("./poeTradeOfficial");
 const priceComparison_1 = require("./priceComparison");
 const poeNinjaScraper_1 = require("./poeNinjaScraper");
 const poedbScraper_1 = require("./poedbScraper");
+const craftOfExileScraper_1 = require("./craftOfExileScraper");
 // Initialize API and utilities
 const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
@@ -521,6 +522,73 @@ electron_1.ipcMain.handle('clear-poedb-cache', async () => {
     }
     catch (error) {
         console.error('Clear poedb cache error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// ==================== Craft of Exile Integration ====================
+// Simulate crafting with specific method
+electron_1.ipcMain.handle('craft-simulate', async (event, baseItem, itemLevel, desiredMods, method) => {
+    try {
+        const result = await craftOfExileScraper_1.craftOfExileScraper.simulateCrafting(baseItem, itemLevel, desiredMods, method);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Craft simulation error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get mod weights for base item
+electron_1.ipcMain.handle('craft-get-mod-weights', async (event, baseItem, itemLevel) => {
+    try {
+        const result = await craftOfExileScraper_1.craftOfExileScraper.getModWeights(baseItem, itemLevel);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Mod weights error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Calculate crafting cost
+electron_1.ipcMain.handle('craft-calculate-cost', async (event, baseItem, itemLevel, desiredMods, currencyPrices) => {
+    try {
+        const result = await craftOfExileScraper_1.craftOfExileScraper.calculateCraftingCost(baseItem, itemLevel, desiredMods, currencyPrices);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Crafting cost calculation error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get crafting guide
+electron_1.ipcMain.handle('craft-get-guide', async (event, itemType, targetMods) => {
+    try {
+        const result = await craftOfExileScraper_1.craftOfExileScraper.getCraftingGuide(itemType, targetMods);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Crafting guide error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Compare crafting methods
+electron_1.ipcMain.handle('craft-compare-methods', async (event, baseItem, itemLevel, desiredMods) => {
+    try {
+        const result = await craftOfExileScraper_1.craftOfExileScraper.compareCraftingMethods(baseItem, itemLevel, desiredMods);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error('Crafting method comparison error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Clear craft of exile cache
+electron_1.ipcMain.handle('clear-craft-cache', async () => {
+    try {
+        await craftOfExileScraper_1.craftOfExileScraper.clearCache();
+        return { success: true, message: 'Craft of Exile cache cleared' };
+    }
+    catch (error) {
+        console.error('Clear craft cache error:', error);
         return { success: false, error: error.message };
     }
 });
