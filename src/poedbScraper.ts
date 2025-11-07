@@ -95,6 +95,7 @@ export class PoeDBScraper {
           const mods: any[] = [];
 
           // Find modifier tables
+          // @ts-ignore - document is available in browser context
           const tables = document.querySelectorAll('table');
 
           tables.forEach(table => {
@@ -195,6 +196,7 @@ export class PoeDBScraper {
         const baseItems = await page.evaluate(() => {
           const items: any[] = [];
 
+          // @ts-ignore - document is available in browser context
           const tables = document.querySelectorAll('table');
 
           tables.forEach(table => {

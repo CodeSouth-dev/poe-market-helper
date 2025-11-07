@@ -10,6 +10,7 @@ This document describes the new backend features added to the PoE Market Helper,
 - ✅ Path of Exile official trade site integration with login support
 - ✅ **Enhanced poe.ninja build scraper** (browser-based React rendering)
 - ✅ **Wealth-filtered craftable items** (filter by your chaos budget)
+- ✅ **Craft of Exile integration** (crafting simulation, cost calculator, guides)
 - ✅ Price comparison across multiple sources
 - ✅ Arbitrage opportunity detection
 - ✅ Crafting profit analysis
@@ -340,7 +341,134 @@ const result = await ipcRenderer.invoke('get-market-summary', items, 'Standard')
 // }
 ```
 
-### 5. Browser Management IPC Handlers
+### 6. Craft of Exile Integration (`src/craftOfExileScraper.ts`)
+
+Integrates with craftofexile.com to provide crafting simulation, cost analysis, and step-by-step guides.
+
+**Features:**
+- Crafting method simulation (chaos, alt-regal, fossil, essence, harvest)
+- Mod weight analysis and probability calculations
+- Expected cost calculator with currency prices
+- Step-by-step crafting guides
+- Method comparison (cheapest vs fastest vs easiest)
+
+**IPC Handlers:**
+
+#### Simulate Crafting
+```javascript
+// Simulate crafting with specific method
+const result = await ipcRenderer.invoke(
+  'craft-simulate',
+  'Vaal Regalia',     // base item
+  86,                 // item level
+  ['+1 to Socketed Gems', 'Increased ES'],  // desired mods
+  'chaos'             // method: chaos, alt-regal, fossil, essence, harvest
+);
+// Returns: {
+//   success: true,
+//   data: {
+//     item: string,
+//     desiredMods: string[],
+//     methods: CraftingMethod[],
+//     cheapestMethod: { name, averageCost, averageAttempts, currency, successRate },
+//     fastestMethod: { name, averageCost, averageAttempts, currency, successRate },
+//     totalCost: number
+//   }
+// }
+```
+
+#### Get Mod Weights
+```javascript
+// Get probability weights for all mods on base item
+const result = await ipcRenderer.invoke(
+  'craft-get-mod-weights',
+  'Steel Ring',
+  84
+);
+// Returns: {
+//   success: true,
+//   data: [
+//     { mod: string, weight: number, tier: string, level: number },
+//     ...
+//   ]
+// }
+```
+
+#### Calculate Crafting Cost
+```javascript
+// Calculate expected cost with current currency prices
+const currencyPrices = {
+  'Chaos Orb': 1,
+  'Alteration Orb': 0.2,
+  'Fossils': 5
+};
+
+const result = await ipcRenderer.invoke(
+  'craft-calculate-cost',
+  'Hubris Circlet',
+  86,
+  ['+2 to Socketed Gems', 'Increased ES'],
+  currencyPrices
+);
+// Returns: {
+//   success: true,
+//   data: {
+//     method: string,
+//     expectedCost: number,
+//     expectedAttempts: number,
+//     breakdown: [{ currency, amount, cost }],
+//     probability: number
+//   }
+// }
+```
+
+#### Get Crafting Guide
+```javascript
+// Get step-by-step crafting guide
+const result = await ipcRenderer.invoke(
+  'craft-get-guide',
+  'Spine Bow',
+  ['+2 to Bow Gems', 'Attack Speed']
+);
+// Returns: {
+//   success: true,
+//   data: {
+//     itemType: string,
+//     baseItem: string,
+//     recommendedIlvl: number,
+//     steps: [{ step, action, expectedCost, notes }],
+//     totalEstimatedCost: number,
+//     difficulty: string
+//   }
+// }
+```
+
+#### Compare Crafting Methods
+```javascript
+// Compare all methods side-by-side
+const result = await ipcRenderer.invoke(
+  'craft-compare-methods',
+  'Stygian Vise',
+  86,
+  ['Maximum Life', 'Resistances']
+);
+// Returns: {
+//   success: true,
+//   data: {
+//     item: string,
+//     methods: [{ name, cost, time, difficulty, successRate, recommended }],
+//     recommendation: string
+//   }
+// }
+```
+
+#### Clear Craft Cache
+```javascript
+await ipcRenderer.invoke('clear-craft-cache');
+// Clears 24-hour cache for fresh data
+```
+
+### 7. Browser Management IPC Handlers
 
 #### Get Browser Stats
 ```javascript
