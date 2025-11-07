@@ -563,6 +563,9 @@
             <button class="tab active" data-tab="market">Market Search</button>
             <button class="tab" data-tab="insights">Market Insights</button>
             <button class="tab" data-tab="crafting">Crafting Helper</button>
+            <button class="tab" data-tab="pob">PoB Import</button>
+            <button class="tab" data-tab="livesearch">Live Search</button>
+            <button class="tab" data-tab="fossil">Fossil Optimizer</button>
             <button class="tab" data-tab="guide">Learn to Craft</button>
         </div>
 
@@ -756,6 +759,12 @@
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="craftBaseItem">Base Item:</label>
                     <input type="text" id="craftBaseItem" placeholder="e.g., Vaal Regalia, Siege Axe, Steel Ring" required>
+
+                    <!-- Base Item Suggestions -->
+                    <div id="baseSuggestions" style="display: none; margin-top: 10px; background: rgba(255, 215, 0, 0.1); border-left: 3px solid #ffd700; padding: 10px; border-radius: 5px;">
+                        <div style="color: #ffd700; font-weight: bold; margin-bottom: 8px;">💡 Recommended Bases:</div>
+                        <div id="baseSuggestionsList"></div>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 20px;">
@@ -879,6 +888,133 @@
             </section>
         </section>
         </div> <!-- End Guide Tab -->
+
+        <!-- PoB Import Tab -->
+        <div id="pobTab" class="tab-content">
+            <section class="search-section">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">📋 Path of Building Import</h2>
+                <p style="color: #cccccc; margin-bottom: 20px;">Import your PoB build code to analyze cost and get crafting recommendations!</p>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="pobCode" style="display: block; color: #ffd700; margin-bottom: 10px;">PoB Pastebin Code:</label>
+                    <textarea id="pobCode" placeholder="Paste your PoB code here..." style="width: 100%; height: 120px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px; padding: 10px; font-family: monospace;"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="pobLeague">League:</label>
+                    <select id="pobLeague">
+                        <option value="Standard">Standard</option>
+                    </select>
+                </div>
+
+                <button id="pobImportBtn" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">Import Build</button>
+            </section>
+
+            <div id="pobLoading" class="loading" style="display: none;">📋 Importing build...</div>
+            <div id="pobError" class="error" style="display: none;"></div>
+
+            <section id="pobResults" style="display: none; margin-top: 30px;">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">Build Analysis</h2>
+                <div id="pobResultsContent"></div>
+            </section>
+        </div> <!-- End PoB Tab -->
+
+        <!-- Live Search Tab -->
+        <div id="livesearchTab" class="tab-content">
+            <section class="search-section">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">🔍 Live Search & Notifications</h2>
+                <p style="color: #cccccc; margin-bottom: 20px;">Monitor specific items YOU choose and get notified of new listings!</p>
+
+                <div style="background: rgba(255,193,7,0.1); border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                    <strong style="color: #ffc107;">⚠️ You Control What to Monitor:</strong>
+                    <p style="color: #cccccc; margin-top: 5px;">Live Search only monitors items YOU specifically add. Enter the exact item name below - no random items!</p>
+                </div>
+
+                <form id="liveSearchForm" style="background: rgba(30,30,40,0.8); padding: 25px; border-radius: 10px; margin-bottom: 30px;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="liveItemName" style="display: block; color: #ffd700; margin-bottom: 5px;">Item Name (Required):</label>
+                        <input type="text" id="liveItemName" placeholder="e.g., Headhunter, Shavronne's Wrappings" required style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="liveMaxPrice">Max Price (chaos):</label>
+                        <input type="number" id="liveMaxPrice" placeholder="e.g., 500">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="liveMinLinks">Min Links:</label>
+                        <select id="liveMinLinks">
+                            <option value="0">Any</option>
+                            <option value="4">4-link</option>
+                            <option value="5">5-link</option>
+                            <option value="6">6-link</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="liveLeague">League:</label>
+                        <select id="liveLeague">
+                            <option value="Standard">Standard</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">Create Live Search</button>
+                </form>
+
+                <div id="liveSearchStats" style="background: rgba(139,92,246,0.1); border: 2px solid #8b5cf6; border-radius: 10px; padding: 20px; margin-bottom: 30px; display: none;">
+                    <h3 style="color: #8b5cf6; margin-bottom: 15px;">📊 Search Statistics</h3>
+                    <div id="liveSearchStatsContent"></div>
+                </div>
+
+                <section id="activeSearches" style="margin-top: 30px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Active Searches</h3>
+                    <div id="activeSearchesList"></div>
+                    <p id="noActiveSearches" style="color: #888; text-align: center; padding: 20px;">No active searches. Create one above!</p>
+                </section>
+
+                <section id="searchNotifications" style="margin-top: 30px; display: none;">
+                    <h3 style="color: #00ff00; margin-bottom: 15px;">🔔 New Listings</h3>
+                    <div id="notificationsList"></div>
+                </section>
+            </section>
+        </div> <!-- End Live Search Tab -->
+
+        <!-- Fossil Optimizer Tab -->
+        <div id="fossilTab" class="tab-content">
+            <section class="search-section">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">🔨 Fossil Combination Optimizer</h2>
+                <p style="color: #cccccc; margin-bottom: 20px;">Find the best fossil combinations for your desired mods!</p>
+
+                <form id="fossilOptimizeForm" style="background: rgba(30,30,40,0.8); padding: 25px; border-radius: 10px; margin-bottom: 30px;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="fossilBaseItem">Base Item:</label>
+                        <input type="text" id="fossilBaseItem" placeholder="e.g., Vaal Regalia, Hubris Circlet" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="fossilDesiredMods" style="display: block; color: #ffd700; margin-bottom: 5px;">Desired Mods (one per line):</label>
+                        <textarea id="fossilDesiredMods" placeholder="+# to maximum Life&#10;+#% increased Energy Shield&#10;+#% to Fire Resistance" required style="width: 100%; height: 100px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px; padding: 10px;"></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="fossilLeague">League:</label>
+                        <select id="fossilLeague">
+                            <option value="Standard">Standard</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">Optimize Fossils</button>
+                </form>
+
+                <div id="fossilLoading" class="loading" style="display: none;">🔨 Optimizing fossil combination...</div>
+                <div id="fossilError" class="error" style="display: none;"></div>
+
+                <section id="fossilResults" style="display: none; margin-top: 30px;">
+                    <h2 style="color: #ffd700; margin-bottom: 20px;">Optimization Results</h2>
+                    <div id="fossilResultsContent"></div>
+                </section>
+            </section>
+        </div> <!-- End Fossil Tab -->
 
     </div>
 
@@ -1699,15 +1835,103 @@
             });
         }
 
+        // Fetch and display top bases for selected item class
+        async function fetchAndDisplayTopBases(itemClass, itemLevel) {
+            if (!itemClass) {
+                // Hide suggestions if no class selected
+                const baseSuggestions = document.getElementById('baseSuggestions');
+                if (baseSuggestions) {
+                    baseSuggestions.style.display = 'none';
+                }
+                return;
+            }
+
+            try {
+                // Fetch top bases from backend
+                const result = await ipcRenderer.invoke('craft-get-bases-by-class', itemClass, itemLevel || 86);
+
+                if (result.success && result.data && result.data.length > 0) {
+                    const baseSuggestions = document.getElementById('baseSuggestions');
+                    const baseSuggestionsList = document.getElementById('baseSuggestionsList');
+                    const craftBaseItem = document.getElementById('craftBaseItem');
+
+                    // Auto-fill with the #1 recommended base
+                    const topBase = result.data[0];
+                    if (craftBaseItem && !craftBaseItem.value) {
+                        craftBaseItem.value = topBase.name;
+                    }
+
+                    // Display all suggestions
+                    let html = '';
+                    result.data.slice(0, 5).forEach((base, index) => {
+                        const isTop = index === 0;
+                        html += `
+                            <div style="padding: 8px; margin-bottom: 6px; background: ${isTop ? 'rgba(255, 215, 0, 0.15)' : 'rgba(50, 50, 60, 0.5)'}; border-radius: 4px; cursor: pointer; border: 1px solid ${isTop ? '#ffd700' : '#555'};" onclick="document.getElementById('craftBaseItem').value = '${base.name.replace(/'/g, "\\'")}'; document.getElementById('baseSuggestions').querySelectorAll('div[style*=padding]').forEach(d => d.style.border = '1px solid #555'); this.style.border = '1px solid #ffd700';">
+                                <div style="color: ${isTop ? '#ffd700' : '#ffffff'}; font-weight: ${isTop ? 'bold' : 'normal'};">
+                                    ${isTop ? '⭐ ' : ''}${index + 1}. ${base.name}
+                                </div>
+                                <div style="color: #aaa; font-size: 12px; margin-top: 4px;">
+                                    ${base.reason || 'Popular choice for this slot'}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    baseSuggestionsList.innerHTML = html;
+                    baseSuggestions.style.display = 'block';
+                } else {
+                    // Hide if no bases found
+                    const baseSuggestions = document.getElementById('baseSuggestions');
+                    if (baseSuggestions) {
+                        baseSuggestions.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch base suggestions:', error);
+            }
+        }
+
+        // Fetch available mods for autocomplete
+        async function fetchAvailableMods(itemClass, itemLevel) {
+            if (!itemClass) return;
+
+            try {
+                const result = await ipcRenderer.invoke('craft-get-mods-for-class', itemClass, itemLevel || 86, 'all');
+
+                if (result.success && result.data) {
+                    // Store mods globally for autocomplete/search
+                    window.availableModsForClass = result.data;
+                    console.log(`Loaded ${result.data.length} available mods for ${itemClass}`);
+                }
+            } catch (error) {
+                console.error('Failed to fetch available mods:', error);
+            }
+        }
+
+        // Combined update function when item class or level changes
+        async function onItemClassOrLevelChange() {
+            const itemClass = document.getElementById('craftItemClass').value;
+            const itemLevel = parseInt(document.getElementById('craftItemLevel').value) || 86;
+
+            // Update mod dropdowns (existing functionality)
+            updateAllModDropdowns();
+
+            // Fetch and display top bases
+            await fetchAndDisplayTopBases(itemClass, itemLevel);
+
+            // Fetch available mods for better autocomplete
+            await fetchAvailableMods(itemClass, itemLevel);
+        }
+
         // Add event listener to item class and item level selectors
         const craftItemClassSelect = document.getElementById('craftItemClass');
         const craftItemLevelInput = document.getElementById('craftItemLevel');
 
         if (craftItemClassSelect) {
-            craftItemClassSelect.addEventListener('change', updateAllModDropdowns);
+            craftItemClassSelect.addEventListener('change', onItemClassOrLevelChange);
         }
         if (craftItemLevelInput) {
-            craftItemLevelInput.addEventListener('input', updateAllModDropdowns);
+            craftItemLevelInput.addEventListener('input', onItemClassOrLevelChange);
         }
 
         window.removeMod = function(modId) {
@@ -3134,6 +3358,414 @@
             insightsError.style.display = 'block';
             setTimeout(() => {
                 insightsError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ==================== PoB Import ====================
+        const pobImportBtn = document.getElementById('pobImportBtn');
+        const pobCode = document.getElementById('pobCode');
+        const pobLeague = document.getElementById('pobLeague');
+        const pobLoading = document.getElementById('pobLoading');
+        const pobError = document.getElementById('pobError');
+        const pobResults = document.getElementById('pobResults');
+        const pobResultsContent = document.getElementById('pobResultsContent');
+
+        pobImportBtn.addEventListener('click', async () => {
+            const code = pobCode.value.trim();
+            if (!code) {
+                showPoBError('Please enter a PoB code');
+                return;
+            }
+
+            pobLoading.style.display = 'block';
+            pobError.style.display = 'none';
+            pobResults.style.display = 'none';
+
+            try {
+                const result = await ipcRenderer.invoke('pob-import', code, pobLeague.value);
+
+                if (result.success) {
+                    displayPoBResults(result.data);
+                    pobResults.style.display = 'block';
+                } else {
+                    showPoBError(result.error || 'Failed to import build');
+                }
+            } catch (error) {
+                showPoBError('Error importing build: ' + error.message);
+            } finally {
+                pobLoading.style.display = 'none';
+            }
+        });
+
+        function displayPoBResults(build) {
+            let html = `
+                <div style="background: rgba(139,92,246,0.1); border: 2px solid #8b5cf6; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #8b5cf6; margin-bottom: 15px;">${build.buildName}</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #cccccc;">
+                        <div><strong>Class:</strong> ${build.className} (${build.ascendancy})</div>
+                        <div><strong>Level:</strong> ${build.level}</div>
+                        <div><strong>Main Skill:</strong> ${build.mainSkill}</div>
+                        <div><strong>Total Cost:</strong> <span style="color: #ffd700;">${build.totalCost.toFixed(0)}c</span></div>
+                    </div>
+                </div>
+
+                ${build.keystones.length > 0 ? `
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 10px;">🔑 Keystones</h4>
+                    <div style="color: #cccccc;">${build.keystones.join(', ')}</div>
+                </div>
+                ` : ''}
+
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">📦 Items (${build.items.length})</h4>
+                    <div style="display: grid; gap: 15px;">
+            `;
+
+            build.items.forEach(item => {
+                html += `
+                    <div style="background: rgba(30,30,40,0.8); border-left: 4px solid #8b5cf6; padding: 15px; border-radius: 5px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <strong style="color: #ffd700;">${item.slot}</strong>
+                            <span style="color: #00ff00;">${item.estimatedCost}c</span>
+                        </div>
+                        <div style="color: #cccccc; margin-bottom: 5px;">${item.name}</div>
+                        <div style="color: #888; font-size: 12px;">Rarity: ${item.rarity}${item.links ? ` | ${item.links}-link` : ''}</div>
+                        ${item.requiredMods.length > 0 ? `
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <div style="color: #8b5cf6; font-size: 12px; margin-bottom: 5px;">Required Mods:</div>
+                            ${item.requiredMods.map(mod => `<div style="color: #cccccc; font-size: 12px;">• ${mod}</div>`).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            if (build.craftingRecommendations.length > 0) {
+                html += `
+                <div style="background: rgba(255,193,7,0.1); border: 2px solid #ffc107; border-radius: 10px; padding: 20px;">
+                    <h4 style="color: #ffc107; margin-bottom: 15px;">🔨 Crafting Recommendations</h4>
+                    <div style="display: grid; gap: 15px;">
+                `;
+
+                build.craftingRecommendations.forEach(rec => {
+                    html += `
+                        <div style="background: rgba(30,30,40,0.8); padding: 15px; border-radius: 5px;">
+                            <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">${rec.slot}: ${rec.baseItem}</div>
+                            <div style="color: #cccccc; margin-bottom: 5px;">Method: ${rec.craftingMethod}</div>
+                            <div style="color: #00ff00;">Est. Cost: ${rec.estimatedCost.toFixed(0)}c</div>
+                            <div style="margin-top: 10px; color: #888; font-size: 12px;">
+                                Target: ${rec.desiredMods.join(', ')}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    </div>
+                </div>
+                `;
+            }
+
+            pobResultsContent.innerHTML = html;
+        }
+
+        function showPoBError(message) {
+            pobError.textContent = message;
+            pobError.style.display = 'block';
+            setTimeout(() => {
+                pobError.style.display = 'none';
+            }, 5000);
+        }
+
+        // ==================== Live Search ====================
+        const liveSearchForm = document.getElementById('liveSearchForm');
+        const liveItemName = document.getElementById('liveItemName');
+        const liveMaxPrice = document.getElementById('liveMaxPrice');
+        const liveMinLinks = document.getElementById('liveMinLinks');
+        const liveLeague = document.getElementById('liveLeague');
+        const activeSearchesList = document.getElementById('activeSearchesList');
+        const noActiveSearches = document.getElementById('noActiveSearches');
+        const searchNotifications = document.getElementById('searchNotifications');
+        const notificationsList = document.getElementById('notificationsList');
+        const liveSearchStats = document.getElementById('liveSearchStats');
+        const liveSearchStatsContent = document.getElementById('liveSearchStatsContent');
+
+        liveSearchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const filter = {
+                itemName: liveItemName.value.trim(),
+                maxPrice: liveMaxPrice.value ? parseInt(liveMaxPrice.value) : undefined,
+                minLinks: parseInt(liveMinLinks.value),
+                league: liveLeague.value
+            };
+
+            try {
+                const result = await ipcRenderer.invoke('live-search-create', filter);
+
+                if (result.success) {
+                    alert(`✅ Live search created! ID: ${result.searchId}`);
+                    liveSearchForm.reset();
+                    await loadActiveSearches();
+                    await updateSearchStats();
+                } else {
+                    alert('❌ ' + (result.error || 'Failed to create search'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        async function loadActiveSearches() {
+            try {
+                const result = await ipcRenderer.invoke('live-search-get-active');
+
+                if (result.success && result.data.length > 0) {
+                    noActiveSearches.style.display = 'none';
+
+                    let html = '<div style="display: grid; gap: 15px;">';
+                    result.data.forEach(search => {
+                        html += `
+                            <div style="background: rgba(139,92,246,0.1); border: 2px solid #8b5cf6; border-radius: 10px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <div>
+                                        <div style="color: #ffd700; font-weight: bold;">${search.filter.itemName || search.filter.itemType}</div>
+                                        <div style="color: #888; font-size: 12px;">ID: ${search.id}</div>
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button onclick="pauseSearch('${search.id}')" style="padding: 5px 10px; background: #ffc107; color: #000; border: none; border-radius: 5px; cursor: pointer;">⏸️ Pause</button>
+                                        <button onclick="deleteSearch('${search.id}')" style="padding: 5px 10px; background: #f44336; color: #fff; border: none; border-radius: 5px; cursor: pointer;">🗑️ Delete</button>
+                                    </div>
+                                </div>
+                                <div style="color: #cccccc; font-size: 14px;">
+                                    <div>League: ${search.filter.league}</div>
+                                    ${search.filter.maxPrice ? `<div>Max Price: ${search.filter.maxPrice}c</div>` : ''}
+                                    ${search.filter.minLinks ? `<div>Min Links: ${search.filter.minLinks}</div>` : ''}
+                                    <div>Results: ${search.results.length}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+
+                    activeSearchesList.innerHTML = html;
+                } else {
+                    noActiveSearches.style.display = 'block';
+                    activeSearchesList.innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Failed to load active searches:', error);
+            }
+        }
+
+        async function pauseSearch(searchId) {
+            try {
+                const result = await ipcRenderer.invoke('live-search-stop', searchId);
+                if (result.success) {
+                    alert('✅ Search paused');
+                    await loadActiveSearches();
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function deleteSearch(searchId) {
+            if (confirm('Delete this search?')) {
+                try {
+                    const result = await ipcRenderer.invoke('live-search-delete', searchId);
+                    if (result.success) {
+                        alert('✅ Search deleted');
+                        await loadActiveSearches();
+                        await updateSearchStats();
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+        }
+
+        async function updateSearchStats() {
+            try {
+                const result = await ipcRenderer.invoke('live-search-stats');
+
+                if (result.success) {
+                    liveSearchStats.style.display = 'block';
+                    liveSearchStatsContent.innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; color: #cccccc;">
+                            <div><strong>Total Searches:</strong> ${result.data.totalSearches}</div>
+                            <div><strong>Active:</strong> ${result.data.activeSearches}</div>
+                            <div><strong>Total Results:</strong> ${result.data.totalResults}</div>
+                            <div><strong>Avg/Search:</strong> ${result.data.averageResultsPerSearch.toFixed(1)}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to get stats:', error);
+            }
+        }
+
+        // Listen for new listings
+        ipcRenderer.on('live-search-new-listing', (event, data) => {
+            const { searchId, result } = data;
+
+            // Show notification
+            searchNotifications.style.display = 'block';
+
+            const notifHtml = `
+                <div style="background: rgba(0,255,0,0.1); border: 2px solid #00ff00; border-radius: 10px; padding: 20px; margin-bottom: 15px; animation: pulse 2s;">
+                    <div style="display: flex; justify-content: between; align-items: center;">
+                        <div>
+                            <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">🆕 NEW LISTING!</div>
+                            <div style="color: #ffd700; margin-bottom: 10px;">${result.itemName}</div>
+                            <div style="color: #cccccc;">Price: ${result.price}${result.currency}</div>
+                            <div style="color: #888; font-size: 12px;">Seller: ${result.seller} | Listed: ${result.listed}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            notificationsList.insertAdjacentHTML('afterbegin', notifHtml);
+
+            // Desktop notification
+            new Notification('New Deal Found!', {
+                body: `${result.itemName} for ${result.price}c`
+            });
+        });
+
+        // Load active searches when tab is opened
+        document.querySelector('[data-tab="livesearch"]').addEventListener('click', () => {
+            loadActiveSearches();
+            updateSearchStats();
+        });
+
+        // ==================== Fossil Optimizer ====================
+        const fossilOptimizeForm = document.getElementById('fossilOptimizeForm');
+        const fossilBaseItem = document.getElementById('fossilBaseItem');
+        const fossilDesiredMods = document.getElementById('fossilDesiredMods');
+        const fossilLeague = document.getElementById('fossilLeague');
+        const fossilLoading = document.getElementById('fossilLoading');
+        const fossilError = document.getElementById('fossilError');
+        const fossilResults = document.getElementById('fossilResults');
+        const fossilResultsContent = document.getElementById('fossilResultsContent');
+
+        fossilOptimizeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const baseItem = fossilBaseItem.value.trim();
+            const modsText = fossilDesiredMods.value.trim();
+            const mods = modsText.split('\n').map(m => m.trim()).filter(m => m);
+
+            if (!baseItem || mods.length === 0) {
+                showFossilError('Please enter base item and desired mods');
+                return;
+            }
+
+            fossilLoading.style.display = 'block';
+            fossilError.style.display = 'none';
+            fossilResults.style.display = 'none';
+
+            try {
+                const result = await ipcRenderer.invoke('fossil-optimize', baseItem, mods, fossilLeague.value);
+
+                if (result.success) {
+                    displayFossilResults(result.data);
+                    fossilResults.style.display = 'block';
+                } else {
+                    showFossilError(result.error || 'Failed to optimize fossils');
+                }
+            } catch (error) {
+                showFossilError('Error: ' + error.message);
+            } finally {
+                fossilLoading.style.display = 'none';
+            }
+        });
+
+        function displayFossilResults(opt) {
+            const best = opt.bestCombination;
+
+            let html = `
+                <div style="background: rgba(139,92,246,0.1); border: 2px solid #8b5cf6; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #8b5cf6; margin-bottom: 15px;">✅ Best Combination</h3>
+                    <div style="background: rgba(30,30,40,0.8); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <div style="color: #ffd700; font-size: 18px; font-weight: bold; margin-bottom: 15px;">
+                            ${best.fossils.join(' + ')}
+                        </div>
+                        <div style="color: #cccccc; margin-bottom: 10px;">Resonator: ${best.resonator}</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                            <div>
+                                <div style="color: #888; font-size: 12px;">Cost per Attempt</div>
+                                <div style="color: #ffd700; font-size: 20px;">${best.costPerAttempt}c</div>
+                            </div>
+                            <div>
+                                <div style="color: #888; font-size: 12px;">Success Rate</div>
+                                <div style="color: #00ff00; font-size: 20px;">${(best.successRate * 100).toFixed(2)}%</div>
+                            </div>
+                            <div>
+                                <div style="color: #888; font-size: 12px;">Average Cost</div>
+                                <div style="color: #ff9800; font-size: 20px;">${best.averageCost.toFixed(0)}c</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${best.blockedMods.length > 0 ? `
+                    <div style="background: rgba(244,67,54,0.1); border-left: 4px solid #f44336; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+                        <div style="color: #f44336; font-weight: bold; margin-bottom: 5px;">🚫 Blocked Mods</div>
+                        <div style="color: #cccccc;">${best.blockedMods.join(', ')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${best.enhancedMods.length > 0 ? `
+                    <div style="background: rgba(76,175,80,0.1); border-left: 4px solid #4caf50; padding: 15px; border-radius: 5px;">
+                        <div style="color: #4caf50; font-weight: bold; margin-bottom: 5px;">🎯 Enhanced Mods</div>
+                        <div style="color: #cccccc;">${best.enhancedMods.join(', ')}</div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">💡 Recommendation</h4>
+                    <p style="color: #cccccc;">${opt.recommendation}</p>
+                </div>
+            `;
+
+            if (opt.allCombinations.length > 1) {
+                html += `
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-top: 20px;">
+                        <h4 style="color: #ffd700; margin-bottom: 15px;">Alternative Combinations</h4>
+                        <div style="display: grid; gap: 10px;">
+                `;
+
+                opt.allCombinations.slice(1, 4).forEach((combo, i) => {
+                    html += `
+                        <div style="background: rgba(30,30,40,0.8); padding: 15px; border-radius: 5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #cccccc;">${i + 2}. ${combo.fossils.join(' + ')}</div>
+                                <div style="color: #ff9800;">${combo.averageCost.toFixed(0)}c avg</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            fossilResultsContent.innerHTML = html;
+        }
+
+        function showFossilError(message) {
+            fossilError.textContent = message;
+            fossilError.style.display = 'block';
+            setTimeout(() => {
+                fossilError.style.display = 'none';
             }, 5000);
         }
     </script>

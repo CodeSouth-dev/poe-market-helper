@@ -69,14 +69,22 @@ export class LiveSearchManager extends EventEmitter {
 
   /**
    * Create a new live search
+   * IMPORTANT: Only monitors items YOU specifically define in the filter.
+   * No random items - you control exactly what to watch for.
    */
   async createSearch(filter: SearchFilter): Promise<string> {
+    // Validate that user has specified what to search for
+    if (!filter.itemName && !filter.itemType) {
+      throw new Error('Must specify either itemName or itemType - no random item monitoring allowed');
+    }
+
     const searchId = `search-${this.nextSearchId++}`;
 
     console.log(`\n🔍 Creating live search: ${searchId}`);
     console.log(`   Item: ${filter.itemName || filter.itemType || 'Any'}`);
     console.log(`   Price: ${filter.minPrice || 0}c - ${filter.maxPrice || '∞'}c`);
     console.log(`   League: ${filter.league}`);
+    console.log(`   ℹ️  Only monitoring YOUR specified item - no random items`);
 
     const liveSearch: LiveSearch = {
       id: searchId,
@@ -298,6 +306,7 @@ export class LiveSearchManager extends EventEmitter {
 
   /**
    * Create a search for underpriced items
+   * YOU specify the exact item name - this finds deals on YOUR chosen item only
    */
   async createUnderpricedSearch(
     itemName: string,
@@ -305,11 +314,16 @@ export class LiveSearchManager extends EventEmitter {
     discount: number, // percentage (e.g., 20 for 20% off)
     league: string
   ): Promise<string> {
+    if (!itemName || itemName.trim() === '') {
+      throw new Error('Must specify itemName - no random item monitoring');
+    }
+
     const maxPrice = typicalPrice * (1 - discount / 100);
 
     console.log(`\n💎 Creating underpriced search for ${itemName}`);
     console.log(`   Typical price: ${typicalPrice}c`);
     console.log(`   Max price (${discount}% off): ${maxPrice.toFixed(0)}c`);
+    console.log(`   ℹ️  Monitoring YOUR specified item only`);
 
     return await this.createSearch({
       itemName,
