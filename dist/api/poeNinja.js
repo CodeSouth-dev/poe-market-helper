@@ -206,7 +206,8 @@ class PoeNinjaAPI {
      * ONLY returns craftable base types (normal/magic/rare non-corrupted), NOT:
      * - Unique items (drop-only uniques like Headhunter/Mageblood)
      * - Corrupted items (cannot be crafted on)
-     * - Finished items (6-links, influenced, fractured, synthesized)
+     * - Special items (influenced, fractured, synthesized)
+     * Includes 6-link bases as they are part of the crafting process
      */
     async getProfitableItems(league, limit = 20) {
         const allItems = [];
@@ -228,32 +229,27 @@ class PoeNinjaAPI {
             }
             // Filter out non-craftable items:
             // 1. Corrupted items (cannot be crafted on)
-            // 2. 6-link items (these are finished items, not bases)
-            // 3. Items with special variants that indicate they're not bases
+            // 2. Items with special mods/variants that indicate they're not normal/magic/rare bases
             const variant = (item.variant || '').toLowerCase();
             // Exclude corrupted items
             if (variant.includes('corrupt')) {
                 return false;
             }
-            // Exclude 6-link items (these are finished products, not bases)
-            if (variant.includes('6 link') || variant.includes('6-link') || variant.includes('6link')) {
-                return false;
-            }
-            // Exclude items with special mods/variants (these are finished items)
+            // Exclude items with special mods/variants (these are not craftable bases)
             if (variant.includes('fractured') || variant.includes('synthesised') ||
                 variant.includes('synthesized') || variant.includes('unique')) {
                 return false;
             }
             // Exclude items that look like they have specific influenced mods
-            // (These are finished items, not bases)
+            // (influenced items are typically finished crafts)
             if (variant.includes('shaper') || variant.includes('elder') ||
                 variant.includes('crusader') || variant.includes('redeemer') ||
                 variant.includes('hunter') || variant.includes('warlord')) {
                 return false;
             }
             // Only allow items with no variant, or variants that indicate normal/magic/rare bases
-            // Common acceptable variants: empty, "5-link", "4-link", item level indicators
-            const acceptableVariantPattern = /^(|[45][\s-]?link|ilvl?\s*\d+)$/i;
+            // Common acceptable variants: empty, links (4/5/6), item level indicators
+            const acceptableVariantPattern = /^(|[456][\s-]?link|ilvl?\s*\d+)$/i;
             if (variant && !acceptableVariantPattern.test(variant)) {
                 return false;
             }
