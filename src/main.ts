@@ -11,6 +11,9 @@ import { priceComparisonService } from './priceComparison';
 import { poeNinjaScraper } from './poeNinjaScraper';
 import { poedbScraper } from './poedbScraper';
 import { craftOfExileScraper } from './craftOfExileScraper';
+import { pobImporter } from './pobImporter';
+import { liveSearchManager } from './liveSearch';
+import { fossilOptimizer } from './fossilOptimizer';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -46,8 +49,9 @@ function createWindow(): void {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', async () => {
-  // Cleanup browser sessions before quitting
+  // Cleanup browser sessions and live searches before quitting
   await browserManager.shutdown();
+  liveSearchManager.shutdown();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -636,5 +640,140 @@ ipcMain.handle('craft-get-mods-for-class', async (event: any, itemClass: string,
   } catch (error: any) {
     console.error('Get mods for class error:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// ==================== Path of Building Import ====================
+
+// Import PoB code
+ipcMain.handle('pob-import', async (event: any, pobCode: string, league: string) => {
+  try {
+    const result = await pobImporter.importBuild(pobCode, league);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('PoB import error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get PoB build summary (quick overview)
+ipcMain.handle('pob-get-summary', async (event: any, pobCode: string, league: string) => {
+  try {
+    const result = await pobImporter.getBuildSummary(pobCode, league);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('PoB summary error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Live Search & Notifications ====================
+
+// Create live search
+ipcMain.handle('live-search-create', async (event: any, filter: any) => {
+  try {
+    const searchId = await liveSearchManager.createSearch(filter);
+    return { success: true, searchId };
+  } catch (error: any) {
+    console.error('Create live search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Stop live search
+ipcMain.handle('live-search-stop', async (event: any, searchId: string) => {
+  try {
+    const stopped = liveSearchManager.stopSearch(searchId);
+    return { success: stopped };
+  } catch (error: any) {
+    console.error('Stop live search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Resume live search
+ipcMain.handle('live-search-resume', async (event: any, searchId: string) => {
+  try {
+    const resumed = liveSearchManager.resumeSearch(searchId);
+    return { success: resumed };
+  } catch (error: any) {
+    console.error('Resume live search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Delete live search
+ipcMain.handle('live-search-delete', async (event: any, searchId: string) => {
+  try {
+    const deleted = liveSearchManager.deleteSearch(searchId);
+    return { success: deleted };
+  } catch (error: any) {
+    console.error('Delete live search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get all active searches
+ipcMain.handle('live-search-get-active', async () => {
+  try {
+    const searches = liveSearchManager.getActiveSearches();
+    return { success: true, data: searches };
+  } catch (error: any) {
+    console.error('Get active searches error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get results for a search
+ipcMain.handle('live-search-get-results', async (event: any, searchId: string) => {
+  try {
+    const results = liveSearchManager.getResults(searchId);
+    return { success: true, data: results };
+  } catch (error: any) {
+    console.error('Get search results error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Create underpriced search
+ipcMain.handle('live-search-underpriced', async (event: any, itemName: string, typicalPrice: number, discount: number, league: string) => {
+  try {
+    const searchId = await liveSearchManager.createUnderpricedSearch(itemName, typicalPrice, discount, league);
+    return { success: true, searchId };
+  } catch (error: any) {
+    console.error('Create underpriced search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get live search statistics
+ipcMain.handle('live-search-stats', async () => {
+  try {
+    const stats = liveSearchManager.getStatistics();
+    return { success: true, data: stats };
+  } catch (error: any) {
+    console.error('Get search stats error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Fossil Optimization ====================
+
+// Find best fossil combination
+ipcMain.handle('fossil-optimize', async (event: any, baseItem: string, desiredMods: string[], league: string) => {
+  try {
+    const result = await fossilOptimizer.findBestCombination(baseItem, desiredMods, league);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Fossil optimization error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Listen for new listings from live search
+liveSearchManager.on('newListing', (data) => {
+  // Send notification to frontend
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('live-search-new-listing', data);
   }
 });
