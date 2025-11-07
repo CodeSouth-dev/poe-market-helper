@@ -97,7 +97,7 @@ export class BrowserManager {
     const userDataDir = path.join(SESSION_DIR, sessionId);
 
     const options: LaunchOptions = {
-      headless: headless ? 'new' : false,
+      headless: headless,
       userDataDir,
       args: [
         '--no-sandbox',

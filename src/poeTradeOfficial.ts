@@ -188,6 +188,7 @@ export class PoeTradeOfficial {
 
         // Get first result price
         const price = await page.evaluate(() => {
+          // @ts-ignore - document is available in browser context
           const priceElement = document.querySelector('.price');
           if (!priceElement) return null;
 
@@ -306,6 +307,7 @@ export class PoeTradeOfficial {
         const items: any[] = [];
 
         // Find all result items
+        // @ts-ignore - document is available in browser context
         const resultElements = document.querySelectorAll('.result-item, .resultset > div');
 
         resultElements.forEach(elem => {
