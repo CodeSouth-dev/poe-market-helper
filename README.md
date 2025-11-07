@@ -1,6 +1,21 @@
 # Path of Exile Market Helper
 
-A standalone desktop application for live Path of Exile market data and crafting assistance.
+A powerful desktop application for live Path of Exile market data and advanced crafting assistance, featuring a **hybrid Electron + Python architecture** for maximum capabilities.
+
+## Architecture
+
+This application uses a **dual-server architecture**:
+
+- **Frontend**: Electron desktop app with beautiful UI (TypeScript/HTML/CSS)
+- **Backend**: Python FastAPI server with headless browser capabilities (Playwright)
+
+**Why Python Backend?**
+- ✅ **Headless Browser**: Scrape JavaScript-rendered sites (poe.ninja/builds, React apps)
+- ✅ **Comprehensive Mod Database**: Access to 1000+ mods from poedb.tw
+- ✅ **Advanced Scraping**: Better tools for web scraping (BeautifulSoup, Playwright)
+- ✅ **Future Features**: OCR, game automation, map crafting, and more
+
+See [`backend/README.md`](backend/README.md) for detailed backend documentation.
 
 ## Features
 
@@ -17,7 +32,9 @@ A standalone desktop application for live Path of Exile market data and crafting
 ✅ **Success Probabilities**: Expected attempts and costs based on mod weights
 ✅ **Base Recommendations**: Determine whether to buy white, rare, fractured, or influenced bases
 ✅ **RePoE Integration**: Comprehensive game data for accurate calculations
-✅ **Multiple Methods**: Compare Chaos spam, Fossils, Essences, and Alterations
+✅ **Multiple Methods**: Compare Chaos spam, Fossils, Essences, Alterations, Harvest, Recombinators, and more
+✅ **Comprehensive Mod Database**: 1000+ mods from poedb.tw via Python backend
+✅ **Build-Based Crafting**: Analyze popular builds to find profitable crafting targets
 
 ### UI/UX
 ✅ **Professional UI**: Clean, game-themed interface with tab-based navigation
@@ -26,33 +43,63 @@ A standalone desktop application for live Path of Exile market data and crafting
 ## Quick Start
 
 ### Prerequisites
-- Node.js 16+ (Download from [nodejs.org](https://nodejs.org))
+- **Node.js 16+** (Download from [nodejs.org](https://nodejs.org))
+- **Python 3.10+** (Download from [python.org](https://python.org))
 - Internet connection for poe.ninja API
 
-### Installation & Running
+### Installation
 
-1. **Extract/Download** this project folder
-2. **Open Terminal/Command Prompt** in the project directory
-3. **Run setup**:
-   ```bash
-   # On Windows
-   npm install && npm run dev
-   
-   # On Mac/Linux
-   ./setup.sh
-   ```
+#### 1. Setup Frontend (Electron)
 
-### Alternative Manual Setup
 ```bash
-# Install dependencies
+# Install Node.js dependencies
 npm install
 
 # Build TypeScript
 npm run build
+```
 
-# Start the application
+#### 2. Setup Backend (Python)
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Run setup script (Linux/Mac)
+./setup.sh
+
+# Or manually:
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+playwright install chromium
+```
+
+### Running the Application
+
+You need to run **BOTH** servers:
+
+#### Terminal 1: Start Python Backend
+```bash
+cd backend
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+python main.py
+
+# Or use the start script (Linux/Mac):
+./start.sh
+```
+
+Backend will be available at: `http://localhost:8000`
+
+#### Terminal 2: Start Electron Frontend
+```bash
+# From project root
 npm start
 ```
+
+**Note**: The Python backend enables advanced features like build scraping and comprehensive mod database. You can run the frontend without it, but some features will be limited.
+
+See [`backend/INTEGRATION.md`](backend/INTEGRATION.md) for detailed integration instructions.
 
 ## Usage
 
@@ -90,17 +137,33 @@ See [CRAFTING_FEATURE.md](CRAFTING_FEATURE.md) for detailed documentation.
 
 ```
 poe-market-helper/
-├── src/
-│   ├── main.ts           # Electron main process
-│   ├── index.html        # UI interface
+├── src/                    # Frontend (Electron)
+│   ├── main.ts             # Electron main process
+│   ├── index.html          # UI interface
 │   ├── api/
-│   │   └── poeNinja.ts   # API wrapper
+│   │   └── poeNinja.ts     # poe.ninja API wrapper
 │   └── utils/
-│       ├── cache.ts      # Caching system
-│       └── favorites.ts  # Favorites management
-├── data/                 # Runtime data storage
-├── package.json          # Dependencies
-└── tsconfig.json         # TypeScript config
+│       ├── cache.ts        # Caching system
+│       └── favorites.ts    # Favorites management
+│
+├── backend/                # Backend (Python)
+│   ├── main.py             # FastAPI server
+│   ├── scrapers/           # Web scrapers
+│   │   ├── poe_ninja.py    # Build scraper (Playwright)
+│   │   └── poedb_scraper.py # Mod database scraper
+│   ├── database/           # Database models
+│   │   ├── models.py       # SQLAlchemy models
+│   │   └── mod_db.py       # Mod database handler
+│   ├── api/                # API endpoints
+│   │   ├── builds.py       # Build analysis
+│   │   ├── crafting.py     # Crafting calculations
+│   │   └── market.py       # Market insights
+│   └── README.md           # Backend documentation
+│
+├── data/                   # Runtime data storage
+│   └── poe_mods.db         # SQLite mod database
+├── package.json            # Node.js dependencies
+└── tsconfig.json           # TypeScript config
 ```
 
 ## How It Works
@@ -134,11 +197,23 @@ npm install
 
 ## Development
 
-Built with:
+### Frontend Stack
 - **Electron** - Desktop app framework
 - **TypeScript** - Type-safe JavaScript
-- **poe.ninja API** - Live market data
 - **HTML/CSS/JS** - User interface
+
+### Backend Stack
+- **Python 3.10+** - Backend language
+- **FastAPI** - Web framework
+- **Playwright** - Headless browser for scraping
+- **SQLAlchemy** - Database ORM
+- **BeautifulSoup** - HTML parsing
+- **SQLite** - Local database
+
+### APIs & Data Sources
+- **poe.ninja API** - Live market data and builds
+- **poedb.tw** - Comprehensive mod database (scraped)
+- **RePoE** - Game data integration
 
 ## Extending the App
 
