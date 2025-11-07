@@ -91,6 +91,26 @@ class CraftingCalculator {
         const alterationMethod = await this.calculateAlterationSpam(desiredMods, baseItem, league);
         if (alterationMethod)
             methods.push(alterationMethod);
+        // 5. Exalted Orb slamming (for adding 1-2 specific mods)
+        const exaltMethod = await this.calculateExaltedSlam(desiredMods, baseItem, league);
+        if (exaltMethod)
+            methods.push(exaltMethod);
+        // 6. Harvest Reforge (for targeted rerolling)
+        const harvestMethod = await this.calculateHarvestReforge(desiredMods, baseItem, league);
+        if (harvestMethod)
+            methods.push(harvestMethod);
+        // 7. Veiled Chaos (Aisling) for veiled mods
+        const veiledMethod = await this.calculateVeiledChaos(desiredMods, baseItem, league);
+        if (veiledMethod)
+            methods.push(veiledMethod);
+        // 8. Annulment Orb (for removing unwanted mods)
+        const annulMethod = await this.calculateAnnulment(desiredMods, baseItem, league);
+        if (annulMethod)
+            methods.push(annulMethod);
+        // 9. Beastcrafting (specific beast crafts)
+        const beastMethod = await this.calculateBeastcrafting(desiredMods, baseItem, league);
+        if (beastMethod)
+            methods.push(beastMethod);
         // Sort by cost
         methods.sort((a, b) => a.averageCost - b.averageCost);
         const bestMethod = methods[0];
@@ -278,6 +298,256 @@ class CraftingCalculator {
             ],
             expectedAttempts
         };
+    }
+    /**
+     * Calculate Exalted Orb slamming method
+     * Used to add 1-2 specific mods to an item with open affixes
+     */
+    async calculateExaltedSlam(desiredMods, baseItem, league) {
+        // Exalt slamming is only useful for adding 1-2 mods to an already good item
+        if (desiredMods.length > 2) {
+            return null;
+        }
+        const availableMods = this.dataLoader.getModsForItemClass(baseItem.item_class, baseItem.tags);
+        // Calculate probability of hitting desired mod with exalt
+        const prefixes = desiredMods.filter(m => m.type === 'prefix');
+        const suffixes = desiredMods.filter(m => m.type === 'suffix');
+        const availablePrefixes = availableMods.filter(m => m.type === 'prefix');
+        const availableSuffixes = availableMods.filter(m => m.type === 'suffix');
+        let probability = 1;
+        for (const prefix of prefixes) {
+            const matchingMods = availablePrefixes.filter(m => m.name.toLowerCase().includes(prefix.name.toLowerCase()));
+            if (matchingMods.length === 0)
+                return null;
+            probability *= matchingMods.length / availablePrefixes.length;
+        }
+        for (const suffix of suffixes) {
+            const matchingMods = availableSuffixes.filter(m => m.name.toLowerCase().includes(suffix.name.toLowerCase()));
+            if (matchingMods.length === 0)
+                return null;
+            probability *= matchingMods.length / availableSuffixes.length;
+        }
+        if (probability === 0)
+            return null;
+        const exaltPrice = this.currencyPrices.get('Exalted Orb')?.chaosValue || 180;
+        const expectedAttempts = Math.ceil(1 / probability);
+        const averageCost = expectedAttempts * exaltPrice;
+        return {
+            method: 'chaos',
+            name: 'Exalted Orb Slamming',
+            description: 'Add random mods to item using Exalted Orbs',
+            probability,
+            averageCost,
+            currencyUsed: {
+                'Exalted Orb': expectedAttempts
+            },
+            steps: [
+                `Start with a rare ${baseItem.name} that has good existing mods`,
+                'Ensure the item has open prefix or suffix slots',
+                'Use Exalted Orb to add a random mod',
+                `Expected attempts to hit desired mod(s): ${expectedAttempts}`,
+                '⚠️ Warning: Exalt slamming is expensive and risky for multiple mods'
+            ],
+            expectedAttempts
+        };
+    }
+    /**
+     * Calculate Harvest Reforge method
+     * Rerolls all mods while guaranteeing mods of a specific type
+     */
+    async calculateHarvestReforge(desiredMods, baseItem, league) {
+        // Determine harvest type based on desired mods
+        const harvestType = this.getHarvestTypeForMods(desiredMods);
+        if (!harvestType)
+            return null;
+        const availableMods = this.dataLoader.getModsForItemClass(baseItem.item_class, baseItem.tags);
+        // Harvest reforge narrows the mod pool to specific types
+        const harvestModPool = availableMods.filter(mod => {
+            // Simplified: filter mods that match the harvest type
+            const modName = mod.name.toLowerCase();
+            return modName.includes(harvestType.toLowerCase());
+        });
+        if (harvestModPool.length === 0)
+            return null;
+        // Calculate probability with narrowed pool
+        const probability = this.calculateModProbabilityWithPool(desiredMods, harvestModPool, baseItem.tags);
+        if (probability === 0)
+            return null;
+        // Harvest craft prices vary, use reasonable estimate
+        const harvestPrice = 20; // Average harvest reforge cost
+        const expectedAttempts = Math.ceil(1 / probability);
+        const averageCost = expectedAttempts * harvestPrice;
+        return {
+            method: 'harvest',
+            name: `Harvest Reforge (${harvestType})`,
+            description: `Use Harvest "Reforge ${harvestType}" to guarantee ${harvestType} mods`,
+            probability,
+            averageCost,
+            currencyUsed: {
+                [`Harvest Reforge ${harvestType}`]: expectedAttempts
+            },
+            steps: [
+                `Obtain a ${baseItem.name}`,
+                `Use Harvest "Reforge ${harvestType}" craft`,
+                `This guarantees at least one ${harvestType} mod while rerolling all other mods`,
+                `Expected attempts: ${expectedAttempts}`,
+                `💡 Harvest crafts can be bought from TFT or found in Sacred Grove`
+            ],
+            expectedAttempts
+        };
+    }
+    /**
+     * Calculate Veiled Chaos method (Aisling crafting)
+     * Adds a veiled mod that can be unveiled for powerful crafts
+     */
+    async calculateVeiledChaos(desiredMods, baseItem, league) {
+        // Veiled chaos is mainly useful for specific unveil-able mods
+        // For now, return null unless we can determine veiled mods are desired
+        // This would require additional data about which mods are unveil-able
+        const veiledPrice = this.currencyPrices.get('Veiled Chaos Orb')?.chaosValue || 50;
+        // Simplified: only recommend if looking for 1-2 specific mods
+        if (desiredMods.length > 2)
+            return null;
+        // Check if any desired mods match common veiled mod patterns
+        const veiledModPatterns = ['quality', 'non-channelling', 'gain', 'trigger'];
+        const hasVeiledMod = desiredMods.some(mod => veiledModPatterns.some(pattern => mod.name.toLowerCase().includes(pattern)));
+        if (!hasVeiledMod)
+            return null;
+        const expectedAttempts = 15; // Average attempts to get desired veiled mod
+        const averageCost = expectedAttempts * veiledPrice;
+        return {
+            method: 'veiled',
+            name: 'Veiled Chaos Orb (Aisling)',
+            description: 'Use Veiled Chaos Orb to add veiled modifier',
+            probability: 1 / expectedAttempts,
+            averageCost,
+            currencyUsed: {
+                'Veiled Chaos Orb': expectedAttempts
+            },
+            steps: [
+                `Start with a rare ${baseItem.name}`,
+                'Use Veiled Chaos Orb to reroll and add a veiled mod',
+                'Unveil the mod at Jun to choose from 3 options',
+                `Expected attempts: ${expectedAttempts}`,
+                '💡 Alternatively, use Aisling in Research for veiled mod'
+            ],
+            expectedAttempts
+        };
+    }
+    /**
+     * Calculate Annulment Orb method
+     * Used to remove unwanted mods from an item
+     */
+    async calculateAnnulment(desiredMods, baseItem, league) {
+        // Annulment is useful when you have a good item with 1 unwanted mod
+        // This is a risky method, so we only recommend it in specific cases
+        // For now, return null as it's situational and requires existing item analysis
+        return null;
+    }
+    /**
+     * Calculate Beastcrafting method
+     * Uses captured beasts to apply specific crafts
+     */
+    async calculateBeastcrafting(desiredMods, baseItem, league) {
+        // Beast prices from poe.ninja
+        const craicicChimeralPrice = this.currencyPrices.get('Craicic Chimeral')?.chaosValue || 30;
+        const fenumalHybridPrice = this.currencyPrices.get('Fenumal Hybrid Arachnid')?.chaosValue || 15;
+        // Check if any desired mods match common beast craft patterns
+        const modTexts = desiredMods.map(m => m.name.toLowerCase()).join(' ');
+        // Imprint beast (Craicic Chimeral) - useful for alt+regal crafting
+        if (desiredMods.length <= 2) {
+            return {
+                method: 'chaos',
+                name: 'Beastcraft (Imprint)',
+                description: 'Use Craicic Chimeral to create imprint for safe crafting',
+                probability: 0.5,
+                averageCost: craicicChimeralPrice + 20, // Beast + base crafting cost
+                currencyUsed: {
+                    'Craicic Chimeral': 1,
+                    'Orb of Alteration': 50,
+                    'Regal Orb': 2
+                },
+                steps: [
+                    `Start with a magic ${baseItem.name} with desired mod`,
+                    'Use Craicic Chimeral to create an imprint',
+                    'Use Regal Orb to upgrade to rare',
+                    'If bad regal, restore with imprint and try again',
+                    'Repeat until good regal, then continue crafting',
+                    '💡 This method is great for preserving good magic items'
+                ],
+                expectedAttempts: 2
+            };
+        }
+        // Split beast (Fenumal Hybrid Arachnid) - duplicates a rare item
+        if (modTexts.includes('split')) {
+            return {
+                method: 'chaos',
+                name: 'Beastcraft (Split)',
+                description: 'Use Fenumal Hybrid Arachnid to duplicate item',
+                probability: 0.5,
+                averageCost: fenumalHybridPrice,
+                currencyUsed: {
+                    'Fenumal Hybrid Arachnid': 1
+                },
+                steps: [
+                    `Start with a rare ${baseItem.name} that has some desired mods`,
+                    'Use Fenumal Hybrid Arachnid to split the item',
+                    'Both resulting items will have some of the original mods',
+                    'This creates two items from one, useful for valuable items',
+                    '⚠️ Mods are randomly distributed between the two items'
+                ],
+                expectedAttempts: 1
+            };
+        }
+        return null;
+    }
+    /**
+     * Helper: Determine harvest craft type based on desired mods
+     */
+    getHarvestTypeForMods(desiredMods) {
+        const modTexts = desiredMods.map(m => m.name.toLowerCase()).join(' ');
+        // Map common mod types to harvest craft types
+        if (modTexts.includes('life') || modTexts.includes('mana'))
+            return 'Life';
+        if (modTexts.includes('fire') || modTexts.includes('cold') || modTexts.includes('lightning'))
+            return 'Elemental';
+        if (modTexts.includes('physical') || modTexts.includes('attack'))
+            return 'Physical';
+        if (modTexts.includes('chaos') || modTexts.includes('poison'))
+            return 'Chaos';
+        if (modTexts.includes('crit') || modTexts.includes('spell'))
+            return 'Caster';
+        if (modTexts.includes('speed') || modTexts.includes('attack'))
+            return 'Speed';
+        if (modTexts.includes('armour') || modTexts.includes('evasion') || modTexts.includes('energy shield'))
+            return 'Defence';
+        return null;
+    }
+    /**
+     * Helper: Calculate probability with custom mod pool
+     */
+    calculateModProbabilityWithPool(desiredMods, modPool, itemTags) {
+        const prefixes = desiredMods.filter(m => m.type === 'prefix');
+        const suffixes = desiredMods.filter(m => m.type === 'suffix');
+        const availablePrefixes = modPool.filter(m => m.type === 'prefix');
+        const availableSuffixes = modPool.filter(m => m.type === 'suffix');
+        if (availablePrefixes.length === 0 || availableSuffixes.length === 0) {
+            return 0;
+        }
+        let probability = 1;
+        for (const prefix of prefixes) {
+            const matchingMods = availablePrefixes.filter(m => m.name.toLowerCase().includes(prefix.name.toLowerCase()));
+            if (matchingMods.length === 0)
+                return 0;
+            probability *= matchingMods.length / availablePrefixes.length;
+        }
+        for (const suffix of suffixes) {
+            const matchingMods = availableSuffixes.filter(m => m.name.toLowerCase().includes(suffix.name.toLowerCase()));
+            if (matchingMods.length === 0)
+                return 0;
+            probability *= matchingMods.length / availableSuffixes.length;
+        }
+        return probability;
     }
     /**
      * Calculate probability of hitting desired mods
