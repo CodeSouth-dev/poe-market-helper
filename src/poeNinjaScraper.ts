@@ -44,6 +44,7 @@ export class PoeNinjaScraper {
           const itemUsage = new Map<string, number>();
 
           // Try different selectors for build rows
+          // @ts-ignore - document is available in browser context
           const buildRows = document.querySelectorAll(
             '.build-row, [class*="BuildRow"], tbody tr, .table-row'
           );
