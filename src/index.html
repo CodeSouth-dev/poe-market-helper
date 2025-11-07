@@ -816,7 +816,20 @@
                     <button type="button" id="addModBtn" class="btn-success" style="margin-top: 10px;">+ Add Mod</button>
                 </div>
 
-                <button type="submit" id="calculateBtn">Calculate Best Crafting Method</button>
+                <!-- Risk Mode Toggle -->
+                <div style="margin-bottom: 25px; background: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 15px; border-radius: 5px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="riskModeToggle" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                        <div>
+                            <span style="color: #ff9800; font-weight: bold; font-size: 16px;">🎲 High Risk Mode</span>
+                            <p style="color: #ccc; font-size: 13px; margin: 5px 0 0 0;">
+                                Enable advanced strategies like recombinators for potential mirror-tier results. Higher cost, higher reward!
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <button type="submit" id="calculateBtn">🎯 Calculate Best Crafting Method</button>
             </form>
         </section>
 
@@ -2334,7 +2347,9 @@
 
             const baseItem = document.getElementById('craftBaseItem').value;
             const itemClass = document.getElementById('craftItemClass').value;
+            const itemLevel = parseInt(document.getElementById('craftItemLevel').value) || 86;
             const league = document.getElementById('craftLeague').value;
+            const riskMode = document.getElementById('riskModeToggle').checked;
 
             // Collect mods
             const modInputs = document.querySelectorAll('.mod-input-group');
@@ -2344,7 +2359,7 @@
                 const name = modDiv.querySelector('.mod-name').value;
                 const type = modDiv.querySelector('.mod-type').value;
                 if (name) {
-                    desiredMods.push({ name, type });
+                    desiredMods.push(name);
                 }
             });
 
@@ -2353,23 +2368,32 @@
                 return;
             }
 
-            // Show loading
+            // Show loading with risk mode indicator
+            craftingLoading.innerHTML = riskMode
+                ? '🎲 Analyzing crafting methods (Risk Mode Active)...'
+                : '🔮 Analyzing crafting methods...';
             craftingLoading.style.display = 'block';
             craftingError.style.display = 'none';
             craftingResults.style.display = 'none';
 
             try {
-                const result = await ipcRenderer.invoke('calculate-crafting', {
-                    desiredMods,
-                    baseItemName: baseItem,
+                // Use smart optimizer
+                const craftingGoal = {
+                    baseItem,
+                    itemLevel,
                     itemClass,
-                    league
-                });
+                    desiredMods,
+                    budget: 1000, // Default budget, could be made configurable
+                    league,
+                    riskMode
+                };
+
+                const result = await window.api.invoke('smart-optimizer-get-strategy', craftingGoal);
 
                 craftingLoading.style.display = 'none';
 
                 if (result.success) {
-                    displayCraftingResults(result.data);
+                    displaySmartCraftingResults(result.data);
                 } else {
                     showCraftingError(result.error);
                 }
@@ -2465,6 +2489,185 @@
             }
 
             return `${chaosValue.toFixed(1)} Chaos`;
+        }
+
+        function displaySmartCraftingResults(strategy) {
+            craftingResults.style.display = 'block';
+
+            const riskColors = {
+                'safe': '#4caf50',
+                'moderate': '#ff9800',
+                'high': '#f44336',
+                'extreme': '#9c27b0'
+            };
+
+            const riskColor = riskColors[strategy.riskLevel] || '#888';
+
+            let html = `
+                <div style="background: linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(76,175,80,0.2) 100%); border-radius: 10px; padding: 25px; margin-bottom: 25px;">
+                    <h3 style="color: #ffd700; margin: 0 0 10px 0;">🎯 Optimal Strategy: ${strategy.method}</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <span style="background: ${riskColor}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 13px; font-weight: bold;">
+                            ${strategy.riskLevel.toUpperCase()} RISK
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); color: #ffd700; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
+                            Source: ${strategy.source.toUpperCase()}
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); color: #8b5cf6; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
+                            ${strategy.difficulty.toUpperCase()}
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Estimated Cost</div>
+                            <div style="color: #ffd700; font-size: 24px; font-weight: bold;">${strategy.estimatedCost}c</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Success Rate</div>
+                            <div style="color: #4caf50; font-size: 24px; font-weight: bold;">${(strategy.successRate * 100).toFixed(0)}%</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Time Required</div>
+                            <div style="color: #2196f3; font-size: 18px; font-weight: bold;">${strategy.timeToComplete}</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                            <div style="color: #888; font-size: 12px;">Profit Potential</div>
+                            <div style="color: #00ff00; font-size: 24px; font-weight: bold;">${strategy.profitPotential}c</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Steps -->
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">📋 Step-by-Step Guide</h4>
+                    <ol style="color: #cccccc; line-height: 2; padding-left: 20px;">
+                        ${strategy.steps.map(step => `<li>${step}</li>`).join('')}
+                    </ol>
+                </div>
+            `;
+
+            // Requirements
+            if (strategy.requirements.length > 0) {
+                html += `
+                    <div style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #2196f3; font-weight: bold; margin-bottom: 10px;">📦 Requirements</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.requirements.map(req => `<li>${req}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Tips
+            if (strategy.tips.length > 0) {
+                html += `
+                    <div style="background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #4caf50; font-weight: bold; margin-bottom: 10px;">💡 Pro Tips</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.tips.map(tip => `<li>${tip}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Warnings
+            if (strategy.warnings.length > 0) {
+                html += `
+                    <div style="background: rgba(244, 67, 54, 0.1); border-left: 4px solid #f44336; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">⚠️ Warnings</div>
+                        <ul style="color: #cccccc; margin: 0; padding-left: 20px;">
+                            ${strategy.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Recombinator Strategy (if risk mode enabled)
+            if (strategy.recombinatorOption) {
+                const recomb = strategy.recombinatorOption;
+                html += `
+                    <div style="background: linear-gradient(135deg, rgba(156, 39, 176, 0.3) 0%, rgba(244, 67, 54, 0.3) 100%); border: 2px solid #9c27b0; border-radius: 10px; padding: 25px; margin-top: 25px;">
+                        <h3 style="color: #9c27b0; margin: 0 0 15px 0;">🎲 HIGH RISK RECOMBINATOR STRATEGY</h3>
+                        <p style="color: #cccccc; font-size: 16px; margin-bottom: 20px;">${recomb.description}</p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Total Investment</div>
+                                <div style="color: #ffd700; font-size: 24px; font-weight: bold;">${recomb.estimatedCost}c</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Success Rate</div>
+                                <div style="color: #ff9800; font-size: 24px; font-weight: bold;">${(recomb.successRate * 100).toFixed(0)}%</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                                <div style="color: #888; font-size: 12px;">Profit if Successful</div>
+                                <div style="color: #00ff00; font-size: 24px; font-weight: bold;">${recomb.profitPotential}c</div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="color: #ffd700; margin-bottom: 15px;">Recombinator Process</h4>
+                            <ol style="color: #cccccc; line-height: 2; padding-left: 20px;">
+                                ${recomb.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+
+                        ${recomb.warnings.length > 0 ? `
+                            <div style="background: rgba(244, 67, 54, 0.2); border-left: 4px solid #f44336; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                                <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">⚠️ CRITICAL WARNINGS</div>
+                                <ul style="color: #ffcccc; margin: 0; padding-left: 20px;">
+                                    ${recomb.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${recomb.tips.length > 0 ? `
+                            <div style="background: rgba(76, 175, 80, 0.2); border-left: 4px solid #4caf50; padding: 15px; border-radius: 5px;">
+                                <div style="color: #4caf50; font-weight: bold; margin-bottom: 10px;">💡 Expert Tips</div>
+                                <ul style="color: #ccffcc; margin: 0; padding-left: 20px;">
+                                    ${recomb.tips.map(tip => `<li>${tip}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Alternative Methods
+            if (strategy.alternativeMethods && strategy.alternativeMethods.length > 0) {
+                html += `
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-top: 25px;">
+                        <h4 style="color: #ffd700; margin-bottom: 15px;">🔄 Alternative Methods</h4>
+                        <div style="display: grid; gap: 15px;">
+                `;
+
+                strategy.alternativeMethods.forEach((alt, index) => {
+                    const altRiskColor = riskColors[alt.riskLevel] || '#888';
+                    html += `
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border-left: 4px solid ${altRiskColor};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <div style="color: #ffd700; font-weight: bold;">${index + 2}. ${alt.method}</div>
+                                    <div style="color: #888; font-size: 12px;">${alt.source} • ${alt.difficulty}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #ffd700; font-size: 18px; font-weight: bold;">${alt.estimatedCost}c</div>
+                                    <div style="color: #4caf50; font-size: 12px;">${(alt.successRate * 100).toFixed(0)}% success</div>
+                                </div>
+                            </div>
+                            <div style="color: #cccccc; font-size: 13px;">Time: ${alt.timeToComplete} | Profit: ${alt.profitPotential}c</div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            craftingResultsContent.innerHTML = html;
         }
 
         function showCraftingError(message) {

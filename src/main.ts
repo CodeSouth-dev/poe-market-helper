@@ -1091,6 +1091,52 @@ ipcMain.handle('maxroll-get-method-by-name', async (event: any, name: string) =>
   }
 });
 
+// ===== Smart Crafting Optimizer Handlers =====
+
+ipcMain.handle('smart-optimizer-get-strategy', async (event: any, goal: any) => {
+  try {
+    const { smartCraftingOptimizer } = await import('./smartCraftingOptimizer');
+    const strategy = await smartCraftingOptimizer.getOptimalStrategy(goal);
+    return { success: true, data: strategy };
+  } catch (error: any) {
+    console.error('Failed to get optimal strategy:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('smart-optimizer-quick-recommendation', async (event: any, params: any) => {
+  try {
+    const { smartCraftingOptimizer } = await import('./smartCraftingOptimizer');
+    const { itemText, budget, league, riskMode } = params;
+    const recommendation = await smartCraftingOptimizer.quickRecommendation(
+      itemText,
+      budget,
+      league,
+      riskMode
+    );
+    return { success: true, data: recommendation };
+  } catch (error: any) {
+    console.error('Failed to get quick recommendation:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('smart-optimizer-get-by-budget', async (event: any, params: any) => {
+  try {
+    const { smartCraftingOptimizer } = await import('./smartCraftingOptimizer');
+    const { itemClass, budget, league } = params;
+    const methods = await smartCraftingOptimizer.getMethodsByBudget(
+      itemClass,
+      budget,
+      league
+    );
+    return { success: true, data: methods };
+  } catch (error: any) {
+    console.error('Failed to get methods by budget:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Listen for new listings from live search
 liveSearchManager.on('newListing', (data) => {
   // Send notification to frontend

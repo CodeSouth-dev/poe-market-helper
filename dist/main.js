@@ -1055,6 +1055,42 @@ electron_1.ipcMain.handle('maxroll-get-method-by-name', async (event, name) => {
         return { success: false, error: error.message };
     }
 });
+// ===== Smart Crafting Optimizer Handlers =====
+electron_1.ipcMain.handle('smart-optimizer-get-strategy', async (event, goal) => {
+    try {
+        const { smartCraftingOptimizer } = await Promise.resolve().then(() => __importStar(require('./smartCraftingOptimizer')));
+        const strategy = await smartCraftingOptimizer.getOptimalStrategy(goal);
+        return { success: true, data: strategy };
+    }
+    catch (error) {
+        console.error('Failed to get optimal strategy:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('smart-optimizer-quick-recommendation', async (event, params) => {
+    try {
+        const { smartCraftingOptimizer } = await Promise.resolve().then(() => __importStar(require('./smartCraftingOptimizer')));
+        const { itemText, budget, league, riskMode } = params;
+        const recommendation = await smartCraftingOptimizer.quickRecommendation(itemText, budget, league, riskMode);
+        return { success: true, data: recommendation };
+    }
+    catch (error) {
+        console.error('Failed to get quick recommendation:', error);
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle('smart-optimizer-get-by-budget', async (event, params) => {
+    try {
+        const { smartCraftingOptimizer } = await Promise.resolve().then(() => __importStar(require('./smartCraftingOptimizer')));
+        const { itemClass, budget, league } = params;
+        const methods = await smartCraftingOptimizer.getMethodsByBudget(itemClass, budget, league);
+        return { success: true, data: methods };
+    }
+    catch (error) {
+        console.error('Failed to get methods by budget:', error);
+        return { success: false, error: error.message };
+    }
+});
 // Listen for new listings from live search
 liveSearch_1.liveSearchManager.on('newListing', (data) => {
     // Send notification to frontend
