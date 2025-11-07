@@ -115,6 +115,30 @@ export class CraftingCalculator {
     const alterationMethod = await this.calculateAlterationSpam(desiredMods, baseItem, league);
     if (alterationMethod) methods.push(alterationMethod);
 
+    // 5. Exalted Orb slamming (for adding 1-2 specific mods)
+    const exaltMethod = await this.calculateExaltedSlam(desiredMods, baseItem, league);
+    if (exaltMethod) methods.push(exaltMethod);
+
+    // 6. Harvest Reforge (for targeted rerolling)
+    const harvestMethod = await this.calculateHarvestReforge(desiredMods, baseItem, league);
+    if (harvestMethod) methods.push(harvestMethod);
+
+    // 7. Veiled Chaos (Aisling) for veiled mods
+    const veiledMethod = await this.calculateVeiledChaos(desiredMods, baseItem, league);
+    if (veiledMethod) methods.push(veiledMethod);
+
+    // 8. Annulment Orb (for removing unwanted mods)
+    const annulMethod = await this.calculateAnnulment(desiredMods, baseItem, league);
+    if (annulMethod) methods.push(annulMethod);
+
+    // 9. Beastcrafting (specific beast crafts)
+    const beastMethod = await this.calculateBeastcrafting(desiredMods, baseItem, league);
+    if (beastMethod) methods.push(beastMethod);
+
+    // 10. Recombinators (combine two items)
+    const recombinatorMethod = await this.calculateRecombinator(desiredMods, baseItem, league);
+    if (recombinatorMethod) methods.push(recombinatorMethod);
+
     // Sort by cost
     methods.sort((a, b) => a.averageCost - b.averageCost);
 
@@ -348,6 +372,503 @@ export class CraftingCalculator {
       ],
       expectedAttempts
     };
+  }
+
+  /**
+   * Calculate Exalted Orb slamming method
+   * Used to add 1-2 specific mods to an item with open affixes
+   */
+  private async calculateExaltedSlam(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Exalt slamming is only useful for adding 1-2 mods to an already good item
+    if (desiredMods.length > 2) {
+      return null;
+    }
+
+    const availableMods = this.dataLoader.getModsForItemClass(baseItem.item_class, baseItem.tags);
+
+    // Calculate probability of hitting desired mod with exalt
+    const prefixes = desiredMods.filter(m => m.type === 'prefix');
+    const suffixes = desiredMods.filter(m => m.type === 'suffix');
+
+    const availablePrefixes = availableMods.filter(m => m.type === 'prefix');
+    const availableSuffixes = availableMods.filter(m => m.type === 'suffix');
+
+    let probability = 1;
+    for (const prefix of prefixes) {
+      const matchingMods = availablePrefixes.filter(m =>
+        m.name.toLowerCase().includes(prefix.name.toLowerCase())
+      );
+      if (matchingMods.length === 0) return null;
+      probability *= matchingMods.length / availablePrefixes.length;
+    }
+
+    for (const suffix of suffixes) {
+      const matchingMods = availableSuffixes.filter(m =>
+        m.name.toLowerCase().includes(suffix.name.toLowerCase())
+      );
+      if (matchingMods.length === 0) return null;
+      probability *= matchingMods.length / availableSuffixes.length;
+    }
+
+    if (probability === 0) return null;
+
+    const exaltPrice = this.currencyPrices.get('Exalted Orb')?.chaosValue || 180;
+    const expectedAttempts = Math.ceil(1 / probability);
+    const averageCost = expectedAttempts * exaltPrice;
+
+    return {
+      method: 'chaos',
+      name: 'Exalted Orb Slamming',
+      description: 'Add random mods to item using Exalted Orbs',
+      probability,
+      averageCost,
+      currencyUsed: {
+        'Exalted Orb': expectedAttempts
+      },
+      steps: [
+        `Start with a rare ${baseItem.name} that has good existing mods`,
+        'Ensure the item has open prefix or suffix slots',
+        'Use Exalted Orb to add a random mod',
+        `Expected attempts to hit desired mod(s): ${expectedAttempts}`,
+        '⚠️ Warning: Exalt slamming is expensive and risky for multiple mods'
+      ],
+      expectedAttempts
+    };
+  }
+
+  /**
+   * Calculate Harvest Reforge method
+   * Rerolls all mods while guaranteeing mods of a specific type
+   */
+  private async calculateHarvestReforge(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Determine harvest type based on desired mods
+    const harvestType = this.getHarvestTypeForMods(desiredMods);
+    if (!harvestType) return null;
+
+    const availableMods = this.dataLoader.getModsForItemClass(baseItem.item_class, baseItem.tags);
+
+    // Harvest reforge narrows the mod pool to specific types
+    const harvestModPool = availableMods.filter(mod => {
+      // Simplified: filter mods that match the harvest type
+      const modName = mod.name.toLowerCase();
+      return modName.includes(harvestType.toLowerCase());
+    });
+
+    if (harvestModPool.length === 0) return null;
+
+    // Calculate probability with narrowed pool
+    const probability = this.calculateModProbabilityWithPool(desiredMods, harvestModPool, baseItem.tags);
+
+    if (probability === 0) return null;
+
+    // Harvest craft prices vary, use reasonable estimate
+    const harvestPrice = 20; // Average harvest reforge cost
+    const expectedAttempts = Math.ceil(1 / probability);
+    const averageCost = expectedAttempts * harvestPrice;
+
+    return {
+      method: 'harvest',
+      name: `Harvest Reforge (${harvestType})`,
+      description: `Use Harvest "Reforge ${harvestType}" to guarantee ${harvestType} mods`,
+      probability,
+      averageCost,
+      currencyUsed: {
+        [`Harvest Reforge ${harvestType}`]: expectedAttempts
+      },
+      steps: [
+        `Obtain a ${baseItem.name}`,
+        `Use Harvest "Reforge ${harvestType}" craft`,
+        `This guarantees at least one ${harvestType} mod while rerolling all other mods`,
+        `Expected attempts: ${expectedAttempts}`,
+        `💡 Harvest crafts can be bought from TFT or found in Sacred Grove`
+      ],
+      expectedAttempts
+    };
+  }
+
+  /**
+   * Calculate Veiled Chaos method (Aisling crafting)
+   * Adds a veiled mod that can be unveiled for powerful crafts
+   */
+  private async calculateVeiledChaos(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Veiled chaos is mainly useful for specific unveil-able mods
+    // For now, return null unless we can determine veiled mods are desired
+    // This would require additional data about which mods are unveil-able
+
+    const veiledPrice = this.currencyPrices.get('Veiled Chaos Orb')?.chaosValue || 50;
+
+    // Simplified: only recommend if looking for 1-2 specific mods
+    if (desiredMods.length > 2) return null;
+
+    // Check if any desired mods match common veiled mod patterns
+    const veiledModPatterns = ['quality', 'non-channelling', 'gain', 'trigger'];
+    const hasVeiledMod = desiredMods.some(mod =>
+      veiledModPatterns.some(pattern => mod.name.toLowerCase().includes(pattern))
+    );
+
+    if (!hasVeiledMod) return null;
+
+    const expectedAttempts = 15; // Average attempts to get desired veiled mod
+    const averageCost = expectedAttempts * veiledPrice;
+
+    return {
+      method: 'veiled',
+      name: 'Veiled Chaos Orb (Aisling)',
+      description: 'Use Veiled Chaos Orb to add veiled modifier',
+      probability: 1 / expectedAttempts,
+      averageCost,
+      currencyUsed: {
+        'Veiled Chaos Orb': expectedAttempts
+      },
+      steps: [
+        `Start with a rare ${baseItem.name}`,
+        'Use Veiled Chaos Orb to reroll and add a veiled mod',
+        'Unveil the mod at Jun to choose from 3 options',
+        `Expected attempts: ${expectedAttempts}`,
+        '💡 Alternatively, use Aisling in Research for veiled mod'
+      ],
+      expectedAttempts
+    };
+  }
+
+  /**
+   * Calculate Annulment Orb method
+   * Used to remove unwanted mods from an item
+   */
+  private async calculateAnnulment(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Annulment is useful when you have a good item with 1 unwanted mod
+    // This is a risky method, so we only recommend it in specific cases
+    // For now, return null as it's situational and requires existing item analysis
+    return null;
+  }
+
+  /**
+   * Calculate Beastcrafting method
+   * Uses captured beasts to apply specific crafts
+   */
+  private async calculateBeastcrafting(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Beast prices from poe.ninja
+    const craicicChimeralPrice = this.currencyPrices.get('Craicic Chimeral')?.chaosValue || 30;
+    const fenumalHybridPrice = this.currencyPrices.get('Fenumal Hybrid Arachnid')?.chaosValue || 15;
+
+    // Check if any desired mods match common beast craft patterns
+    const modTexts = desiredMods.map(m => m.name.toLowerCase()).join(' ');
+
+    // Imprint beast (Craicic Chimeral) - useful for alt+regal crafting
+    if (desiredMods.length <= 2) {
+      return {
+        method: 'chaos',
+        name: 'Beastcraft (Imprint)',
+        description: 'Use Craicic Chimeral to create imprint for safe crafting',
+        probability: 0.5,
+        averageCost: craicicChimeralPrice + 20, // Beast + base crafting cost
+        currencyUsed: {
+          'Craicic Chimeral': 1,
+          'Orb of Alteration': 50,
+          'Regal Orb': 2
+        },
+        steps: [
+          `Start with a magic ${baseItem.name} with desired mod`,
+          'Use Craicic Chimeral to create an imprint',
+          'Use Regal Orb to upgrade to rare',
+          'If bad regal, restore with imprint and try again',
+          'Repeat until good regal, then continue crafting',
+          '💡 This method is great for preserving good magic items'
+        ],
+        expectedAttempts: 2
+      };
+    }
+
+    // Split beast (Fenumal Hybrid Arachnid) - duplicates a rare item
+    if (modTexts.includes('split')) {
+      return {
+        method: 'chaos',
+        name: 'Beastcraft (Split)',
+        description: 'Use Fenumal Hybrid Arachnid to duplicate item',
+        probability: 0.5,
+        averageCost: fenumalHybridPrice,
+        currencyUsed: {
+          'Fenumal Hybrid Arachnid': 1
+        },
+        steps: [
+          `Start with a rare ${baseItem.name} that has some desired mods`,
+          'Use Fenumal Hybrid Arachnid to split the item',
+          'Both resulting items will have some of the original mods',
+          'This creates two items from one, useful for valuable items',
+          '⚠️ Mods are randomly distributed between the two items'
+        ],
+        expectedAttempts: 1
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Helper: Calculate optimal p/s combinations for recombinator crafting
+   * Returns suggested prefix/suffix counts for each item
+   */
+  private getOptimalRecombinatorCombination(
+    prefixCount: number,
+    suffixCount: number
+  ): { itemA: string; itemB: string; totalPrefixes: number; totalSuffixes: number } {
+    const totalPrefixes = prefixCount;
+    const totalSuffixes = suffixCount;
+
+    // Optimal strategy: Use mod doubling by having overlapping mods
+    // For 2 desired mods of same type: 1p/0s + 1p/0s (double the mod)
+    // For mixed types: distribute evenly
+
+    let itemA = '';
+    let itemB = '';
+
+    if (prefixCount === 2 && suffixCount === 0) {
+      // 2 prefixes: Double 1 mod
+      itemA = '1p/0s';
+      itemB = '1p/0s';
+    } else if (prefixCount === 0 && suffixCount === 2) {
+      // 2 suffixes: Double 1 mod
+      itemA = '0p/1s';
+      itemB = '0p/1s';
+    } else if (prefixCount === 1 && suffixCount === 1) {
+      // 1p + 1s: Simple combination
+      itemA = '1p/0s';
+      itemB = '0p/1s';
+    } else if (prefixCount === 3 && suffixCount === 0) {
+      // 3 prefixes: 2p on one, 1p doubled on both
+      itemA = '2p/0s';
+      itemB = '1p/0s';
+    } else if (prefixCount === 0 && suffixCount === 3) {
+      // 3 suffixes: 2s on one, 1s doubled on both
+      itemA = '0p/2s';
+      itemB = '0p/1s';
+    } else if (prefixCount === 2 && suffixCount === 1) {
+      // 2p + 1s: Double 1 prefix
+      itemA = '1p/1s';
+      itemB = '1p/0s';
+    } else if (prefixCount === 1 && suffixCount === 2) {
+      // 1p + 2s: Double 1 suffix
+      itemA = '1p/1s';
+      itemB = '0p/1s';
+    } else {
+      // Fallback: distribute evenly
+      const itemAPrefixes = Math.ceil(prefixCount / 2);
+      const itemBPrefixes = prefixCount - itemAPrefixes;
+      const itemASuffixes = Math.ceil(suffixCount / 2);
+      const itemBSuffixes = suffixCount - itemASuffixes;
+      itemA = `${itemAPrefixes}p/${itemASuffixes}s`;
+      itemB = `${itemBPrefixes}p/${itemBSuffixes}s`;
+    }
+
+    return { itemA, itemB, totalPrefixes, totalSuffixes };
+  }
+
+  /**
+   * Calculate Recombinator crafting method
+   * Combines two items to create one item with mods from both
+   *
+   * Notation: p = prefix, s = suffix
+   * Example: 1p/0s + 2p/1s means Item A has 1 prefix, 0 suffixes
+   *          and Item B has 2 prefixes, 1 suffix (3TP/1TS total)
+   * Success Rate: Always 1/3 for hitting desired mods
+   */
+  private async calculateRecombinator(
+    desiredMods: DesiredMod[],
+    baseItem: BaseItem,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Recombinators are best for 2-4 desired mods
+    if (desiredMods.length < 2 || desiredMods.length > 4) {
+      return null;
+    }
+
+    // Check if recombinators are available (they were removed after Sentinel league)
+    // For now, we'll calculate but note availability
+    const recombinatorPrice = this.currencyPrices.get('Armour Recombinator')?.chaosValue || 100;
+
+    // Count prefixes and suffixes
+    const prefixes = desiredMods.filter(m => m.type === 'prefix');
+    const suffixes = desiredMods.filter(m => m.type === 'suffix');
+    const prefixCount = prefixes.length;
+    const suffixCount = suffixes.length;
+
+    // Success rate is always 1/3 for recombinators
+    const successProbability = 1/3;
+    const expectedAttempts = Math.ceil(1 / successProbability); // = 3
+
+    // Get optimal combination
+    const combination = this.getOptimalRecombinatorCombination(prefixCount, suffixCount);
+
+    // Build strategy description using p/s notation
+    const strategyNotation = `${combination.itemA} + ${combination.itemB} → ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS`;
+
+    // Build detailed strategy based on desired mods
+    let detailedStrategy = '';
+    if (prefixCount === 2 && suffixCount === 0) {
+      detailedStrategy = `Craft Item A with 1 desired prefix, craft Item B with the SAME prefix (mod doubling). Result: 2TP/0TS`;
+    } else if (prefixCount === 0 && suffixCount === 2) {
+      detailedStrategy = `Craft Item A with 1 desired suffix, craft Item B with the SAME suffix (mod doubling). Result: 0TP/2TS`;
+    } else if (prefixCount === 1 && suffixCount === 1) {
+      detailedStrategy = `Craft Item A with the desired prefix (1p/0s), craft Item B with the desired suffix (0p/1s). Result: 1TP/1TS`;
+    } else if (prefixCount === 3 && suffixCount === 0) {
+      detailedStrategy = `Craft Item A with 2 desired prefixes (2p/0s), craft Item B with 1 of those prefixes doubled (1p/0s). Result: 3TP/0TS`;
+    } else if (prefixCount === 0 && suffixCount === 3) {
+      detailedStrategy = `Craft Item A with 2 desired suffixes (0p/2s), craft Item B with 1 of those suffixes doubled (0p/1s). Result: 0TP/3TS`;
+    } else if (prefixCount === 2 && suffixCount === 1) {
+      detailedStrategy = `Craft Item A with 1 prefix + 1 suffix (1p/1s), craft Item B with 1 prefix doubled (1p/0s). Result: 2TP/1TS`;
+    } else if (prefixCount === 1 && suffixCount === 2) {
+      detailedStrategy = `Craft Item A with 1 prefix + 1 suffix (1p/1s), craft Item B with 1 suffix doubled (0p/1s). Result: 1TP/2TS`;
+    } else {
+      detailedStrategy = `Craft Item A: ${combination.itemA}, craft Item B: ${combination.itemB}. Result: ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS`;
+    }
+
+    // Cost calculation: need to craft two base items + recombinator
+    const chaosPrice = this.currencyPrices.get('Chaos Orb')?.chaosValue || 1;
+    const baseCraftCost = 50 * chaosPrice; // Estimate for crafting each base item
+    const totalBaseCost = baseCraftCost * 2; // Two items needed
+    const recombinatorCost = recombinatorPrice * expectedAttempts;
+    const averageCost = totalBaseCost * expectedAttempts + recombinatorCost;
+
+    // Build specific crafting steps with mod names
+    const itemAMods: string[] = [];
+    const itemBMods: string[] = [];
+
+    // Distribute mods based on optimal combination
+    if (combination.itemA.includes('2p')) {
+      itemAMods.push(...prefixes.slice(0, 2).map(p => p.name));
+    } else if (combination.itemA.includes('1p')) {
+      itemAMods.push(prefixes[0]?.name || 'prefix');
+    }
+    if (combination.itemA.includes('2s')) {
+      itemAMods.push(...suffixes.slice(0, 2).map(s => s.name));
+    } else if (combination.itemA.includes('1s')) {
+      itemAMods.push(suffixes[0]?.name || 'suffix');
+    }
+
+    if (combination.itemB.includes('2p')) {
+      itemBMods.push(...prefixes.slice(0, 2).map(p => p.name));
+    } else if (combination.itemB.includes('1p')) {
+      // Use the same mod for doubling if possible
+      itemBMods.push(prefixes[prefixCount > 1 && combination.itemA.includes('1p') ? 0 : Math.min(1, prefixCount - 1)]?.name || 'prefix');
+    }
+    if (combination.itemB.includes('2s')) {
+      itemBMods.push(...suffixes.slice(0, 2).map(s => s.name));
+    } else if (combination.itemB.includes('1s')) {
+      // Use the same mod for doubling if possible
+      itemBMods.push(suffixes[suffixCount > 1 && combination.itemA.includes('1s') ? 0 : Math.min(1, suffixCount - 1)]?.name || 'suffix');
+    }
+
+    return {
+      method: 'harvest', // Using 'harvest' as a catch-all for special methods
+      name: `Recombinator (${strategyNotation})`,
+      description: `Combine two items to merge their modifiers using mod doubling strategy`,
+      probability: successProbability,
+      averageCost,
+      currencyUsed: {
+        [`${baseItem.item_class} Recombinator`]: expectedAttempts,
+        'Chaos Orb (for base crafting)': Math.floor(totalBaseCost / chaosPrice) * expectedAttempts
+      },
+      steps: [
+        `⚠️ NOTE: Recombinators were removed after Sentinel league and may not be available`,
+        `📊 Strategy: ${strategyNotation}`,
+        `💡 ${detailedStrategy}`,
+        ``,
+        `Crafting Steps:`,
+        `1. Craft Item A (${combination.itemA}): ${baseItem.name} with [${itemAMods.join(', ')}]`,
+        `   • Use Essence/Alteration spam to hit these mods`,
+        ``,
+        `2. Craft Item B (${combination.itemB}): ${baseItem.name} with [${itemBMods.join(', ')}]`,
+        `   • ${itemAMods.some(mod => itemBMods.includes(mod)) ? '⭐ Double one mod from Item A for higher success rate!' : 'Use Essence/Alteration spam to hit these mods'}`,
+        ``,
+        `3. Use ${baseItem.item_class} Recombinator to combine both items`,
+        `   • The recombinator will randomly select mods from both items`,
+        `   • Success rate: 1/3 (always)`,
+        `   • Expected attempts: ${expectedAttempts}`,
+        ``,
+        `💡 MOD DOUBLING TIP: Having the same mod on both items does NOT increase your chance`,
+        `   but it does increase the pool size, giving you more total affixes to work with`,
+        ``,
+        `Result: ${combination.totalPrefixes}TP/${combination.totalSuffixes}TS total affixes across both items`
+      ],
+      expectedAttempts
+    };
+  }
+
+  /**
+   * Helper: Determine harvest craft type based on desired mods
+   */
+  private getHarvestTypeForMods(desiredMods: DesiredMod[]): string | null {
+    const modTexts = desiredMods.map(m => m.name.toLowerCase()).join(' ');
+
+    // Map common mod types to harvest craft types
+    if (modTexts.includes('life') || modTexts.includes('mana')) return 'Life';
+    if (modTexts.includes('fire') || modTexts.includes('cold') || modTexts.includes('lightning')) return 'Elemental';
+    if (modTexts.includes('physical') || modTexts.includes('attack')) return 'Physical';
+    if (modTexts.includes('chaos') || modTexts.includes('poison')) return 'Chaos';
+    if (modTexts.includes('crit') || modTexts.includes('spell')) return 'Caster';
+    if (modTexts.includes('speed') || modTexts.includes('attack')) return 'Speed';
+    if (modTexts.includes('armour') || modTexts.includes('evasion') || modTexts.includes('energy shield')) return 'Defence';
+
+    return null;
+  }
+
+  /**
+   * Helper: Calculate probability with custom mod pool
+   */
+  private calculateModProbabilityWithPool(
+    desiredMods: DesiredMod[],
+    modPool: Mod[],
+    itemTags: string[]
+  ): number {
+    const prefixes = desiredMods.filter(m => m.type === 'prefix');
+    const suffixes = desiredMods.filter(m => m.type === 'suffix');
+
+    const availablePrefixes = modPool.filter(m => m.type === 'prefix');
+    const availableSuffixes = modPool.filter(m => m.type === 'suffix');
+
+    if (availablePrefixes.length === 0 || availableSuffixes.length === 0) {
+      return 0;
+    }
+
+    let probability = 1;
+
+    for (const prefix of prefixes) {
+      const matchingMods = availablePrefixes.filter(m =>
+        m.name.toLowerCase().includes(prefix.name.toLowerCase())
+      );
+      if (matchingMods.length === 0) return 0;
+      probability *= matchingMods.length / availablePrefixes.length;
+    }
+
+    for (const suffix of suffixes) {
+      const matchingMods = availableSuffixes.filter(m =>
+        m.name.toLowerCase().includes(suffix.name.toLowerCase())
+      );
+      if (matchingMods.length === 0) return 0;
+      probability *= matchingMods.length / availableSuffixes.length;
+    }
+
+    return probability;
   }
 
   /**

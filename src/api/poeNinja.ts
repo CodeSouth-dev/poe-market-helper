@@ -251,7 +251,16 @@ export class PoeNinjaAPI {
 
   /**
    * Get items with best profit margins for crafting
-   * ONLY returns craftable base types (rare items), NOT drop-only uniques
+   * Returns all craftable base types including:
+   * - Normal/magic/rare items
+   * - Fractured items (locked mods, rest craftable)
+   * - Synthesized items (special implicit, explicit mods craftable)
+   * - Influenced items (Shaper/Elder/Conqueror - prime crafting bases)
+   * - 4/5/6-link items (part of crafting process)
+   *
+   * EXCLUDES:
+   * - Unique items (already excluded via BaseType category)
+   * - Corrupted items (cannot be modified)
    */
   async getProfitableItems(league: string, limit: number = 20): Promise<Array<{
     item: PoeNinjaItem;
@@ -262,8 +271,8 @@ export class PoeNinjaAPI {
   }>> {
     const allItems: PoeNinjaItem[] = [];
 
-    // ONLY use BaseType - these are craftable rare items
-    // Uniques like Headhunter/Mageblood are NOT craftable!
+    // ONLY use BaseType - these are craftable items
+    // Uniques are in separate categories (UniqueWeapon, UniqueArmour, etc.)
     try {
       const baseTypes = await this.searchCategory('', league, 'BaseType');
       allItems.push(...baseTypes);
@@ -275,7 +284,24 @@ export class PoeNinjaAPI {
     const profitableItems = allItems
       .filter(item => {
         // Must be valuable enough and have decent trading activity
-        return item.chaosValue > 20 && item.listingCount && item.listingCount > 3;
+        if (!(item.chaosValue > 20 && item.listingCount && item.listingCount > 3)) {
+          return false;
+        }
+
+        // Only exclude corrupted items - they cannot be modified
+        const variant = (item.variant || '').toLowerCase();
+        if (variant.includes('corrupt')) {
+          return false;
+        }
+
+        // Everything else in BaseType category is craftable:
+        // - Normal/magic/rare bases
+        // - Fractured bases (locked mods but rest is craftable)
+        // - Synthesized bases (implicit locked, explicit craftable)
+        // - Influenced bases (Shaper/Elder/Conqueror - valuable crafting bases)
+        // - Any link count (4/5/6-link are all craftable)
+
+        return true;
       })
       .map(item => {
         const sellPrice = item.chaosValue;

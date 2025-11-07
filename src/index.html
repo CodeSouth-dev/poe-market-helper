@@ -1048,7 +1048,7 @@
         };
 
         // Get available mods for a specific item class
-        function getModsForItemClass(itemClass, modType) {
+        function getModsForItemClass(itemClass, modType, itemLevel = 100) {
             if (!itemClass) return [];
 
             let mods = [];
@@ -1078,7 +1078,37 @@
             const uniqueMods = Array.from(new Set(mods.map(m => m.name)))
                 .map(name => mods.find(m => m.name === name));
 
-            return uniqueMods;
+            // Filter by item level - only show mods that can roll on this item
+            const filteredByLevel = uniqueMods.filter(mod => {
+                return itemLevel >= mod.ilvl;
+            });
+
+            // Filter out mods that would conflict with current mods
+            // Check if we have room for more prefixes/suffixes
+            const maxPrefixes = 3;
+            const maxSuffixes = 3;
+
+            if (modType === 'prefix' && currentItemMods.count.prefixes >= maxPrefixes) {
+                return []; // No room for more prefixes
+            }
+            if (modType === 'suffix' && currentItemMods.count.suffixes >= maxSuffixes) {
+                return []; // No room for more suffixes
+            }
+
+            // Filter out mods that are similar to existing mods (same mod group)
+            // This is a simplified check - in reality PoE has complex mod groups
+            const currentModTexts = [...currentItemMods.prefixes, ...currentItemMods.suffixes];
+            const availableMods = filteredByLevel.filter(mod => {
+                // Check if a similar mod already exists
+                const modBase = mod.name.replace(/[+#%\d\s\-]/g, '').toLowerCase();
+                const hasSimilar = currentModTexts.some(currentMod => {
+                    const currentModBase = currentMod.replace(/[+#%\d\s\-]/g, '').toLowerCase();
+                    return currentModBase.includes(modBase) || modBase.includes(currentModBase);
+                });
+                return !hasSimilar;
+            });
+
+            return availableMods;
         }
 
         // Initialize app
@@ -1474,8 +1504,9 @@
             modDiv.className = 'mod-input-group';
             modDiv.setAttribute('data-mod-id', modId);
 
-            // Get current item class
+            // Get current item class and level
             const itemClass = document.getElementById('craftItemClass').value;
+            const itemLevel = parseInt(document.getElementById('craftItemLevel').value) || 100;
 
             modDiv.innerHTML = `
                 <div class="mod-inputs">
@@ -1483,15 +1514,20 @@
                         <label>Type:</label>
                         <select class="mod-type" data-mod-id="${modId}" required>
                             <option value="">Select Type First</option>
-                            <option value="prefix">Prefix</option>
-                            <option value="suffix">Suffix</option>
+                            <option value="prefix">Prefix (${3 - currentItemMods.count.prefixes} slots)</option>
+                            <option value="suffix">Suffix (${3 - currentItemMods.count.suffixes} slots)</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative; flex: 2;">
                         <label>Mod Name:</label>
-                        <select class="mod-name" data-mod-id="${modId}" required>
-                            <option value="">Select type first...</option>
-                        </select>
+                        <input type="text"
+                               class="mod-search"
+                               data-mod-id="${modId}"
+                               placeholder="Type to search mods..."
+                               autocomplete="off"
+                               required>
+                        <input type="hidden" class="mod-name" data-mod-id="${modId}">
+                        <div class="mod-dropdown" data-mod-id="${modId}" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: rgba(30, 30, 40, 0.98); border: 2px solid #ffd700; border-radius: 5px; max-height: 300px; overflow-y: auto; z-index: 1000; margin-top: 5px;"></div>
                     </div>
                     <button type="button" class="btn-danger btn-small" onclick="removeMod(${modId})">Remove</button>
                 </div>
@@ -1500,55 +1536,150 @@
 
             // Add event listener to mod type selector
             const modTypeSelect = modDiv.querySelector('.mod-type');
-            const modNameSelect = modDiv.querySelector('.mod-name');
+            const modSearchInput = modDiv.querySelector('.mod-search');
+            const modNameHidden = modDiv.querySelector('.mod-name');
+            const modDropdown = modDiv.querySelector('.mod-dropdown');
 
             modTypeSelect.addEventListener('change', function() {
-                updateModNameOptions(modNameSelect, this.value, itemClass);
+                updateSearchableModOptions(modSearchInput, modNameHidden, modDropdown, this.value, itemClass, itemLevel);
             });
+
+            // Setup search functionality
+            setupModSearch(modSearchInput, modNameHidden, modDropdown, modTypeSelect, itemClass, itemLevel);
         }
 
-        // Update mod name dropdown based on type and item class
-        function updateModNameOptions(selectElement, modType, itemClass) {
+        // Setup searchable mod dropdown
+        function setupModSearch(searchInput, hiddenInput, dropdown, typeSelect, itemClass, itemLevel) {
+            let allMods = [];
+            let selectedModName = '';
+
+            // Focus handler - show dropdown with all available mods
+            searchInput.addEventListener('focus', function() {
+                const modType = typeSelect.value;
+                if (modType) {
+                    allMods = getModsForItemClass(itemClass, modType, itemLevel);
+                    filterAndShowMods('');
+                }
+            });
+
+            // Input handler - filter mods as user types
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                filterAndShowMods(searchTerm);
+            });
+
+            // Click outside to close dropdown
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            function filterAndShowMods(searchTerm) {
+                const filteredMods = allMods.filter(mod =>
+                    mod.name.toLowerCase().includes(searchTerm)
+                );
+
+                if (filteredMods.length === 0) {
+                    dropdown.innerHTML = '<div style="padding: 10px; color: #888;">No mods found</div>';
+                    dropdown.style.display = 'block';
+                    return;
+                }
+
+                dropdown.innerHTML = '';
+                filteredMods.forEach(mod => {
+                    const modItem = document.createElement('div');
+                    modItem.style.cssText = 'padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #444;';
+                    modItem.innerHTML = `
+                        <div style="color: #ffd700;">${mod.name}</div>
+                        <div style="color: #888; font-size: 11px;">${mod.tier}, ilvl ${mod.ilvl}+</div>
+                    `;
+
+                    modItem.addEventListener('mouseenter', function() {
+                        this.style.background = 'rgba(255, 215, 0, 0.2)';
+                    });
+                    modItem.addEventListener('mouseleave', function() {
+                        this.style.background = 'transparent';
+                    });
+                    modItem.addEventListener('click', function() {
+                        searchInput.value = mod.name;
+                        hiddenInput.value = mod.name;
+                        selectedModName = mod.name;
+                        dropdown.style.display = 'none';
+                    });
+
+                    dropdown.appendChild(modItem);
+                });
+
+                dropdown.style.display = 'block';
+            }
+        }
+
+        // Update searchable mod options
+        function updateSearchableModOptions(searchInput, hiddenInput, dropdown, modType, itemClass, itemLevel) {
             if (!modType) {
-                selectElement.innerHTML = '<option value="">Select type first...</option>';
+                searchInput.disabled = true;
+                searchInput.placeholder = 'Select type first...';
+                dropdown.style.display = 'none';
                 return;
             }
 
-            const mods = getModsForItemClass(itemClass, modType);
+            searchInput.disabled = false;
+            searchInput.placeholder = 'Type to search mods...';
+            searchInput.value = '';
+            hiddenInput.value = '';
 
-            if (mods.length === 0) {
-                selectElement.innerHTML = '<option value="">No mods available</option>';
-                return;
+            // Update the slot count in the type dropdown
+            const modTypeSelect = searchInput.closest('.mod-input-group').querySelector('.mod-type');
+            const prefixOption = modTypeSelect.querySelector('option[value="prefix"]');
+            const suffixOption = modTypeSelect.querySelector('option[value="suffix"]');
+
+            if (prefixOption) {
+                prefixOption.textContent = `Prefix (${3 - currentItemMods.count.prefixes} slots)`;
             }
-
-            selectElement.innerHTML = '<option value="">Choose a mod...</option>';
-            mods.forEach(mod => {
-                const option = document.createElement('option');
-                option.value = mod.name;
-                option.textContent = `${mod.name} (${mod.tier}, ilvl ${mod.ilvl}+)`;
-                selectElement.appendChild(option);
-            });
+            if (suffixOption) {
+                suffixOption.textContent = `Suffix (${3 - currentItemMods.count.suffixes} slots)`;
+            }
         }
 
-        // Update all mod dropdowns when item class changes
+        // Update all mod dropdowns when item class or item level changes
         function updateAllModDropdowns() {
             const itemClass = document.getElementById('craftItemClass').value;
+            const itemLevel = parseInt(document.getElementById('craftItemLevel').value) || 100;
             const modInputs = document.querySelectorAll('.mod-input-group');
 
             modInputs.forEach(modInput => {
                 const modTypeSelect = modInput.querySelector('.mod-type');
-                const modNameSelect = modInput.querySelector('.mod-name');
+                const modSearchInput = modInput.querySelector('.mod-search');
+                const modNameHidden = modInput.querySelector('.mod-name');
+                const modDropdown = modInput.querySelector('.mod-dropdown');
 
-                if (modTypeSelect && modTypeSelect.value) {
-                    updateModNameOptions(modNameSelect, modTypeSelect.value, itemClass);
+                if (modTypeSelect && modTypeSelect.value && modSearchInput) {
+                    updateSearchableModOptions(modSearchInput, modNameHidden, modDropdown, modTypeSelect.value, itemClass, itemLevel);
+                }
+
+                // Update slot counts in type selector
+                const prefixOption = modTypeSelect.querySelector('option[value="prefix"]');
+                const suffixOption = modTypeSelect.querySelector('option[value="suffix"]');
+
+                if (prefixOption) {
+                    prefixOption.textContent = `Prefix (${3 - currentItemMods.count.prefixes} slots)`;
+                }
+                if (suffixOption) {
+                    suffixOption.textContent = `Suffix (${3 - currentItemMods.count.suffixes} slots)`;
                 }
             });
         }
 
-        // Add event listener to item class selector
+        // Add event listener to item class and item level selectors
         const craftItemClassSelect = document.getElementById('craftItemClass');
+        const craftItemLevelInput = document.getElementById('craftItemLevel');
+
         if (craftItemClassSelect) {
             craftItemClassSelect.addEventListener('change', updateAllModDropdowns);
+        }
+        if (craftItemLevelInput) {
+            craftItemLevelInput.addEventListener('input', updateAllModDropdowns);
         }
 
         window.removeMod = function(modId) {
@@ -1591,6 +1722,15 @@
                         }
                     }
 
+                    // Update mod dropdowns based on parsed item
+                    updateAllModDropdowns();
+
+                    // Show current mods if any
+                    if (parsedData.currentMods && parsedData.currentMods.length > 0) {
+                        console.log('Current mods on item:', parsedData.currentMods);
+                        console.log('Available mod slots - Prefixes:', 3 - currentItemMods.count.prefixes, ', Suffixes:', 3 - currentItemMods.count.suffixes);
+                    }
+
                     // Visual feedback
                     itemPasteArea.style.borderColor = '#00ff00';
                     setTimeout(() => {
@@ -1614,8 +1754,12 @@
                 baseName: null,
                 itemLevel: null,
                 itemClass: null,
-                rarity: null
+                rarity: null,
+                currentMods: []
             };
+
+            let inModSection = false;
+            let pastRequirements = false;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
@@ -1636,6 +1780,7 @@
                 // Parse base name - usually after rarity line or second non-empty line
                 // For magic/rare items, look for "--------" separator and get the line after
                 if (line === '--------') {
+                    inModSection = true;
                     // Base type is usually after the separator
                     for (let j = i + 1; j < lines.length; j++) {
                         const nextLine = lines[j];
@@ -1660,6 +1805,20 @@
                         result.itemClass = classMatch[0];
                     }
                 }
+
+                // Track when we pass the requirements section
+                if (line.match(/Requirements?:/i)) {
+                    pastRequirements = true;
+                }
+
+                // Extract mods (between separators, after requirements)
+                if (inModSection && pastRequirements && line !== '--------') {
+                    // Mods typically have numbers or percentages, and are not requirements/sockets
+                    if (line.match(/[+\-]?\d+/) &&
+                        !line.match(/Requirements?:|Sockets:|Item Level:|Quality:|Armour:|Evasion:|Energy Shield:|Level:|Str |Dex |Int /i)) {
+                        result.currentMods.push(line);
+                    }
+                }
             }
 
             // If no base name found yet, try to get it from the name lines
@@ -1670,6 +1829,25 @@
                     result.baseName = lines[2];
                 }
             }
+
+            // Count prefixes and suffixes (rough estimate based on mod patterns)
+            // In PoE, rare items can have up to 3 prefixes and 3 suffixes
+            currentItemMods.prefixes = [];
+            currentItemMods.suffixes = [];
+            result.currentMods.forEach(mod => {
+                // Common prefix indicators: life, mana, energy shield, flat damage, attributes
+                if (mod.match(/maximum Life|maximum Mana|maximum Energy Shield|to Strength|to Dexterity|to Intelligence|to all Attributes|Adds \d+ to \d+|increased Armour|increased Evasion|Level of/i)) {
+                    currentItemMods.prefixes.push(mod);
+                } else {
+                    // Common suffix indicators: resistances, accuracy, attack speed, cast speed
+                    currentItemMods.suffixes.push(mod);
+                }
+            });
+
+            currentItemMods.count = {
+                prefixes: currentItemMods.prefixes.length,
+                suffixes: currentItemMods.suffixes.length
+            };
 
             return result;
         }
