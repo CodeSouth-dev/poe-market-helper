@@ -17,6 +17,7 @@ import { fossilOptimizer } from './fossilOptimizer';
 import { automatedBaseAnalyzer } from './automatedBaseAnalyzer';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 import { pohxCraftingScraper } from './pohxCraftingScraper';
+import { maxRollCraftingScraper } from './maxRollCraftingScraper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -996,6 +997,96 @@ ipcMain.handle('pohx-search', async (event: any, keyword: string) => {
     return { success: true, data: guides };
   } catch (error: any) {
     console.error('Search Pohx guides error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== MaxRoll Crafting Guides ====================
+
+// Scrape all crafting guides from maxroll.gg
+ipcMain.handle('maxroll-scrape-all-guides', async (event: any) => {
+  try {
+    const result = await maxRollCraftingScraper.scrapeAllGuides();
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Scrape MaxRoll guides error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get all sections
+ipcMain.handle('maxroll-get-all-sections', async (event: any) => {
+  try {
+    const sections = await maxRollCraftingScraper.getAllSections();
+    return { success: true, data: sections };
+  } catch (error: any) {
+    console.error('Get MaxRoll sections error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get general crafting tips
+ipcMain.handle('maxroll-get-general-tips', async (event: any) => {
+  try {
+    const tips = await maxRollCraftingScraper.getGeneralTips();
+    return { success: true, data: tips };
+  } catch (error: any) {
+    console.error('Get MaxRoll tips error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get methods by category
+ipcMain.handle('maxroll-get-by-category', async (event: any, category: 'Basic' | 'Intermediate' | 'Advanced') => {
+  try {
+    const methods = await maxRollCraftingScraper.getMethodsByCategory(category);
+    return { success: true, data: methods };
+  } catch (error: any) {
+    console.error('Get MaxRoll methods by category error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get basic crafting methods
+ipcMain.handle('maxroll-get-basic-methods', async (event: any) => {
+  try {
+    const methods = await maxRollCraftingScraper.getBasicMethods();
+    return { success: true, data: methods };
+  } catch (error: any) {
+    console.error('Get MaxRoll basic methods error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get intermediate crafting methods
+ipcMain.handle('maxroll-get-intermediate-methods', async (event: any) => {
+  try {
+    const methods = await maxRollCraftingScraper.getIntermediateMethods();
+    return { success: true, data: methods };
+  } catch (error: any) {
+    console.error('Get MaxRoll intermediate methods error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Search MaxRoll methods
+ipcMain.handle('maxroll-search', async (event: any, keyword: string) => {
+  try {
+    const methods = await maxRollCraftingScraper.searchMethods(keyword);
+    return { success: true, data: methods };
+  } catch (error: any) {
+    console.error('Search MaxRoll methods error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get method by name
+ipcMain.handle('maxroll-get-method-by-name', async (event: any, name: string) => {
+  try {
+    const method = await maxRollCraftingScraper.getMethodByName(name);
+    return { success: true, data: method };
+  } catch (error: any) {
+    console.error('Get MaxRoll method by name error:', error);
     return { success: false, error: error.message };
   }
 });
