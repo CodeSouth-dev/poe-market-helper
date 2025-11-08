@@ -168,6 +168,51 @@ electron_1.ipcMain.handle('search-mods', async (event, query, itemClass) => {
         return { success: false, error: error.message };
     }
 });
+// Get mods for item with weights
+electron_1.ipcMain.handle('get-mods-for-item', async (event, params) => {
+    try {
+        if (!craftingData.isLoaded()) {
+            await craftingData.loadAll();
+        }
+        const baseItem = params.baseItemName
+            ? craftingData.getBaseItem(params.baseItemName)
+            : null;
+        const tags = baseItem?.tags || [params.itemClass.toLowerCase().replace(/\s/g, '')];
+        // Get all mods for this item class
+        const allMods = craftingData.getModsForItemClass(params.itemClass, tags);
+        // Helper to get mod weight for specific item tags
+        function getModWeight(mod) {
+            if (!mod.spawn_weights || mod.spawn_weights.length === 0)
+                return 0;
+            // Find weight for matching tags
+            for (const sw of mod.spawn_weights) {
+                if (tags.some(tag => tag.toLowerCase() === sw.tag.toLowerCase())) {
+                    return sw.weight;
+                }
+            }
+            return 0;
+        }
+        // Filter by type and ilvl, add weight info
+        const filteredMods = allMods
+            .filter(mod => mod.type === params.modType)
+            .filter(mod => mod.required_level <= params.itemLevel)
+            .map(mod => ({
+            name: mod.name,
+            type: mod.type,
+            requiredLevel: mod.required_level,
+            weight: getModWeight(mod),
+            stats: mod.stats,
+            domain: mod.domain
+        }))
+            .filter(mod => mod.weight > 0) // Only show rollable mods
+            .sort((a, b) => b.weight - a.weight); // Sort by weight (higher = more common)
+        return { success: true, data: filteredMods };
+    }
+    catch (error) {
+        console.error('Get mods error:', error);
+        return { success: false, error: error.message };
+    }
+});
 electron_1.ipcMain.handle('search-base-items', async (event, query) => {
     try {
         if (!craftingData.isLoaded()) {
