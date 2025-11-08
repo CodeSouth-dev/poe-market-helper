@@ -2060,6 +2060,53 @@
             });
         }
 
+        // Extract base type from magic item names
+        // Magic items have format like "Plague Jade Amulet" or "Jade Amulet of the Pupil"
+        // where "Plague" and "of the Pupil" are magic mod names
+        function extractBaseFromMagicItem(magicName) {
+            // Known base type patterns - match the actual base at the end
+            const basePatterns = [
+                // Jewelry
+                /(?:.*\s)?(Jade Amulet|Lapis Amulet|Amber Amulet|Agate Amulet|Coral Amulet|Onyx Amulet|Gold Amulet|Turquoise Amulet|Citrine Amulet|Marble Amulet|Blue Pearl Amulet|Seaglass Amulet|Simplex Amulet|Astrolabe Amulet|Bonespire Amulet)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(Iron Ring|Coral Ring|Paua Ring|Sapphire Ring|Topaz Ring|Ruby Ring|Diamond Ring|Gold Ring|Moonstone Ring|Two-Stone Ring|Prismatic Ring|Unset Ring|Amethyst Ring|Vermillion Ring|Cerulean Ring|Opal Ring|Steel Ring|Breach Ring)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(Rustic Sash|Chain Belt|Leather Belt|Heavy Belt|Cloth Belt|Studded Belt|Vanguard Belt|Crystal Belt|Stygian Vise)(?:\s+of\s+.*)?/i,
+
+                // Armour
+                /(?:.*\s)?(.*?Helmet|.*?Helm|.*?Hood|.*?Crown|.*?Circlet|.*?Tricorne|.*?Burgonet|.*?Sallet|.*?Bascinet)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Regalia|.*?Vestment|.*?Garb|.*?Robe|.*?Brigandine|.*?Raiment|.*?Coat|.*?Chainmail|.*?Plate|.*?Lamellar|.*?Armour|.*?Cuirass|.*?Hauberk)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Gloves|.*?Gauntlets|.*?Mitts|.*?Mittens)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Boots|.*?Greaves|.*?Slippers)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Shield|.*?Buckler)(?:\s+of\s+.*)?/i,
+
+                // Weapons
+                /(?:.*\s)?(.*?Wand)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Sceptre|.*?Sekhem)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Staff|.*?Quarterstaff|.*?Lathi)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Bow)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Dagger|.*?Kris|.*?Poignard|.*?Skean)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Claw|.*?Awl)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Sword|.*?Blade|.*?Rapier|.*?Foil|.*?Saber)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Axe|.*?Cleaver|.*?Hatchet|.*?Labrys)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Mace|.*?Gavel|.*?Hammer|.*?Pernarch)(?:\s+of\s+.*)?/i,
+                /(?:.*\s)?(.*?Quiver)(?:\s+of\s+.*)?/i
+            ];
+
+            for (const pattern of basePatterns) {
+                const match = magicName.match(pattern);
+                if (match && match[1]) {
+                    return match[1].trim();
+                }
+            }
+
+            // If no pattern matched, try to remove common magic prefixes/suffixes
+            // Magic prefixes are usually one word at the start
+            // Magic suffixes are "of the X" format
+            let baseName = magicName.replace(/^[A-Z][a-z]+\s+/, ''); // Remove prefix word
+            baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, ''); // Remove "of the X" suffix
+
+            return baseName;
+        }
+
         // Parse PoE item text
         function parsePoEItem(itemText) {
             const lines = itemText.split('\n').map(line => line.trim()).filter(line => line);
@@ -2097,8 +2144,15 @@
                     if (result.rarity.toLowerCase() === 'normal' && i === 1) {
                         result.baseName = line;
                         foundBaseName = true;
-                    } else if ((result.rarity.toLowerCase() === 'rare' || result.rarity.toLowerCase() === 'magic') && i === 2) {
+                    } else if (result.rarity.toLowerCase() === 'rare' && i === 2) {
+                        // For rare items, line 3 is the base type (line 2 is the rare name)
                         result.baseName = line;
+                        foundBaseName = true;
+                    } else if (result.rarity.toLowerCase() === 'magic' && i === 1) {
+                        // For magic items, the name includes the mod prefix/suffix with the base
+                        // Examples: "Plague Jade Amulet", "Jade Amulet of the Pupil"
+                        // We need to extract just the base type
+                        result.baseName = extractBaseFromMagicItem(line);
                         foundBaseName = true;
                     }
                 }
@@ -2448,6 +2502,21 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Crafting Goal -->
+                ${strategy.baseItem && strategy.desiredMods ? `
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">🎯 Crafting Goal</h4>
+                    <div style="color: #cccccc;">
+                        <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Base Item:</strong> ${strategy.baseItem} (ilvl ${strategy.itemLevel || '?'})</p>
+                        <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Item Class:</strong> ${strategy.itemClass || 'Unknown'}</p>
+                        <p style="margin: 10px 0 5px 0;"><strong style="color: #8b5cf6;">Desired Mods:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 25px; color: #afa;">
+                            ${strategy.desiredMods.map(mod => `<li>${mod}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
 
                 <!-- Steps -->
                 <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
@@ -2804,6 +2873,74 @@
             return recipes;
         }
 
+        // Map essences to the mods they guarantee
+        // Returns array of {essence, mod, tier, itemTypes} for mods that match the item's current mods
+        function findEssencesForMods(modsOnItem) {
+            const essenceDatabase = {
+                // Life/Mana/ES
+                'Greed': { mod: 'maximum Life', tiers: ['Whispering (20-24)', 'Muttering (25-29)', 'Weeping (30-34)', 'Wailing (35-39)', 'Screaming (40-44)', 'Shrieking (45-49)', 'Deafening (50-54)'] },
+                'Woe': { mod: 'maximum Mana', tiers: ['Whispering (35-39)', 'Muttering (40-44)', 'Weeping (45-49)', 'Wailing (50-54)', 'Screaming (55-59)', 'Shrieking (60-64)', 'Deafening (65-69)'] },
+                'Spite': { mod: 'maximum Energy Shield', tiers: ['Whispering (8-10)', 'Muttering (11-13)', 'Weeping (14-16)', 'Wailing (17-19)', 'Screaming (20-22)', 'Shrieking (23-25)', 'Deafening (26-28)'] },
+
+                // Resistances
+                'Anger': { mod: 'Fire Resistance', tiers: ['Whispering (16-19%)', 'Muttering (20-23%)', 'Weeping (24-27%)', 'Wailing (28-31%)', 'Screaming (32-35%)', 'Shrieking (36-39%)', 'Deafening (40-43%)'] },
+                'Hatred': { mod: 'Cold Resistance', tiers: ['Whispering (16-19%)', 'Muttering (20-23%)', 'Weeping (24-27%)', 'Wailing (28-31%)', 'Screaming (32-35%)', 'Shrieking (36-39%)', 'Deafening (40-43%)'] },
+                'Wrath': { mod: 'Lightning Resistance', tiers: ['Whispering (16-19%)', 'Muttering (20-23%)', 'Weeping (24-27%)', 'Wailing (28-31%)', 'Screaming (32-35%)', 'Shrieking (36-39%)', 'Deafening (40-43%)'] },
+
+                // Attributes
+                'Rage': { mod: 'to Strength', tiers: ['Whispering (15-18)', 'Muttering (19-22)', 'Weeping (23-26)', 'Wailing (27-30)', 'Screaming (31-34)', 'Shrieking (35-38)', 'Deafening (39-42)'] },
+                'Sorrow': { mod: 'to Dexterity', tiers: ['Whispering (15-18)', 'Muttering (19-22)', 'Weeping (23-26)', 'Wailing (27-30)', 'Screaming (31-34)', 'Shrieking (35-38)', 'Deafening (39-42)'] },
+                'Doubt': { mod: 'to Intelligence', tiers: ['Whispering (15-18)', 'Muttering (19-22)', 'Weeping (23-26)', 'Wailing (27-30)', 'Screaming (31-34)', 'Shrieking (35-38)', 'Deafening (39-42)'] },
+
+                // Weapon-specific
+                'Contempt': { mod: 'Physical Damage', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+                'Torment': { mod: 'Cast Speed', tiers: ['Whispering (5-7%)', 'Muttering (8-10%)', 'Weeping (11-13%)', 'Wailing (14-16%)', 'Screaming (17-19%)', 'Shrieking (20-22%)', 'Deafening (23-25%)'], itemTypes: ['weapon'] },
+                'Zeal': { mod: 'Attack Speed', tiers: ['Whispering (5-7%)', 'Muttering (8-10%)', 'Weeping (11-13%)', 'Wailing (14-16%)', 'Screaming (17-19%)', 'Shrieking (20-22%)', 'Deafening (23-25%)'], itemTypes: ['weapon'] },
+
+                // Armor/Evasion
+                'Fear': { mod: 'Armour', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['armour', 'helmet', 'gloves', 'boots', 'shield'] },
+                'Suffering': { mod: 'Evasion', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['armour', 'helmet', 'gloves', 'boots', 'shield'] },
+
+                // Elemental Damage (weapon)
+                'Scorn': { mod: 'Fire Damage to Attacks', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+                'Envy': { mod: 'Chaos Damage to Attacks', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+                'Dread': { mod: 'Cold Damage to Attacks', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+                'Anguish': { mod: 'Lightning Damage to Attacks', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+
+                // Crit
+                'Misery': { mod: 'Critical Strike Chance', tiers: ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening'], itemTypes: ['weapon'] },
+
+                // Spell Damage
+                'Loathing': { mod: 'Spell Damage', tiers: ['Whispering (13-17%)', 'Muttering (18-22%)', 'Weeping (23-27%)', 'Wailing (28-32%)', 'Screaming (33-37%)', 'Shrieking (38-42%)', 'Deafening (43-47%)'], itemTypes: ['weapon'] }
+            };
+
+            const matches = [];
+            const allMods = [...modsOnItem.explicit, ...modsOnItem.implicit];
+
+            // Check each essence against the item's mods
+            for (const [essenceName, essenceData] of Object.entries(essenceDatabase)) {
+                for (const itemMod of allMods) {
+                    // Normalize the mod text for comparison
+                    const normalizedMod = itemMod.toLowerCase();
+                    const normalizedEssenceMod = essenceData.mod.toLowerCase();
+
+                    // Check if the item mod contains the essence mod pattern
+                    if (normalizedMod.includes(normalizedEssenceMod)) {
+                        matches.push({
+                            essence: essenceName,
+                            mod: essenceData.mod,
+                            tiers: essenceData.tiers,
+                            itemTypes: essenceData.itemTypes || ['all'],
+                            matchedItemMod: itemMod
+                        });
+                        break; // Only match once per essence
+                    }
+                }
+            }
+
+            return matches;
+        }
+
         function determineBestCraftingMethod(itemData, modsOnItem, vendorRecipes, budgetMax) {
             const explicitModCount = modsOnItem.explicit.length;
             const itemClass = (itemData.itemClass || '').toLowerCase();
@@ -2916,7 +3053,7 @@
             if (explicitModCount >= 2) {
                 stepsHTML += `<div style="background: rgba(138,43,226,0.1); padding: 15px; border-left: 4px solid #8a2be2; margin-bottom: 15px;">
                     <h4 style="color: #8a2be2; margin: 0 0 10px 0;">⭐ Method ${methodNum}: Recombinator Method (VERY COST-EFFECTIVE)</h4>
-                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Available in Kingsmarch.</p>
+                    <p style="color: #ddd; margin: 0 0 10px 0;"><strong>Overview:</strong> Combine two items of the same base to merge their mods. Can use Recombinator in your hideout or at Kingsmarch.</p>
                     <ol style="color: #ddd; line-height: 1.8; margin: 0;">
                         <li><strong style="color: #ffd700;">Prepare Item 1:</strong> Alt-spam a <strong>${itemData.baseName || 'base'}</strong> (ilvl ${itemData.itemLevel || '82+'}) until you hit <strong>1 desired mod</strong>
                             <ul style="margin-top: 5px;">
@@ -2930,7 +3067,7 @@
                                 <li>Regal it as well</li>
                             </ul>
                         </li>
-                        <li><strong style="color: #ffd700;">Recombine:</strong> Use the Recombinator in Kingsmarch
+                        <li><strong style="color: #ffd700;">Recombine:</strong> Use a Recombinator (hideout or Kingsmarch)
                             <ul style="margin-top: 5px;">
                                 <li>Costs <strong>Gold + Thaumaturgic Dust</strong> (NOT chaos orbs!)</li>
                                 <li>Select which mods you want to keep from each item</li>
@@ -2943,7 +3080,7 @@
                     </ol>
                     <p style="color: #afa; margin: 10px 0 0 0;">✅ <strong>Why this is best:</strong> Main cost is just alterations (0.1-0.2c each) + base items. Total ~5-20c per attempt, way cheaper than chaos spam!</p>
                     <p style="color: #8af; margin: 5px 0 0 0;">💡 <strong>Pro tip:</strong> Start with 1:1 recombination (1 mod from each item) for best success rate. Can do 2:1 or 3:1 for more mods but lower success.</p>
-                    <p style="color: #f88; margin: 5px 0 0 0;">⚠️ <strong>Availability:</strong> Check if Kingsmarch Recombinator is available in current league.</p>
+                    <p style="color: #8af; margin: 5px 0 0 0;">🏠 <strong>Location:</strong> You can use Recombinators in your hideout if you have one, or visit the Recombinator in Kingsmarch.</p>
                 </div>`;
                 methodNum++;
             }
@@ -2964,10 +3101,32 @@
             }
 
             // Method X: Essence crafting (for guaranteed mods)
+            const matchingEssences = findEssencesForMods(modsOnItem);
             stepsHTML += `<div style="background: rgba(200,100,0,0.1); padding: 15px; border-left: 4px solid #c86400; margin-bottom: 15px;">
-                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method ${methodNum}: Essence Crafting (Guaranteed Mods)</h4>
-                <ol style="color: #ddd; line-height: 1.8; margin: 0;">
-                    <li>Find the <strong>Essence</strong> that gives you the most important mod (e.g., Essence of Greed for Life)</li>
+                <h4 style="color: #c86400; margin: 0 0 10px 0;">Method ${methodNum}: Essence Crafting (Guaranteed Mods)</h4>`;
+
+            if (matchingEssences.length > 0) {
+                stepsHTML += `<div style="background: rgba(255,215,0,0.15); padding: 12px; border-radius: 5px; margin-bottom: 15px; border-left: 3px solid #ffd700;">
+                    <h5 style="color: #ffd700; margin: 0 0 10px 0;">🔮 Essences That Provide Your Item's Stats:</h5>
+                    <div style="color: #ddd; line-height: 1.8;">`;
+
+                matchingEssences.forEach(match => {
+                    stepsHTML += `
+                        <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                            <div style="color: #ffa500; font-weight: bold;">Essence of ${match.essence}</div>
+                            <div style="color: #afa; font-size: 13px;">Guarantees: ${match.mod}</div>
+                            <div style="color: #aaa; font-size: 12px;">Matches your mod: "${match.matchedItemMod}"</div>
+                            <div style="color: #8af; font-size: 12px; margin-top: 4px;">Tiers: ${match.tiers.join(', ')}</div>
+                        </div>`;
+                });
+
+                stepsHTML += `</div>
+                    <p style="color: #8af; margin: 10px 0 0 0; font-size: 13px;">💡 <strong>Tip:</strong> Use higher tier essences (Shrieking/Deafening) to get better values for these mods!</p>
+                </div>`;
+            }
+
+            stepsHTML += `<ol style="color: #ddd; line-height: 1.8; margin: 0;">
+                    <li>Find the <strong>Essence</strong> that gives you the most important mod${matchingEssences.length > 0 ? ' (see suggestions above)' : ' (e.g., Essence of Greed for Life)'}</li>
                     <li>Spam the essence on your base until you hit 1-2 additional desired mods</li>
                     <li>Finish with bench crafts or Harvest</li>
                 </ol>
