@@ -15,6 +15,7 @@ import { pohxCraftingScraper, CraftingGuide } from './pohxCraftingScraper';
 import { maxRollCraftingScraper, MaxRollCraftingMethod } from './maxRollCraftingScraper';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 import { getCurrencyPriceService } from './services/currencyPriceService';
+import { getCraftingDataLoader } from './api/craftingData';
 import { validateCraftingGoal, formatValidationResult } from './utils/validators';
 import {
   METHOD_SCORING_WEIGHTS,
@@ -53,6 +54,8 @@ export interface OptimizedStrategy {
   itemLevel?: number;
   itemClass?: string;
   desiredMods?: string[];
+  recommendedItemLevel?: number; // Calculated minimum ilvl for desired mods
+  itemLevelBreakdown?: Array<{mod: string, minLevel: number}>; // Show which mods need which ilvl
 
   // Advanced options
   alternativeMethods?: OptimizedStrategy[];
@@ -79,6 +82,7 @@ export interface RecombinatorStrategy {
 
 export class SmartCraftingOptimizer {
   private currencyService = getCurrencyPriceService();
+  private dataLoader = getCraftingDataLoader();
 
   /**
    * Get the optimal crafting strategy for a given goal
@@ -93,6 +97,15 @@ export class SmartCraftingOptimizer {
     // Load currency prices for cost calculation
     await this.currencyService.loadPrices(goal.league);
 
+    // Load mod data and calculate minimum item level
+    await this.dataLoader.loadAll();
+    const { recommendedItemLevel, itemLevelBreakdown } = this.calculateMinimumItemLevel(goal);
+
+    // Update goal with recommended ilvl if user's input is lower
+    if (recommendedItemLevel > goal.itemLevel) {
+      goal.itemLevel = recommendedItemLevel;
+    }
+
     // Gather all available methods
     const allMethods = await this.gatherAllMethods(goal);
 
@@ -103,11 +116,11 @@ export class SmartCraftingOptimizer {
     const bestMethod = rankedMethods[0];
 
     // Build the optimized strategy
-    const strategy = await this.buildStrategy(bestMethod, goal);
+    const strategy = await this.buildStrategy(bestMethod, goal, recommendedItemLevel, itemLevelBreakdown);
 
     // Add alternative methods
     strategy.alternativeMethods = await Promise.all(
-      rankedMethods.slice(1, 4).map(m => this.buildStrategy(m, goal))
+      rankedMethods.slice(1, 4).map(m => this.buildStrategy(m, goal, recommendedItemLevel, itemLevelBreakdown))
     );
 
     // Add recombinator option if risk mode is enabled
@@ -125,6 +138,48 @@ export class SmartCraftingOptimizer {
   private async loadCurrencyPrices(league: string) {
     // Currency prices are loaded via centralized service in getOptimalStrategy
     // This method kept for backward compatibility
+  }
+
+  /**
+   * Calculate minimum item level required for desired mods
+   */
+  private calculateMinimumItemLevel(goal: CraftingGoal): {
+    recommendedItemLevel: number;
+    itemLevelBreakdown: Array<{mod: string, minLevel: number}>;
+  } {
+    const breakdown: Array<{mod: string, minLevel: number}> = [];
+    let maxLevel = 1;
+
+    // Try to find mods that match the desired mod names
+    for (const desiredMod of goal.desiredMods) {
+      // Search for mods by name
+      const matchingMods = this.dataLoader.searchMods(desiredMod, goal.itemClass);
+
+      if (matchingMods.length > 0) {
+        // Get the highest tier (lowest required level) version of this mod
+        // Sort by required_level descending to get the best (highest tier) version first
+        const sortedMods = matchingMods
+          .filter(m => m.required_level > 0)
+          .sort((a, b) => b.required_level - a.required_level);
+
+        if (sortedMods.length > 0) {
+          const bestMod = sortedMods[0];
+          breakdown.push({
+            mod: desiredMod,
+            minLevel: bestMod.required_level
+          });
+
+          if (bestMod.required_level > maxLevel) {
+            maxLevel = bestMod.required_level;
+          }
+        }
+      }
+    }
+
+    return {
+      recommendedItemLevel: maxLevel,
+      itemLevelBreakdown: breakdown
+    };
   }
 
   /**
@@ -344,7 +399,12 @@ export class SmartCraftingOptimizer {
   /**
    * Build a complete strategy from a method
    */
-  private async buildStrategy(method: any, goal: CraftingGoal): Promise<OptimizedStrategy> {
+  private async buildStrategy(
+    method: any,
+    goal: CraftingGoal,
+    recommendedItemLevel: number,
+    itemLevelBreakdown: Array<{mod: string, minLevel: number}>
+  ): Promise<OptimizedStrategy> {
     const estimatedCost = this.estimateCost(method);
     const successRate = this.estimateSuccessRate(method);
 
@@ -365,6 +425,12 @@ export class SmartCraftingOptimizer {
       }
     }
 
+    // Add tips about item level if we calculated it from mods
+    const tips = [...(method.tips || [])];
+    if (recommendedItemLevel > 1 && itemLevelBreakdown.length > 0) {
+      tips.unshift(`Item level ${recommendedItemLevel}+ required for highest tier mods (calculated from your desired mods)`);
+    }
+
     return {
       method: method.name,
       source: method.source,
@@ -374,7 +440,7 @@ export class SmartCraftingOptimizer {
       successRate,
       timeToComplete: this.estimateTime(method),
       requirements,
-      tips: method.tips || [],
+      tips,
       warnings: method.warnings || [],
       profitPotential: this.estimateProfit(method, goal),
       riskLevel: this.assessRiskLevel(method),
@@ -382,7 +448,9 @@ export class SmartCraftingOptimizer {
       baseItem: goal.baseItem,
       itemLevel: goal.itemLevel,
       itemClass: goal.itemClass,
-      desiredMods: goal.desiredMods
+      desiredMods: goal.desiredMods,
+      recommendedItemLevel,
+      itemLevelBreakdown
     };
   }
 
