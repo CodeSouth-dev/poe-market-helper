@@ -1182,68 +1182,75 @@
             }
         };
 
+        // Helper function to format mod weight display
+        function formatModWeight(weight) {
+            if (!weight || weight === 0) return 'Blocked';
+            return weight.toString();
+        }
+
+        // Helper function to get rarity label based on weight
+        function getChanceLabel(weight) {
+            if (!weight || weight === 0) return 'Cannot roll';
+            if (weight >= 2000) return 'Very Common';
+            if (weight >= 1000) return 'Common';
+            if (weight >= 500) return 'Uncommon';
+            if (weight >= 250) return 'Rare';
+            if (weight >= 100) return 'Very Rare';
+            return 'Extremely Rare';
+        }
+
         // Get available mods for a specific item class
-        function getModsForItemClass(itemClass, modType, itemLevel = 100) {
+        async function getModsForItemClass(itemClass, modType, itemLevel = 100) {
             if (!itemClass) return [];
 
-            let mods = [];
+            try {
+                // Get base item name from the crafting form
+                const baseItemInput = document.getElementById('craftBaseItem');
+                const baseItemName = baseItemInput ? baseItemInput.value : null;
 
-            // Add universal mods
-            if (MOD_DATABASE.universal[modType]) {
-                mods = mods.concat(MOD_DATABASE.universal[modType]);
-            }
-
-            // Add class-specific mods
-            if (MOD_DATABASE[itemClass] && MOD_DATABASE[itemClass][modType]) {
-                mods = mods.concat(MOD_DATABASE[itemClass][modType]);
-            }
-
-            // For weapon classes, add weapon mods
-            if (itemClass.includes('Sword') || itemClass.includes('Axe') ||
-                itemClass.includes('Mace') || itemClass.includes('Bow') ||
-                itemClass.includes('Wand') || itemClass.includes('Dagger') ||
-                itemClass.includes('Claw') || itemClass.includes('Sceptre') ||
-                itemClass.includes('Staff')) {
-                if (MOD_DATABASE.Weapon[modType]) {
-                    mods = mods.concat(MOD_DATABASE.Weapon[modType]);
-                }
-            }
-
-            // Remove duplicates
-            const uniqueMods = Array.from(new Set(mods.map(m => m.name)))
-                .map(name => mods.find(m => m.name === name));
-
-            // Filter by item level - only show mods that can roll on this item
-            const filteredByLevel = uniqueMods.filter(mod => {
-                return itemLevel >= mod.ilvl;
-            });
-
-            // Filter out mods that would conflict with current mods
-            // Check if we have room for more prefixes/suffixes
-            const maxPrefixes = 3;
-            const maxSuffixes = 3;
-
-            if (modType === 'prefix' && currentItemMods.count.prefixes >= maxPrefixes) {
-                return []; // No room for more prefixes
-            }
-            if (modType === 'suffix' && currentItemMods.count.suffixes >= maxSuffixes) {
-                return []; // No room for more suffixes
-            }
-
-            // Filter out mods that are similar to existing mods (same mod group)
-            // This is a simplified check - in reality PoE has complex mod groups
-            const currentModTexts = [...currentItemMods.prefixes, ...currentItemMods.suffixes];
-            const availableMods = filteredByLevel.filter(mod => {
-                // Check if a similar mod already exists
-                const modBase = mod.name.replace(/[+#%\d\s\-]/g, '').toLowerCase();
-                const hasSimilar = currentModTexts.some(currentMod => {
-                    const currentModBase = currentMod.replace(/[+#%\d\s\-]/g, '').toLowerCase();
-                    return currentModBase.includes(modBase) || modBase.includes(currentModBase);
+                // Call backend to get mods with real spawn weights from RePoE
+                const result = await window.api.invoke('get-mods-for-item', {
+                    itemClass,
+                    modType,
+                    itemLevel,
+                    baseItemName
                 });
-                return !hasSimilar;
-            });
 
-            return availableMods;
+                if (!result.success || !result.data) {
+                    console.error('Failed to get mods:', result.error);
+                    return [];
+                }
+
+                // Filter out mods that would conflict with current mods
+                // Check if we have room for more prefixes/suffixes
+                const maxPrefixes = 3;
+                const maxSuffixes = 3;
+
+                if (modType === 'prefix' && currentItemMods.count.prefixes >= maxPrefixes) {
+                    return []; // No room for more prefixes
+                }
+                if (modType === 'suffix' && currentItemMods.count.suffixes >= maxSuffixes) {
+                    return []; // No room for more suffixes
+                }
+
+                // Filter out mods that are similar to existing mods (same mod group)
+                // This is a simplified check - in reality PoE has complex mod groups
+                const currentModTexts = [...currentItemMods.prefixes, ...currentItemMods.suffixes];
+                const availableMods = result.data.filter(mod => {
+                    // Check if a similar mod already exists
+                    const modBase = mod.name.replace(/[+#%\d\s\-]/g, '').toLowerCase();
+                    const hasSimilar = currentModTexts.some(currentMod => {
+                        const currentModBase = currentMod.replace(/[+#%\d\s\-]/g, '').toLowerCase();
+                        return currentModBase.includes(modBase) || modBase.includes(currentModBase);
+                    });
+                    return !hasSimilar;
+                });
+
+                return availableMods;
+            } catch (error) {
+                console.error('Error fetching mods:', error);
+                return [];
+            }
         }
 
         // Initialize app
@@ -1708,10 +1715,10 @@
             let selectedModName = '';
 
             // Focus handler - show dropdown with all available mods
-            searchInput.addEventListener('focus', function() {
+            searchInput.addEventListener('focus', async function() {
                 const modType = typeSelect.value;
                 if (modType) {
-                    allMods = getModsForItemClass(itemClass, modType, itemLevel);
+                    allMods = await getModsForItemClass(itemClass, modType, itemLevel);
                     filterAndShowMods('');
                 }
             });
@@ -1744,9 +1751,30 @@
                 filteredMods.forEach(mod => {
                     const modItem = document.createElement('div');
                     modItem.style.cssText = 'padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #444;';
+
+                    // Handle both old format (tier/ilvl) and new format (weight/requiredLevel)
+                    const ilvl = mod.requiredLevel !== undefined ? mod.requiredLevel : (mod.ilvl || 0);
+                    const hasWeight = mod.weight !== undefined;
+
                     modItem.innerHTML = `
-                        <div style="color: #ffd700;">${mod.name}</div>
-                        <div style="color: #888; font-size: 11px;">${mod.tier}, ilvl ${mod.ilvl}+</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="flex: 1;">
+                                <div style="color: #ffd700;">${mod.name}</div>
+                                <div style="color: #888; font-size: 11px;">
+                                    ilvl ${ilvl}+${mod.tier ? ' • ' + mod.tier : ''}
+                                </div>
+                            </div>
+                            ${hasWeight ? `
+                                <div style="text-align: right; margin-left: 10px;">
+                                    <div style="color: #4ade80; font-weight: bold; font-size: 13px;">
+                                        Weight: ${formatModWeight(mod.weight)}
+                                    </div>
+                                    <div style="color: #888; font-size: 10px;">
+                                        ${getChanceLabel(mod.weight)}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
                     `;
 
                     modItem.addEventListener('mouseenter', function() {
