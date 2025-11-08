@@ -48,6 +48,12 @@ export interface OptimizedStrategy {
   profitPotential?: number; // Expected profit in chaos
   riskLevel?: 'safe' | 'moderate' | 'high' | 'extreme';
 
+  // Crafting goal details
+  baseItem?: string;
+  itemLevel?: number;
+  itemClass?: string;
+  desiredMods?: string[];
+
   // Advanced options
   alternativeMethods?: OptimizedStrategy[];
   recombinatorOption?: RecombinatorStrategy;
@@ -342,19 +348,41 @@ export class SmartCraftingOptimizer {
     const estimatedCost = this.estimateCost(method);
     const successRate = this.estimateSuccessRate(method);
 
+    // Add item level requirement if specified
+    const requirements = [...(method.requirements || [])];
+    if (goal.itemLevel && goal.itemLevel > 1) {
+      requirements.unshift(`${goal.baseItem} base with item level ${goal.itemLevel}+ (Check trade sites for correct ilvl!)`);
+    } else {
+      requirements.unshift(`${goal.baseItem} base item`);
+    }
+
+    // Add item level note to first step if not already present
+    const steps = [...(method.steps || [])];
+    if (steps.length > 0 && goal.itemLevel && goal.itemLevel > 1) {
+      const firstStep = steps[0];
+      if (!firstStep.toLowerCase().includes('ilvl') && !firstStep.toLowerCase().includes('item level')) {
+        steps[0] = `Obtain a ${goal.baseItem} with ilvl ${goal.itemLevel}+ from trade (search for "ilvl:${goal.itemLevel}" on trade sites)`;
+      }
+    }
+
     return {
       method: method.name,
       source: method.source,
       difficulty: method.difficulty || 'intermediate',
-      steps: method.steps || [],
+      steps,
       estimatedCost,
       successRate,
       timeToComplete: this.estimateTime(method),
-      requirements: method.requirements || [],
+      requirements,
       tips: method.tips || [],
       warnings: method.warnings || [],
       profitPotential: this.estimateProfit(method, goal),
-      riskLevel: this.assessRiskLevel(method)
+      riskLevel: this.assessRiskLevel(method),
+      // Include crafting goal details
+      baseItem: goal.baseItem,
+      itemLevel: goal.itemLevel,
+      itemClass: goal.itemClass,
+      desiredMods: goal.desiredMods
     };
   }
 
@@ -434,9 +462,9 @@ export class SmartCraftingOptimizer {
         ? `Combine two ${goal.itemClass} items to create mirror-tier results with impossible mod combinations`
         : `Combine two ${goal.itemClass} items to merge different mod pools into one powerful item`,
       steps: [
-        `Step 1: Craft or buy first ${goal.baseItem} with ${goal.desiredMods.slice(0, Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
-        `Step 2: Craft or buy second ${goal.baseItem} with ${goal.desiredMods.slice(Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
-        'Step 3: Ensure both items have same base type and similar item levels',
+        `Step 1: Craft or buy first ${goal.baseItem} (ilvl ${goal.itemLevel}+) with ${goal.desiredMods.slice(0, Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
+        `Step 2: Craft or buy second ${goal.baseItem} (ilvl ${goal.itemLevel}+) with ${goal.desiredMods.slice(Math.ceil(goal.desiredMods.length / 2)).join(' + ')}`,
+        `Step 3: Ensure both items are ilvl ${goal.itemLevel}+ and same base type (search "ilvl:${goal.itemLevel}" on trade)`,
         'Step 4: Match quality and links on both items for best results',
         'Step 5: Use Recombinator to combine them',
         'Step 6: Result will randomly combine mods from both items',

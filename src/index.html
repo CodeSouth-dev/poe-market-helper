@@ -2503,6 +2503,21 @@
                     </div>
                 </div>
 
+                <!-- Crafting Goal -->
+                ${strategy.baseItem && strategy.desiredMods ? `
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">🎯 Crafting Goal</h4>
+                    <div style="color: #cccccc;">
+                        <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Base Item:</strong> ${strategy.baseItem} (ilvl ${strategy.itemLevel || '?'})</p>
+                        <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Item Class:</strong> ${strategy.itemClass || 'Unknown'}</p>
+                        <p style="margin: 10px 0 5px 0;"><strong style="color: #8b5cf6;">Desired Mods:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 25px; color: #afa;">
+                            ${strategy.desiredMods.map(mod => `<li>${mod}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
+
                 <!-- Steps -->
                 <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                     <h4 style="color: #ffd700; margin-bottom: 15px;">📋 Step-by-Step Guide</h4>
