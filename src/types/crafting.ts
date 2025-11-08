@@ -1,4 +1,4 @@
-// Type definitions for crafting data from RePoE
+// Type definitions for crafting data (now using live PoEDB scraping)
 
 export interface ModWeight {
   tag: string;
