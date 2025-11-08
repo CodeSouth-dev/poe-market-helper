@@ -3,12 +3,13 @@
  * Finds the best fossil combinations for desired mods
  */
 
-import { PoeNinjaAPI } from './api/poeNinja';
+import { getCurrencyPriceService } from './services/currencyPriceService';
+import { calculateFossilSuccessRate } from './utils/probabilityCalculator';
+import { FOSSIL_OPTIMIZATION, RESONATOR_COSTS, CACHE_DURATIONS } from './config/craftingConstants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
 const CACHE_DIR = path.join(__dirname, '../data/fossil-cache');
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface Fossil {
   name: string;
@@ -45,12 +46,11 @@ export interface FossilOptimization {
 }
 
 export class FossilOptimizer {
-  private poeAPI: PoeNinjaAPI;
+  private currencyService = getCurrencyPriceService();
   private fossils: Fossil[];
   private resonators: Resonator[];
 
   constructor() {
-    this.poeAPI = new PoeNinjaAPI();
     this.ensureCacheDir();
     this.initializeFossilData();
   }
@@ -410,25 +410,17 @@ export class FossilOptimizer {
    * Calculate success rate for a combination
    */
   private calculateSuccessRate(combo: any, tags: string[]): number {
-    let baseRate = 0.01; // 1% base
-
-    // Count how many desired tags this combo enhances
-    let matchingTags = 0;
+    // Collect all fossil tags
+    const fossilTags: string[] = [];
     for (const fossilName of combo.fossils) {
       const fossil = this.fossils.find(f => f.name === fossilName);
       if (fossil) {
-        const fossilTags = [...fossil.more, ...fossil.adds];
-        for (const tag of tags) {
-          if (fossilTags.includes(tag)) {
-            matchingTags++;
-            baseRate *= 2; // Double the rate for each match
-          }
-        }
+        fossilTags.push(...fossil.more, ...fossil.adds);
       }
     }
 
-    // Cap at reasonable success rate
-    return Math.min(baseRate, 0.15); // Max 15%
+    const result = calculateFossilSuccessRate(fossilTags, tags);
+    return result.successRate;
   }
 
   /**
@@ -437,19 +429,15 @@ export class FossilOptimizer {
   private calculateCost(combo: any): number {
     let totalCost = 0;
 
-    // Add fossil costs
+    // Add fossil costs from currency service (real-time pricing)
     for (const fossilName of combo.fossils) {
-      const fossil = this.fossils.find(f => f.name === fossilName);
-      if (fossil) {
-        totalCost += fossil.cost;
-      }
+      const price = this.currencyService.getPrice(fossilName);
+      totalCost += price;
     }
 
-    // Add resonator cost
-    const resonator = this.resonators.find(r => r.name === combo.resonator);
-    if (resonator) {
-      totalCost += resonator.cost;
-    }
+    // Add resonator cost from currency service
+    const resonatorPrice = this.currencyService.getPrice(combo.resonator);
+    totalCost += resonatorPrice;
 
     return totalCost;
   }

@@ -16,6 +16,8 @@ import {
   AdvancedTactic,
 } from '../types/craftingEnhanced';
 import { searchItem } from '../api/poeNinja';
+import { calculateIlvlAwareModProbability } from './probabilityCalculator';
+import { PROBABILITY_CALCULATION, CURRENCY_COSTS } from '../config/craftingConstants';
 
 /**
  * Calculate probability of hitting target mods based on ilvl and weights
@@ -31,41 +33,22 @@ export function calculateModProbability(
   // Get available mod pool at this ilvl
   const availableMods = getAvailableModsAtIlvl(ilvl, modPoolType);
 
-  // Calculate total weight of available mods
-  const totalWeight = availableMods.reduce((sum, mod) => sum + mod.weight, 0);
-
-  // Calculate weight of target mods
-  const targetWeight = targetMods
-    .filter(m => m.type === modPoolType)
-    .reduce((sum, mod) => sum + (mod.weight || 100), 0);
-
-  const successRate = totalWeight > 0 ? targetWeight / totalWeight : 0;
-  const averageAttempts = successRate > 0 ? Math.ceil(1 / successRate) : Infinity;
-
-  let explanation = '';
-  if (modPoolType === 'prefix') {
-    explanation = `At ilvl ${ilvl}, there are ${availableMods.length} available prefixes with total weight ${totalWeight}. `;
-    explanation += `Your target mods have combined weight ${targetWeight}, giving ~${(successRate * 100).toFixed(2)}% chance per attempt. `;
-    explanation += `Expected attempts: ${averageAttempts}.`;
-  } else {
-    explanation = `At ilvl ${ilvl}, there are ${availableMods.length} available suffixes with total weight ${totalWeight}. `;
-    explanation += `Your target mods have combined weight ${targetWeight}, giving ~${(successRate * 100).toFixed(2)}% chance per attempt. `;
-    explanation += `Expected attempts: ${averageAttempts}.`;
-  }
+  // Use shared probability calculator
+  const probResult = calculateIlvlAwareModProbability(targetMods, availableMods, ilvl, modPoolType);
 
   return {
     targetMods,
     ilvl,
     method: CraftingMethodType.ALT_SPAM, // Default
-    successRate,
-    averageAttempts,
+    successRate: probResult.successRate,
+    averageAttempts: probResult.expectedAttempts,
     modPoolSize: {
       availablePrefixes: modPoolType === 'prefix' ? availableMods.length : 0,
       availableSuffixes: modPoolType === 'suffix' ? availableMods.length : 0,
       targetPrefixes: prefixTargets.length,
       targetSuffixes: suffixTargets.length,
     },
-    explanation,
+    explanation: probResult.explanation,
   };
 }
 
