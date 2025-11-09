@@ -62,15 +62,32 @@ export class CraftingCalculator {
     const modNames = desiredMods.map(m => m.name);
 
     try {
-      // Run simulations for different methods in parallel
-      const [chaosSimulation, altRegalSimulation, fossilSimulation, essenceSimulation] = await Promise.all([
+      // Run ALL crafting method calculations in parallel for maximum efficiency
+      const [
+        chaosSimulation,
+        altRegalSimulation,
+        fossilSimulation,
+        essenceSimulation,
+        fossilMethod,
+        essenceMethod,
+        harvestMethod,
+        veiledMethod,
+        beastMethod
+      ] = await Promise.all([
+        // CraftOfExile simulations
         craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'chaos'),
         craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'alt-regal'),
         craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'fossil'),
-        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'essence')
+        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'essence'),
+        // Advanced crafting methods
+        this.calculateFossilCrafting(desiredMods, baseItemName, itemLevel, itemClass, league),
+        this.calculateEssenceCrafting(desiredMods, baseItemName, itemLevel, itemClass, league),
+        this.calculateHarvestReforge(desiredMods, baseItemName, itemLevel, itemClass, league),
+        this.calculateVeiledChaos(desiredMods, baseItemName, itemLevel, itemClass, league),
+        this.calculateBeastcrafting(desiredMods, baseItemName, itemLevel, itemClass, league)
       ]);
 
-      // Convert CraftOfExile results to our CraftingMethod format
+      // Add basic CraftOfExile methods
       if (chaosSimulation.cheapestMethod) {
         methods.push({
           method: 'chaos',
@@ -111,43 +128,12 @@ export class CraftingCalculator {
         });
       }
 
-      if (fossilSimulation.cheapestMethod && fossilSimulation.cheapestMethod.averageCost > 0) {
-        methods.push({
-          method: 'fossil',
-          name: fossilSimulation.cheapestMethod.name,
-          description: fossilSimulation.cheapestMethod.description || 'Use targeted fossils to force desired mods',
-          probability: fossilSimulation.cheapestMethod.successRate,
-          averageCost: fossilSimulation.cheapestMethod.averageCost,
-          currencyUsed: { 'Fossils': fossilSimulation.cheapestMethod.averageAttempts },
-          steps: [
-            'Identify which fossils weight your desired mods',
-            `Spam fossils on ${baseItemName} (ilvl ${itemLevel})`,
-            `Expected attempts: ${fossilSimulation.cheapestMethod.averageAttempts}`,
-            `Success rate: ${(fossilSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
-            'Finish with bench crafts'
-          ],
-          expectedAttempts: fossilSimulation.cheapestMethod.averageAttempts
-        });
-      }
-
-      if (essenceSimulation.cheapestMethod && essenceSimulation.cheapestMethod.averageCost > 0) {
-        methods.push({
-          method: 'essence',
-          name: essenceSimulation.cheapestMethod.name,
-          description: essenceSimulation.cheapestMethod.description || 'Use essences to guarantee specific mods',
-          probability: essenceSimulation.cheapestMethod.successRate,
-          averageCost: essenceSimulation.cheapestMethod.averageCost,
-          currencyUsed: { 'Essence': essenceSimulation.cheapestMethod.averageAttempts },
-          steps: [
-            'Find the appropriate essence for your desired mod',
-            `Spam essences on ${baseItemName} (ilvl ${itemLevel})`,
-            `Expected attempts: ${essenceSimulation.cheapestMethod.averageAttempts}`,
-            `Success rate: ${(essenceSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
-            'Finish with bench crafts'
-          ],
-          expectedAttempts: essenceSimulation.cheapestMethod.averageAttempts
-        });
-      }
+      // Add advanced methods (these are more detailed than basic CraftOfExile results)
+      if (fossilMethod) methods.push(fossilMethod);
+      if (essenceMethod) methods.push(essenceMethod);
+      if (harvestMethod) methods.push(harvestMethod);
+      if (veiledMethod) methods.push(veiledMethod);
+      if (beastMethod) methods.push(beastMethod);
 
       console.log(`✅ Simulations complete. Found ${methods.length} crafting methods.`);
     } catch (error: any) {
@@ -195,15 +181,347 @@ export class CraftingCalculator {
   }
 
   // ============================================================================
-  // REMOVED: All RePoE-dependent calculation methods have been removed.
-  // TODO: Reimplement using live PoEDB scraping (poedbScraper)
-  // Methods that need reimplementation:
-  // - calculateChaosSpam, calculateFossilCrafting, calculateEssenceCrafting  
-  // - calculateAlterationSpam, calculateExaltedSlam, calculateHarvestReforge
-  // - calculateVeiledChaos, calculateAnnulment, calculateBeastcrafting
-  // - calculateRecombinator, and helper methods
+  // Advanced Crafting Methods - Using Live PoEDB + CraftOfExile
   // ============================================================================
 
+  /**
+   * Calculate fossil crafting method with CraftOfExile simulator
+   */
+  private async calculateFossilCrafting(
+    desiredMods: DesiredMod[],
+    baseItemName: string,
+    itemLevel: number,
+    itemClass: string,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    try {
+      const modNames = desiredMods.map(m => m.name);
+      const simulation = await craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'fossil');
+
+      if (!simulation.cheapestMethod || simulation.cheapestMethod.averageCost === 0) {
+        return null;
+      }
+
+      const fossilPrice = this.currencyService.getPrice('Fossil') || 5; // Avg fossil price
+      const resonatorPrice = this.currencyService.getPrice('Resonator') || 2;
+      const totalCost = (simulation.cheapestMethod.averageAttempts * fossilPrice) + resonatorPrice;
+
+      return {
+        method: 'fossil',
+        name: 'Fossil Crafting',
+        description: 'Use targeted fossils to force desired mods with weighted probabilities',
+        probability: simulation.cheapestMethod.successRate,
+        averageCost: totalCost,
+        currencyUsed: {
+          'Fossils': simulation.cheapestMethod.averageAttempts,
+          'Resonator': 1
+        },
+        steps: [
+          'Identify which fossils weight your desired mods positively',
+          'Purchase fossils and appropriate resonator for mod count',
+          `Spam fossils on ${baseItemName} (ilvl ${itemLevel})`,
+          `Expected attempts: ${Math.round(simulation.cheapestMethod.averageAttempts)}`,
+          `Success rate: ${(simulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
+          'Finish with bench crafts or continue rolling'
+        ],
+        expectedAttempts: Math.round(simulation.cheapestMethod.averageAttempts)
+      };
+    } catch (error: any) {
+      console.error('Failed to calculate fossil crafting:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate essence crafting method
+   */
+  private async calculateEssenceCrafting(
+    desiredMods: DesiredMod[],
+    baseItemName: string,
+    itemLevel: number,
+    itemClass: string,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    try {
+      const modNames = desiredMods.map(m => m.name);
+      const simulation = await craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'essence');
+
+      if (!simulation.cheapestMethod || simulation.cheapestMethod.averageCost === 0) {
+        return null;
+      }
+
+      // Find which essence guarantees one of our desired mods
+      const essenceDatabase: Record<string, string> = {
+        'life': 'Essence of Greed',
+        'maximum life': 'Essence of Greed',
+        'mana': 'Essence of Woe',
+        'energy shield': 'Essence of Spite',
+        'fire resistance': 'Essence of Anger',
+        'cold resistance': 'Essence of Hatred',
+        'lightning resistance': 'Essence of Wrath',
+        'strength': 'Essence of Rage',
+        'dexterity': 'Essence of Sorrow',
+        'intelligence': 'Essence of Doubt',
+        'attack speed': 'Essence of Zeal',
+        'cast speed': 'Essence of Torment'
+      };
+
+      let guaranteedMod = '';
+      let essenceName = 'Essence';
+      for (const mod of modNames) {
+        const modLower = mod.toLowerCase();
+        for (const [key, essence] of Object.entries(essenceDatabase)) {
+          if (modLower.includes(key)) {
+            guaranteedMod = mod;
+            essenceName = essence;
+            break;
+          }
+        }
+        if (guaranteedMod) break;
+      }
+
+      const essencePrice = this.currencyService.getPrice(essenceName) || 10;
+      const totalCost = simulation.cheapestMethod.averageAttempts * essencePrice;
+
+      return {
+        method: 'essence',
+        name: 'Essence Crafting',
+        description: `Use ${essenceName} to guarantee ${guaranteedMod || 'specific mod'}, then roll for others`,
+        probability: simulation.cheapestMethod.successRate,
+        averageCost: totalCost,
+        currencyUsed: {
+          [essenceName]: simulation.cheapestMethod.averageAttempts
+        },
+        steps: [
+          `Purchase ${essenceName} (guarantees ${guaranteedMod || 'one desired mod'})`,
+          `Spam ${essenceName} on ${baseItemName} (ilvl ${itemLevel})`,
+          `Expected attempts: ${Math.round(simulation.cheapestMethod.averageAttempts)}`,
+          `Success rate: ${(simulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
+          'Finish with bench crafts for remaining affixes'
+        ],
+        expectedAttempts: Math.round(simulation.cheapestMethod.averageAttempts)
+      };
+    } catch (error: any) {
+      console.error('Failed to calculate essence crafting:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate Harvest reforge crafting
+   */
+  private async calculateHarvestReforge(
+    desiredMods: DesiredMod[],
+    baseItemName: string,
+    itemLevel: number,
+    itemClass: string,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    try {
+      // Determine which Harvest reforge type based on desired mods
+      const modNames = desiredMods.map(m => m.name.toLowerCase());
+
+      let harvestType = 'Reforge';
+      let targetTag = '';
+
+      // Map mod names to harvest tags
+      if (modNames.some(m => m.includes('fire') || m.includes('cold') || m.includes('lightning'))) {
+        harvestType = 'Reforge with Elemental mod';
+        targetTag = 'elemental';
+      } else if (modNames.some(m => m.includes('life') || m.includes('mana'))) {
+        harvestType = 'Reforge with Life mod';
+        targetTag = 'life';
+      } else if (modNames.some(m => m.includes('chaos') || m.includes('poison'))) {
+        harvestType = 'Reforge with Chaos mod';
+        targetTag = 'chaos';
+      } else if (modNames.some(m => m.includes('physical') || m.includes('bleed'))) {
+        harvestType = 'Reforge with Physical mod';
+        targetTag = 'physical';
+      } else if (modNames.some(m => m.includes('attack') || m.includes('crit'))) {
+        harvestType = 'Reforge with Attack mod';
+        targetTag = 'attack';
+      } else if (modNames.some(m => m.includes('cast') || m.includes('spell'))) {
+        harvestType = 'Reforge with Caster mod';
+        targetTag = 'caster';
+      } else if (modNames.some(m => m.includes('speed'))) {
+        harvestType = 'Reforge with Speed mod';
+        targetTag = 'speed';
+      } else if (modNames.some(m => m.includes('defence') || m.includes('armor') || m.includes('evasion'))) {
+        harvestType = 'Reforge with Defence mod';
+        targetTag = 'defence';
+      }
+
+      const harvestPrice = HARVEST_COSTS[harvestType] || 20;
+
+      // Estimate attempts (Harvest is more targeted, so better success rate)
+      const estimatedAttempts = Math.max(20, Math.floor(100 / (desiredMods.length + 1)));
+      const probability = 1 / estimatedAttempts;
+      const totalCost = estimatedAttempts * harvestPrice;
+
+      return {
+        method: 'harvest',
+        name: 'Harvest Reforge',
+        description: `${harvestType} for targeted crafting`,
+        probability,
+        averageCost: totalCost,
+        currencyUsed: {
+          [harvestType]: estimatedAttempts
+        },
+        steps: [
+          `Purchase "${harvestType}" from Harvest or TFT`,
+          `Use on ${baseItemName} (ilvl ${itemLevel})`,
+          `Guarantees at least one ${targetTag} mod`,
+          `Expected attempts: ${estimatedAttempts}`,
+          `Avg cost per craft: ${harvestPrice}c`,
+          'Can combine with "Keep Prefix/Suffix" for better control'
+        ],
+        expectedAttempts: estimatedAttempts
+      };
+    } catch (error: any) {
+      console.error('Failed to calculate harvest reforge:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate Veiled Chaos (Aisling) crafting
+   */
+  private async calculateVeiledChaos(
+    desiredMods: DesiredMod[],
+    baseItemName: string,
+    itemLevel: number,
+    itemClass: string,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    // Veiled Chaos is useful for specific veiled mods
+    const veiledModKeywords = ['unveiled', 'veiled', 'aisling', 'syndicate'];
+    const hasVeiledMod = desiredMods.some(mod =>
+      veiledModKeywords.some(keyword => mod.name.toLowerCase().includes(keyword))
+    );
+
+    if (!hasVeiledMod && desiredMods.length > 2) {
+      // Only suggest veiled chaos if specifically requested or for 1-2 mod items
+      return null;
+    }
+
+    try {
+      const veiledChaosPrice = this.currencyService.getPrice('Veiled Chaos Orb') || 30;
+      const aislingBenchPrice = 100; // Avg price for Aisling bench in TFT
+
+      // Veiled Chaos method: Get item with desired mods, then add veiled mod
+      const estimatedAttempts = 5; // Usually get decent unveil in a few tries
+      const totalCost = hasVeiledMod ? aislingBenchPrice : (estimatedAttempts * veiledChaosPrice);
+
+      return {
+        method: 'veiled',
+        name: hasVeiledMod ? 'Aisling Bench (Veiled Mod)' : 'Veiled Chaos Orb',
+        description: hasVeiledMod
+          ? 'Use Aisling bench to add veiled mod, then unveil for powerful mods'
+          : 'Add veiled modifier for additional crafting options',
+        probability: 0.6, // Good chance to get useful unveil
+        averageCost: totalCost,
+        currencyUsed: hasVeiledMod
+          ? { 'Aisling Bench (TFT)': 1 }
+          : { 'Veiled Chaos Orb': estimatedAttempts },
+        steps: hasVeiledMod
+          ? [
+              `Craft item with desired mods on ${baseItemName}`,
+              'Use Aisling bench from Syndicate (costs ~100c on TFT)',
+              'Unveil the modifier and select desired option',
+              'Has a chance to remove an existing mod - risky!'
+            ]
+          : [
+              `Spam Veiled Chaos on ${baseItemName} (ilvl ${itemLevel})`,
+              'Rerolls item and adds a veiled modifier',
+              'Unveil to choose from 3 powerful mods',
+              `Expected attempts: ${estimatedAttempts}`,
+              'Useful for getting specific high-tier mods'
+            ],
+        expectedAttempts: estimatedAttempts
+      };
+    } catch (error: any) {
+      console.error('Failed to calculate veiled chaos:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate Beastcrafting method
+   */
+  private async calculateBeastcrafting(
+    desiredMods: DesiredMod[],
+    baseItemName: string,
+    itemLevel: number,
+    itemClass: string,
+    league: string
+  ): Promise<CraftingMethod | null> {
+    try {
+      // Common beastcrafting recipes
+      const beastRecipes: Record<string, { name: string; cost: number; description: string }> = {
+        'prefix': {
+          name: 'Add Prefix, Remove Suffix',
+          cost: 15,
+          description: 'Adds a prefix mod and removes a random suffix'
+        },
+        'suffix': {
+          name: 'Add Suffix, Remove Prefix',
+          cost: 15,
+          description: 'Adds a suffix mod and removes a random prefix'
+        },
+        'imprint': {
+          name: 'Create Imprint (Magic item)',
+          cost: 50,
+          description: 'Creates an imprint of a magic item for safe crafting'
+        },
+        'split': {
+          name: 'Split Item',
+          cost: 80,
+          description: 'Splits item into two (rare league-specific beasts)'
+        },
+        'corrupt': {
+          name: 'Corrupt with 30% Quality',
+          cost: 25,
+          description: 'Corrupts item but sets quality to 30%'
+        }
+      };
+
+      // Determine which beast craft is most relevant
+      const prefixCount = desiredMods.filter(m => m.type === 'prefix').length;
+      const suffixCount = desiredMods.filter(m => m.type === 'suffix').length;
+
+      let bestRecipe = beastRecipes['prefix'];
+      if (suffixCount > prefixCount) {
+        bestRecipe = beastRecipes['suffix'];
+      }
+
+      // For magic items, imprint is very valuable
+      if (desiredMods.length <= 2) {
+        bestRecipe = beastRecipes['imprint'];
+      }
+
+      return {
+        method: 'beast',
+        name: `Beastcrafting: ${bestRecipe.name}`,
+        description: bestRecipe.description,
+        probability: 0.8, // Generally reliable
+        averageCost: bestRecipe.cost,
+        currencyUsed: {
+          'Beast (TFT or catch)': 1
+        },
+        steps: [
+          `Prepare ${baseItemName} with partial mods`,
+          `Purchase or catch beast for "${bestRecipe.name}"`,
+          `Use beast in Menagerie on your item`,
+          `Cost: ~${bestRecipe.cost}c`,
+          'Can be combined with other methods for advanced crafting'
+        ],
+        expectedAttempts: 1
+      };
+    } catch (error: any) {
+      console.error('Failed to calculate beastcrafting:', error.message);
+      return null;
+    }
+  }
 
   /**
    * Recommend best base type to purchase

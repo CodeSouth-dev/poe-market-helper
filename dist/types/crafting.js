@@ -1,5 +1,5 @@
 "use strict";
-// Type definitions for crafting data from RePoE
+// Type definitions for crafting data (now using live PoEDB scraping)
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.COMMON_MATERIALS = void 0;
 exports.COMMON_MATERIALS = {

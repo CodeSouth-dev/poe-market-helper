@@ -39,7 +39,6 @@ const poeNinja_1 = require("./api/poeNinja");
 const cache_1 = require("./utils/cache");
 const favorites_1 = require("./utils/favorites");
 const craftingCalculator_1 = require("./api/craftingCalculator");
-const craftingData_1 = require("./api/craftingData");
 const browserManager_1 = require("./browserManager");
 const poeTradeOfficial_1 = require("./poeTradeOfficial");
 const priceComparison_1 = require("./priceComparison");
@@ -58,7 +57,6 @@ const poeAPI = new poeNinja_1.PoeNinjaAPI();
 const cache = new cache_1.CacheManager();
 const favorites = new favorites_1.FavoritesManager();
 const craftingCalculator = new craftingCalculator_1.CraftingCalculator();
-const craftingData = (0, craftingData_1.getCraftingDataLoader)();
 let mainWindow;
 function createWindow() {
     // Create the browser window
@@ -157,10 +155,11 @@ electron_1.ipcMain.handle('calculate-crafting', async (event, params) => {
 });
 electron_1.ipcMain.handle('search-mods', async (event, query, itemClass) => {
     try {
-        if (!craftingData.isLoaded()) {
-            await craftingData.loadAll();
-        }
-        const results = craftingData.searchMods(query, itemClass);
+        // Use live PoEDB scraping instead of static RePoE data
+        const modifiers = await poedbScraper_1.poedbScraper.scrapeModifiers(itemClass || 'weapon');
+        // Filter by query
+        const results = modifiers.filter(mod => mod.name.toLowerCase().includes(query.toLowerCase()) ||
+            mod.tiers.some(t => t.stats.some(s => s.toLowerCase().includes(query.toLowerCase())))).slice(0, 50);
         return { success: true, data: results };
     }
     catch (error) {
@@ -171,39 +170,28 @@ electron_1.ipcMain.handle('search-mods', async (event, query, itemClass) => {
 // Get mods for item with weights
 electron_1.ipcMain.handle('get-mods-for-item', async (event, params) => {
     try {
-        if (!craftingData.isLoaded()) {
-            await craftingData.loadAll();
-        }
-        const baseItem = params.baseItemName
-            ? craftingData.getBaseItem(params.baseItemName)
-            : null;
-        const tags = baseItem?.tags || [params.itemClass.toLowerCase().replace(/\s/g, '')];
-        // Get all mods for this item class
-        const allMods = craftingData.getModsForItemClass(params.itemClass, tags);
-        // Helper to get mod weight for specific item tags
-        function getModWeight(mod) {
-            if (!mod.spawn_weights || mod.spawn_weights.length === 0)
-                return 0;
-            // Find weight for matching tags
-            for (const sw of mod.spawn_weights) {
-                if (tags.some(tag => tag.toLowerCase() === sw.tag.toLowerCase())) {
-                    return sw.weight;
-                }
-            }
-            return 0;
-        }
-        // Filter by type and ilvl, add weight info
+        // Use live PoEDB scraping instead of static RePoE data
+        const allMods = await poedbScraper_1.poedbScraper.scrapeModifiers(params.itemClass);
+        // Filter by type and ilvl
         const filteredMods = allMods
             .filter(mod => mod.type === params.modType)
-            .filter(mod => mod.required_level <= params.itemLevel)
-            .map(mod => ({
-            name: mod.name,
-            type: mod.type,
-            requiredLevel: mod.required_level,
-            weight: getModWeight(mod),
-            stats: mod.stats,
-            domain: mod.domain
-        }))
+            .filter(mod => {
+            // Check if any tier is available at this ilvl
+            return mod.tiers.some(tier => tier.level <= params.itemLevel);
+        })
+            .map(mod => {
+            // Get the best tier available at this ilvl
+            const availableTiers = mod.tiers.filter(t => t.level <= params.itemLevel);
+            const bestTier = availableTiers.sort((a, b) => b.level - a.level)[0];
+            return {
+                name: mod.name,
+                type: mod.type,
+                requiredLevel: bestTier.level,
+                weight: bestTier.weight,
+                stats: bestTier.stats,
+                domain: mod.domain
+            };
+        })
             .filter(mod => mod.weight > 0) // Only show rollable mods
             .sort((a, b) => b.weight - a.weight); // Sort by weight (higher = more common)
         return { success: true, data: filteredMods };
@@ -215,12 +203,16 @@ electron_1.ipcMain.handle('get-mods-for-item', async (event, params) => {
 });
 electron_1.ipcMain.handle('search-base-items', async (event, query) => {
     try {
-        if (!craftingData.isLoaded()) {
-            await craftingData.loadAll();
+        // Use live PoEDB scraping instead of static RePoE data
+        // Scrape all major item classes
+        const itemClasses = ['weapon', 'armor', 'ring', 'amulet', 'belt'];
+        const allBaseItems = [];
+        for (const itemClass of itemClasses) {
+            const items = await poedbScraper_1.poedbScraper.scrapeBaseItems(itemClass);
+            allBaseItems.push(...items);
         }
-        const allItems = Array.from(craftingData['baseItems'].values());
-        const results = allItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) &&
-            item.drop_enabled).slice(0, 50);
+        // Filter by query
+        const results = allBaseItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
         return { success: true, data: results };
     }
     catch (error) {
