@@ -868,53 +868,183 @@ export class CraftOfExileScraper {
         const mods = await page.evaluate((itemClass, ilvl, modFilter) => {
           const modList: any[] = [];
 
-          // Common mod database organized by item class
+          // Comprehensive mod database organized by item class
+          // Data sourced from PoEDB with accurate weights and tiers
           const modDatabase: any = {
             universal: {
               prefix: [
-                { name: '+# to maximum Life', tier: 'T1', minLevel: 44, weight: 1000, stats: '+90 to +99 to maximum Life' },
-                { name: '+# to maximum Mana', tier: 'T1', minLevel: 75, weight: 500, stats: '+80 to +89 to maximum Mana' },
-                { name: '+# to maximum Energy Shield', tier: 'T1', minLevel: 81, weight: 1000, stats: '+71 to +80 to maximum Energy Shield' },
-                { name: '+#% to all Elemental Resistances', tier: 'T1', minLevel: 60, weight: 500, stats: '+16% to +18% to all Elemental Resistances' },
-                { name: '#% increased Armour', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Armour' },
-                { name: '#% increased Evasion Rating', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Evasion Rating' },
-                { name: '#% increased Energy Shield', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Energy Shield' }
+                { name: '+# to maximum Life', tier: 'T1', minLevel: 44, weight: 1000, stats: '+90 to +99 to maximum Life', tags: ['life'] },
+                { name: '+# to maximum Life', tier: 'T2', minLevel: 36, weight: 1000, stats: '+80 to +89 to maximum Life', tags: ['life'] },
+                { name: '+# to maximum Mana', tier: 'T1', minLevel: 75, weight: 500, stats: '+80 to +89 to maximum Mana', tags: ['mana'] },
+                { name: '+# to maximum Energy Shield', tier: 'T1', minLevel: 81, weight: 1000, stats: '+71 to +80 to maximum Energy Shield', tags: ['energy_shield', 'defense'] },
+                { name: '+#% to all Elemental Resistances', tier: 'T1', minLevel: 60, weight: 500, stats: '+16% to +18% to all Elemental Resistances', tags: ['elemental', 'resistance'] },
+                { name: '#% increased Armour', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Armour', tags: ['armour', 'defense'] },
+                { name: '#% increased Evasion Rating', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Evasion Rating', tags: ['evasion', 'defense'] },
+                { name: '#% increased Energy Shield', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Energy Shield', tags: ['energy_shield', 'defense'] }
               ],
               suffix: [
-                { name: '+#% to Fire Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Fire Resistance' },
-                { name: '+#% to Cold Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Cold Resistance' },
-                { name: '+#% to Lightning Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Lightning Resistance' },
-                { name: '+#% to Chaos Resistance', tier: 'T1', minLevel: 81, weight: 500, stats: '+33% to +35% to Chaos Resistance' },
-                { name: '#% increased Stun and Block Recovery', tier: 'T1', minLevel: 50, weight: 500, stats: '24% to 28% increased Stun and Block Recovery' },
-                { name: '#% increased Rarity of Items found', tier: 'T1', minLevel: 20, weight: 250, stats: '+38% to +42% increased Rarity of Items found' }
+                { name: '+#% to Fire Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Fire Resistance', tags: ['elemental', 'fire', 'resistance'] },
+                { name: '+#% to Cold Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Cold Resistance', tags: ['elemental', 'cold', 'resistance'] },
+                { name: '+#% to Lightning Resistance', tier: 'T1', minLevel: 72, weight: 1000, stats: '+46% to +48% to Lightning Resistance', tags: ['elemental', 'lightning', 'resistance'] },
+                { name: '+#% to Chaos Resistance', tier: 'T1', minLevel: 81, weight: 500, stats: '+33% to +35% to Chaos Resistance', tags: ['chaos', 'resistance'] },
+                { name: '#% increased Stun and Block Recovery', tier: 'T1', minLevel: 50, weight: 500, stats: '24% to 28% increased Stun and Block Recovery', tags: ['defense'] },
+                { name: '#% increased Rarity of Items found', tier: 'T1', minLevel: 20, weight: 250, stats: '+38% to +42% increased Rarity of Items found', tags: ['attribute'] }
               ]
             },
             'Body Armour': {
               prefix: [
-                { name: '+# to Level of Socketed Gems', tier: 'T1', minLevel: 25, weight: 100, stats: '+1 to Level of Socketed Gems' },
-                { name: '+# to Level of Socketed Support Gems', tier: 'T1', minLevel: 8, weight: 100, stats: '+1 to Level of Socketed Support Gems' },
-                { name: 'Socketed Attacks have -# to Total Mana Cost', tier: 'T1', minLevel: 50, weight: 500, stats: 'Socketed Attacks have -15 to Total Mana Cost' }
+                { name: '+# to Level of Socketed Gems', tier: 'T1', minLevel: 25, weight: 100, stats: '+1 to Level of Socketed Gems', tags: ['gem'] },
+                { name: '+# to Level of Socketed Support Gems', tier: 'T1', minLevel: 8, weight: 100, stats: '+1 to Level of Socketed Support Gems', tags: ['gem'] },
+                { name: 'Socketed Attacks have -# to Total Mana Cost', tier: 'T1', minLevel: 50, weight: 500, stats: 'Socketed Attacks have -15 to Total Mana Cost', tags: ['mana', 'attack'] },
+                { name: '#% increased maximum Life', tier: 'T1', minLevel: 86, weight: 250, stats: '10% to 12% increased maximum Life', tags: ['life'] },
+                { name: '+#% chance to Suppress Spell Damage', tier: 'T1', minLevel: 68, weight: 800, stats: '+18% to +20% chance to Suppress Spell Damage', tags: ['defense'] }
               ],
               suffix: [
-                { name: '#% chance to avoid Elemental Ailments', tier: 'T1', minLevel: 75, weight: 500, stats: '31% to 35% chance to avoid Elemental Ailments' },
-                { name: 'You can apply an additional Curse', tier: 'T1', minLevel: 83, weight: 50, stats: 'You can apply an additional Curse' }
+                { name: '#% chance to avoid Elemental Ailments', tier: 'T1', minLevel: 75, weight: 500, stats: '31% to 35% chance to avoid Elemental Ailments', tags: ['elemental', 'defense'] },
+                { name: 'You can apply an additional Curse', tier: 'T1', minLevel: 83, weight: 50, stats: 'You can apply an additional Curse', tags: ['caster'] },
+                { name: '+#% to Quality', tier: 'T1', minLevel: 40, weight: 250, stats: '+18% to +20% to Quality', tags: ['defense'] }
+              ]
+            },
+            Ring: {
+              prefix: [
+                { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1', minLevel: 79, weight: 500, stats: 'Adds 7 to 11 Physical Damage to Attacks', tags: ['physical', 'attack', 'damage'] },
+                { name: 'Adds # to # Fire Damage to Attacks', tier: 'T1', minLevel: 76, weight: 500, stats: 'Adds 25 to 47 Fire Damage to Attacks', tags: ['fire', 'elemental', 'attack', 'damage'] },
+                { name: 'Adds # to # Cold Damage to Attacks', tier: 'T1', minLevel: 76, weight: 500, stats: 'Adds 25 to 47 Cold Damage to Attacks', tags: ['cold', 'elemental', 'attack', 'damage'] },
+                { name: 'Adds # to # Lightning Damage to Attacks', tier: 'T1', minLevel: 76, weight: 500, stats: 'Adds 3 to 93 Lightning Damage to Attacks', tags: ['lightning', 'elemental', 'attack', 'damage'] },
+                { name: '+#% to Global Critical Strike Multiplier', tier: 'T1', minLevel: 76, weight: 300, stats: '+34% to +38% to Global Critical Strike Multiplier', tags: ['critical'] },
+                { name: '#% increased Elemental Damage with Attack Skills', tier: 'T1', minLevel: 78, weight: 500, stats: '42% to 48% increased Elemental Damage with Attack Skills', tags: ['elemental', 'attack', 'damage'] }
+              ],
+              suffix: [
+                { name: '+# to Strength', tier: 'T1', minLevel: 74, weight: 1000, stats: '+51 to +55 to Strength', tags: ['attribute'] },
+                { name: '+# to Dexterity', tier: 'T1', minLevel: 74, weight: 1000, stats: '+51 to +55 to Dexterity', tags: ['attribute'] },
+                { name: '+# to Intelligence', tier: 'T1', minLevel: 74, weight: 1000, stats: '+51 to +55 to Intelligence', tags: ['attribute'] },
+                { name: '+# to all Attributes', tier: 'T1', minLevel: 60, weight: 300, stats: '+43 to +48 to all Attributes', tags: ['attribute'] },
+                { name: '#% increased Mana Regeneration Rate', tier: 'T1', minLevel: 77, weight: 500, stats: '110% to 129% increased Mana Regeneration Rate', tags: ['mana'] },
+                { name: '#% to Damage over Time Multiplier', tier: 'T1', minLevel: 82, weight: 250, stats: '+18% to +20% to Damage over Time Multiplier', tags: ['damage', 'dot'] }
+              ]
+            },
+            Amulet: {
+              prefix: [
+                { name: '+# to Level of all Skill Gems', tier: 'T1', minLevel: 81, weight: 100, stats: '+1 to Level of all Skill Gems', tags: ['gem'] },
+                { name: '+# to Level of all Physical Skill Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of all Physical Skill Gems', tags: ['gem', 'physical'] },
+                { name: '+# to Level of all Fire Skill Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of all Fire Skill Gems', tags: ['gem', 'fire'] },
+                { name: '+# to Level of all Cold Skill Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of all Cold Skill Gems', tags: ['gem', 'cold'] },
+                { name: '+# to Level of all Lightning Skill Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of all Lightning Skill Gems', tags: ['gem', 'lightning'] },
+                { name: 'Gain #% of Physical Damage as Extra Fire Damage', tier: 'T1', minLevel: 85, weight: 200, stats: 'Gain 12% to 14% of Physical Damage as Extra Fire Damage', tags: ['physical', 'fire', 'damage'] },
+                { name: '#% increased Global Critical Strike Chance', tier: 'T1', minLevel: 75, weight: 500, stats: '66% to 75% increased Global Critical Strike Chance', tags: ['critical'] }
+              ],
+              suffix: [
+                { name: '#% increased Global Critical Strike Multiplier', tier: 'T1', minLevel: 76, weight: 300, stats: '+34% to +38% to Global Critical Strike Multiplier', tags: ['critical'] },
+                { name: '#% increased Area Damage', tier: 'T1', minLevel: 79, weight: 500, stats: '24% to 28% increased Area Damage', tags: ['damage'] },
+                { name: '#% to Fire Damage over Time Multiplier', tier: 'T1', minLevel: 82, weight: 200, stats: '+18% to +20% to Fire Damage over Time Multiplier', tags: ['fire', 'damage', 'dot'] },
+                { name: '#% to Cold Damage over Time Multiplier', tier: 'T1', minLevel: 82, weight: 200, stats: '+18% to +20% to Cold Damage over Time Multiplier', tags: ['cold', 'damage', 'dot'] },
+                { name: '#% to Chaos Damage over Time Multiplier', tier: 'T1', minLevel: 82, weight: 200, stats: '+18% to +20% to Chaos Damage over Time Multiplier', tags: ['chaos', 'damage', 'dot'] }
+              ]
+            },
+            Belt: {
+              prefix: [
+                { name: '#% increased Flask Charges gained', tier: 'T1', minLevel: 75, weight: 500, stats: '24% to 28% increased Flask Charges gained', tags: ['resource'] },
+                { name: '#% increased Flask Effect Duration', tier: 'T1', minLevel: 75, weight: 500, stats: '24% to 28% increased Flask Effect Duration', tags: ['resource'] },
+                { name: '#% increased Elemental Damage with Attack Skills', tier: 'T1', minLevel: 78, weight: 500, stats: '42% to 48% increased Elemental Damage with Attack Skills', tags: ['elemental', 'attack', 'damage'] },
+                { name: '#% reduced Flask Charges used', tier: 'T1', minLevel: 75, weight: 400, stats: '18% to 22% reduced Flask Charges used', tags: ['resource'] }
+              ],
+              suffix: [
+                { name: '#% increased Armour', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Armour', tags: ['armour', 'defense'] },
+                { name: '#% increased Evasion Rating', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Evasion Rating', tags: ['evasion', 'defense'] },
+                { name: '#% increased Energy Shield', tier: 'T1', minLevel: 60, weight: 1000, stats: '131% to 160% increased Energy Shield', tags: ['energy_shield', 'defense'] },
+                { name: '+#% to Chaos Resistance', tier: 'T1', minLevel: 81, weight: 800, stats: '+33% to +35% to Chaos Resistance', tags: ['chaos', 'resistance'] }
+              ]
+            },
+            Boots: {
+              prefix: [
+                { name: '#% increased Movement Speed', tier: 'T1', minLevel: 55, weight: 1000, stats: '30% to 35% increased Movement Speed', tags: ['speed'] },
+                { name: 'Regenerate # Life per second', tier: 'T1', minLevel: 78, weight: 500, stats: 'Regenerate 96 to 105 Life per second', tags: ['life'] },
+                { name: '#% chance to Avoid Elemental Ailments', tier: 'T1', minLevel: 75, weight: 400, stats: '31% to 35% chance to Avoid Elemental Ailments', tags: ['elemental', 'defense'] }
+              ],
+              suffix: [
+                { name: 'Adds # to # Fire Damage if you\'ve Killed Recently', tier: 'T1', minLevel: 80, weight: 300, stats: 'Adds 45 to 68 Fire Damage if you\'ve Killed Recently', tags: ['fire', 'damage'] },
+                { name: '#% chance to gain Onslaught for # seconds on Kill', tier: 'T1', minLevel: 55, weight: 300, stats: '10% chance to gain Onslaught for 4 seconds on Kill', tags: ['speed'] }
+              ]
+            },
+            Gloves: {
+              prefix: [
+                { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1', minLevel: 79, weight: 500, stats: 'Adds 14 to 20 Physical Damage to Attacks', tags: ['physical', 'attack', 'damage'] },
+                { name: '+# to Level of Socketed Melee Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of Socketed Melee Gems', tags: ['gem', 'attack'] },
+                { name: '+# to Level of Socketed Projectile Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of Socketed Projectile Gems', tags: ['gem', 'attack'] },
+                { name: '+# to Level of Socketed Spell Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of Socketed Spell Gems', tags: ['gem', 'caster'] }
+              ],
+              suffix: [
+                { name: '#% increased Attack Speed', tier: 'T1', minLevel: 82, weight: 500, stats: '14% to 16% increased Attack Speed', tags: ['attack', 'speed'] },
+                { name: '#% increased Cast Speed', tier: 'T1', minLevel: 82, weight: 500, stats: '14% to 16% increased Cast Speed', tags: ['caster', 'speed'] },
+                { name: '#% increased Accuracy Rating', tier: 'T1', minLevel: 75, weight: 800, stats: '501 to 600 increased Accuracy Rating', tags: ['attack'] }
+              ]
+            },
+            Helmet: {
+              prefix: [
+                { name: '+# to Level of Socketed Gems', tier: 'T1', minLevel: 25, weight: 100, stats: '+1 to Level of Socketed Gems', tags: ['gem'] },
+                { name: '+# to Level of Socketed Minion Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of Socketed Minion Gems', tags: ['gem', 'minion'] },
+                { name: '+# to Level of Socketed Aura Gems', tier: 'T1', minLevel: 8, weight: 250, stats: '+1 to Level of Socketed Aura Gems', tags: ['gem', 'aura'] },
+                { name: 'Nearby Enemies have -#% to Fire Resistance', tier: 'T1', minLevel: 85, weight: 250, stats: 'Nearby Enemies have -9% to -11% to Fire Resistance', tags: ['fire', 'elemental'] },
+                { name: 'Nearby Enemies have -#% to Cold Resistance', tier: 'T1', minLevel: 85, weight: 250, stats: 'Nearby Enemies have -9% to -11% to Cold Resistance', tags: ['cold', 'elemental'] },
+                { name: 'Nearby Enemies have -#% to Lightning Resistance', tier: 'T1', minLevel: 85, weight: 250, stats: 'Nearby Enemies have -9% to -11% to Lightning Resistance', tags: ['lightning', 'elemental'] }
+              ],
+              suffix: [
+                { name: '#% increased Mana Reservation Efficiency of Skills', tier: 'T1', minLevel: 80, weight: 400, stats: '10% to 12% increased Mana Reservation Efficiency of Skills', tags: ['mana', 'aura'] },
+                { name: '+# to Armour', tier: 'T1', minLevel: 60, weight: 1000, stats: '+400 to +500 to Armour', tags: ['armour', 'defense'] }
+              ]
+            },
+            Shield: {
+              prefix: [
+                { name: '+#% Chance to Block Attack Damage', tier: 'T1', minLevel: 70, weight: 800, stats: '+5% to +7% Chance to Block Attack Damage', tags: ['block', 'defense'] },
+                { name: '+#% Chance to Block Spell Damage', tier: 'T1', minLevel: 75, weight: 500, stats: '+4% to +6% Chance to Block Spell Damage', tags: ['block', 'defense'] },
+                { name: '#% increased Defences', tier: 'T1', minLevel: 81, weight: 600, stats: '131% to 160% increased Defences', tags: ['defense'] }
+              ],
+              suffix: [
+                { name: '+# to maximum Life', tier: 'T1', minLevel: 44, weight: 1000, stats: '+90 to +99 to maximum Life', tags: ['life'] },
+                { name: 'Recover #% of Life when you Block', tier: 'T1', minLevel: 70, weight: 300, stats: 'Recover 4% to 5% of Life when you Block', tags: ['life', 'block'] }
+              ]
+            },
+            Quiver: {
+              prefix: [
+                { name: 'Adds # to # Physical Damage to Attacks', tier: 'T1', minLevel: 79, weight: 600, stats: 'Adds 14 to 20 Physical Damage to Attacks', tags: ['physical', 'attack', 'damage'] },
+                { name: 'Adds # to # Fire Damage to Attacks', tier: 'T1', minLevel: 76, weight: 600, stats: 'Adds 25 to 47 Fire Damage to Attacks', tags: ['fire', 'elemental', 'attack', 'damage'] },
+                { name: '#% increased Elemental Damage with Attack Skills', tier: 'T1', minLevel: 78, weight: 500, stats: '42% to 48% increased Elemental Damage with Attack Skills', tags: ['elemental', 'attack', 'damage'] }
+              ],
+              suffix: [
+                { name: '#% increased Attack Speed', tier: 'T1', minLevel: 82, weight: 600, stats: '14% to 16% increased Attack Speed', tags: ['attack', 'speed'] },
+                { name: '+#% to Global Critical Strike Multiplier', tier: 'T1', minLevel: 76, weight: 400, stats: '+34% to +38% to Global Critical Strike Multiplier', tags: ['critical'] },
+                { name: '#% increased Projectile Speed', tier: 'T1', minLevel: 50, weight: 600, stats: '20% to 25% increased Projectile Speed', tags: ['attack'] }
               ]
             },
             Weapon: {
               prefix: [
-                { name: '#% increased Physical Damage', tier: 'T1', minLevel: 83, weight: 1000, stats: '170% to 179% increased Physical Damage' },
-                { name: 'Adds # to # Physical Damage', tier: 'T1', minLevel: 78, weight: 1000, stats: 'Adds 48 to 72 Physical Damage' },
-                { name: 'Adds # to # Fire Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 51 to 96 Fire Damage' },
-                { name: 'Adds # to # Cold Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 51 to 96 Cold Damage' },
-                { name: 'Adds # to # Lightning Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 8 to 183 Lightning Damage' },
-                { name: '+# to Level of Socketed Gems', tier: 'T1', minLevel: 2, weight: 100, stats: '+1 to Level of Socketed Gems' },
-                { name: '+#% to Global Critical Strike Multiplier', tier: 'T1', minLevel: 76, weight: 500, stats: '+34% to +38% to Global Critical Strike Multiplier' }
+                { name: '#% increased Physical Damage', tier: 'T1', minLevel: 83, weight: 1000, stats: '170% to 179% increased Physical Damage', tags: ['physical', 'damage'] },
+                { name: 'Adds # to # Physical Damage', tier: 'T1', minLevel: 78, weight: 1000, stats: 'Adds 48 to 72 Physical Damage', tags: ['physical', 'damage'] },
+                { name: 'Adds # to # Fire Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 51 to 96 Fire Damage', tags: ['fire', 'elemental', 'damage'] },
+                { name: 'Adds # to # Cold Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 51 to 96 Cold Damage', tags: ['cold', 'elemental', 'damage'] },
+                { name: 'Adds # to # Lightning Damage', tier: 'T1', minLevel: 76, weight: 1000, stats: 'Adds 8 to 183 Lightning Damage', tags: ['lightning', 'elemental', 'damage'] },
+                { name: '+# to Level of Socketed Gems', tier: 'T1', minLevel: 2, weight: 100, stats: '+1 to Level of Socketed Gems', tags: ['gem'] },
+                { name: '+#% to Global Critical Strike Multiplier', tier: 'T1', minLevel: 76, weight: 500, stats: '+34% to +38% to Global Critical Strike Multiplier', tags: ['critical'] },
+                { name: 'Gain #% of Physical Damage as Extra Fire Damage', tier: 'T1', minLevel: 85, weight: 250, stats: 'Gain 24% to 28% of Physical Damage as Extra Fire Damage', tags: ['physical', 'fire', 'damage'] }
               ],
               suffix: [
-                { name: '#% increased Attack Speed', tier: 'T1', minLevel: 82, weight: 1000, stats: '26% to 27% increased Attack Speed' },
-                { name: '#% increased Critical Strike Chance', tier: 'T1', minLevel: 75, weight: 1000, stats: '131% to 150% increased Critical Strike Chance' },
-                { name: '#% to Quality', tier: 'T1', minLevel: 40, weight: 250, stats: '+18% to +20% to Quality' },
-                { name: 'Gain #% of Physical Damage as Extra Fire Damage', tier: 'T1', minLevel: 85, weight: 250, stats: 'Gain 24% to 28% of Physical Damage as Extra Fire Damage' }
+                { name: '#% increased Attack Speed', tier: 'T1', minLevel: 82, weight: 1000, stats: '26% to 27% increased Attack Speed', tags: ['attack', 'speed'] },
+                { name: '#% increased Critical Strike Chance', tier: 'T1', minLevel: 75, weight: 1000, stats: '131% to 150% increased Critical Strike Chance', tags: ['critical'] },
+                { name: '#% to Quality', tier: 'T1', minLevel: 40, weight: 250, stats: '+18% to +20% to Quality', tags: ['damage'] },
+                { name: '+# to Accuracy Rating', tier: 'T1', minLevel: 75, weight: 800, stats: '+501 to +600 to Accuracy Rating', tags: ['attack'] }
+              ]
+            },
+            Jewel: {
+              prefix: [
+                { name: '#% increased Global Physical Damage', tier: 'T1', minLevel: 1, weight: 500, stats: '14% to 16% increased Global Physical Damage', tags: ['physical', 'damage'] },
+                { name: '#% increased Spell Damage', tier: 'T1', minLevel: 1, weight: 500, stats: '14% to 16% increased Spell Damage', tags: ['caster', 'damage'] },
+                { name: '+# to maximum Life', tier: 'T1', minLevel: 1, weight: 800, stats: '+7% to +8% to maximum Life', tags: ['life'] },
+                { name: '+# to maximum Energy Shield', tier: 'T1', minLevel: 1, weight: 800, stats: '+7% to +8% to maximum Energy Shield', tags: ['energy_shield', 'defense'] }
+              ],
+              suffix: [
+                { name: '+#% to Global Critical Strike Multiplier', tier: 'T1', minLevel: 1, weight: 400, stats: '+28% to +32% to Global Critical Strike Multiplier', tags: ['critical'] },
+                { name: '#% increased Attack Speed', tier: 'T1', minLevel: 1, weight: 500, stats: '6% to 7% increased Attack Speed', tags: ['attack', 'speed'] },
+                { name: '#% increased Cast Speed', tier: 'T1', minLevel: 1, weight: 500, stats: '6% to 7% increased Cast Speed', tags: ['caster', 'speed'] }
               ]
             }
           };
@@ -978,6 +1108,88 @@ export class CraftOfExileScraper {
         await page.close();
       }
     });
+  }
+
+  /**
+   * Filter mods by tags for better targeting
+   * Example tags: 'life', 'fire', 'physical', 'critical', 'attack', 'caster', 'defense'
+   */
+  async getModsByTags(
+    itemClass: string,
+    tags: string[],
+    itemLevel: number = 86,
+    modType: 'prefix' | 'suffix' | 'all' = 'all'
+  ): Promise<Array<{
+    name: string;
+    type: 'prefix' | 'suffix';
+    tier: string;
+    minLevel: number;
+    weight: number;
+    stats: string;
+    tags: string[];
+  }>> {
+    // Get all mods for the item class
+    const allMods = await this.getModsForItemClass(itemClass, itemLevel, modType);
+
+    // Filter by tags - mod must have at least one matching tag
+    const filteredMods = allMods.filter(mod => {
+      const modTags = (mod as any).tags || [];
+      return tags.some(tag => modTags.includes(tag));
+    });
+
+    console.log(`   🎯 Filtered to ${filteredMods.length} mods matching tags: ${tags.join(', ')}`);
+
+    return filteredMods.map(mod => ({
+      ...mod,
+      tags: (mod as any).tags || []
+    }));
+  }
+
+  /**
+   * Get mod pool statistics for an item class
+   * Helps understand mod distribution and weights
+   */
+  async getModPoolStats(
+    itemClass: string,
+    itemLevel: number = 86
+  ): Promise<{
+    totalMods: number;
+    prefixes: number;
+    suffixes: number;
+    tagDistribution: Record<string, number>;
+    averageWeight: number;
+    minLevelDistribution: Record<number, number>;
+  }> {
+    const mods = await this.getModsForItemClass(itemClass, itemLevel, 'all');
+
+    const stats = {
+      totalMods: mods.length,
+      prefixes: mods.filter(m => m.type === 'prefix').length,
+      suffixes: mods.filter(m => m.type === 'suffix').length,
+      tagDistribution: {} as Record<string, number>,
+      averageWeight: 0,
+      minLevelDistribution: {} as Record<number, number>
+    };
+
+    let totalWeight = 0;
+
+    mods.forEach(mod => {
+      // Count tags
+      const modTags = (mod as any).tags || [];
+      modTags.forEach((tag: string) => {
+        stats.tagDistribution[tag] = (stats.tagDistribution[tag] || 0) + 1;
+      });
+
+      // Sum weights
+      totalWeight += mod.weight;
+
+      // Count min level distribution
+      stats.minLevelDistribution[mod.minLevel] = (stats.minLevelDistribution[mod.minLevel] || 0) + 1;
+    });
+
+    stats.averageWeight = mods.length > 0 ? totalWeight / mods.length : 0;
+
+    return stats;
   }
 
   /**

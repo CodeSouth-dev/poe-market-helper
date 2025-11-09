@@ -38,7 +38,7 @@ class CraftingCalculator {
         const modNames = desiredMods.map(m => m.name);
         try {
             // Run ALL crafting method calculations in parallel for maximum efficiency
-            const [chaosSimulation, altRegalSimulation, fossilSimulation, essenceSimulation, fossilMethod, essenceMethod, harvestMethod, veiledMethod, beastMethod] = await Promise.all([
+            const [chaosSimulation, altRegalSimulation, fossilSimulation, essenceSimulation, fossilMethod, essenceMethod, harvestMethod, veiledMethod, beastMethod, eldritchMethod, awakenersMethod, mavensMethod, influencedExaltMethod, recombinatorMethod] = await Promise.all([
                 // CraftOfExile simulations
                 craftOfExileScraper_1.craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'chaos'),
                 craftOfExileScraper_1.craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'alt-regal'),
@@ -49,7 +49,13 @@ class CraftingCalculator {
                 this.calculateEssenceCrafting(desiredMods, baseItemName, itemLevel, itemClass, league),
                 this.calculateHarvestReforge(desiredMods, baseItemName, itemLevel, itemClass, league),
                 this.calculateVeiledChaos(desiredMods, baseItemName, itemLevel, itemClass, league),
-                this.calculateBeastcrafting(desiredMods, baseItemName, itemLevel, itemClass, league)
+                this.calculateBeastcrafting(desiredMods, baseItemName, itemLevel, itemClass, league),
+                // New advanced methods
+                this.calculateEldritchCrafting(desiredMods, baseItemName, itemLevel, itemClass, league),
+                this.calculateAwakenersOrb(desiredMods, baseItemName, itemLevel, itemClass, league),
+                this.calculateMavensOrb(desiredMods, baseItemName, itemLevel, itemClass, league),
+                this.calculateInfluencedExalt(desiredMods, baseItemName, itemLevel, itemClass, league),
+                this.calculateRecombinatorCrafting(desiredMods, baseItemName, itemLevel, itemClass, league)
             ]);
             // Add basic CraftOfExile methods
             if (chaosSimulation.cheapestMethod) {
@@ -101,6 +107,17 @@ class CraftingCalculator {
                 methods.push(veiledMethod);
             if (beastMethod)
                 methods.push(beastMethod);
+            // Add new advanced methods
+            if (eldritchMethod)
+                methods.push(eldritchMethod);
+            if (awakenersMethod)
+                methods.push(awakenersMethod);
+            if (mavensMethod)
+                methods.push(mavensMethod);
+            if (influencedExaltMethod)
+                methods.push(influencedExaltMethod);
+            if (recombinatorMethod)
+                methods.push(recombinatorMethod);
             console.log(`✅ Simulations complete. Found ${methods.length} crafting methods.`);
         }
         catch (error) {
@@ -435,6 +452,221 @@ class CraftingCalculator {
         }
         catch (error) {
             console.error('Failed to calculate beastcrafting:', error.message);
+            return null;
+        }
+    }
+    /**
+     * Calculate Eldritch Currency crafting (for influenced items)
+     */
+    async calculateEldritchCrafting(desiredMods, baseItemName, itemLevel, itemClass, league) {
+        // Only applicable for armor/jewelry that can have eldritch implicits
+        const validClasses = ['Body Armour', 'Helmet', 'Gloves', 'Boots'];
+        if (!validClasses.includes(itemClass)) {
+            return null;
+        }
+        try {
+            const eldritchChaosPrice = this.currencyService.getPrice('Eldritch Chaos Orb') || 5;
+            const eldritchExaltPrice = this.currencyService.getPrice('Eldritch Exalted Orb') || 15;
+            // Eldritch Chaos for rerolling while keeping implicits
+            const estimatedAttempts = 30;
+            const totalCost = (estimatedAttempts * eldritchChaosPrice) + (eldritchExaltPrice * 2);
+            return {
+                method: 'chaos',
+                name: 'Eldritch Currency Method',
+                description: 'Use Eldritch Chaos/Exalt to craft while preserving valuable implicits',
+                probability: 0.08,
+                averageCost: totalCost,
+                currencyUsed: {
+                    'Eldritch Chaos Orb': estimatedAttempts,
+                    'Eldritch Exalted Orb': 2
+                },
+                steps: [
+                    `Acquire ${baseItemName} with desired Eldritch implicit (Searing/Eater)`,
+                    'Use Eldritch Chaos Orbs to reroll mods while keeping implicits',
+                    'Use Eldritch Exalted Orbs to add final mods',
+                    `Expected chaos orbs: ${estimatedAttempts}`,
+                    'Benefit: Preserves powerful implicit mods that normal chaos would destroy',
+                    'Combine with Orb of Dominance for elevated implicits'
+                ],
+                expectedAttempts: estimatedAttempts
+            };
+        }
+        catch (error) {
+            console.error('Failed to calculate eldritch crafting:', error.message);
+            return null;
+        }
+    }
+    /**
+     * Calculate Awakener's Orb crafting (combining influenced items)
+     */
+    async calculateAwakenersOrb(desiredMods, baseItemName, itemLevel, itemClass, league) {
+        // Check if any desired mods are influenced mods
+        const influencedKeywords = ['crusader', 'redeemer', 'hunter', 'warlord', 'shaper', 'elder'];
+        const hasInfluencedMods = desiredMods.some(mod => influencedKeywords.some(kw => mod.name.toLowerCase().includes(kw)));
+        if (!hasInfluencedMods && desiredMods.length < 4) {
+            return null; // Not worth it for simple crafts
+        }
+        try {
+            const awakenersPrice = this.currencyService.getPrice("Awakener's Orb") || 250;
+            const basePrice = 50; // Cost of two influenced bases
+            const estimatedAttempts = 3;
+            const totalCost = (awakenersPrice * estimatedAttempts) + (basePrice * estimatedAttempts * 2);
+            return {
+                method: 'chaos',
+                name: "Awakener's Orb Method",
+                description: 'Combine two influenced items to get dual-influence with specific mods',
+                probability: 0.3,
+                averageCost: totalCost,
+                currencyUsed: {
+                    "Awakener's Orb": estimatedAttempts,
+                    'Influenced Bases': estimatedAttempts * 2
+                },
+                steps: [
+                    `Acquire two influenced ${baseItemName} (e.g., Crusader + Redeemer)`,
+                    'Craft desired mod on one base (this mod will transfer)',
+                    "Use Awakener's Orb: destroys first item, transfers influence to second",
+                    'Result: Dual-influenced item with guaranteed mod from first base',
+                    `Expected attempts: ${estimatedAttempts}`,
+                    'Continue crafting with other methods for remaining mods',
+                    'Very expensive but allows powerful mod combinations'
+                ],
+                expectedAttempts: estimatedAttempts
+            };
+        }
+        catch (error) {
+            console.error("Failed to calculate Awakener's Orb:", error.message);
+            return null;
+        }
+    }
+    /**
+     * Calculate Maven's Orb crafting (elevating influenced mods)
+     */
+    async calculateMavensOrb(desiredMods, baseItemName, itemLevel, itemClass, league) {
+        // Check if targeting high-tier influenced mods
+        const influencedKeywords = ['elevated', 'crusader', 'redeemer', 'hunter', 'warlord'];
+        const hasElevatedGoal = desiredMods.some(mod => influencedKeywords.some(kw => mod.name.toLowerCase().includes(kw)));
+        if (!hasElevatedGoal) {
+            return null;
+        }
+        try {
+            const mavensPrice = this.currencyService.getPrice("Maven's Orb") || 100;
+            // Maven's Orb: 50% success, 50% removes the mod entirely
+            const estimatedAttempts = 5; // Need multiple tries due to failure risk
+            const totalCost = mavensPrice * estimatedAttempts;
+            return {
+                method: 'chaos',
+                name: "Maven's Orb Method",
+                description: 'Elevate an influenced mod to its highest tier',
+                probability: 0.2,
+                averageCost: totalCost,
+                currencyUsed: {
+                    "Maven's Orb": estimatedAttempts
+                },
+                steps: [
+                    `Craft ${baseItemName} with desired influenced mod`,
+                    'Ensure item has only ONE influenced mod (remove others first)',
+                    "Use Maven's Orb: 50% elevate mod, 50% remove it entirely",
+                    `Expected attempts: ${estimatedAttempts} (due to 50% fail rate)`,
+                    '⚠️ RISKY: Can destroy your item if mod is removed!',
+                    'Best combined with Imprint beast for magic items',
+                    'Only use on valuable items worth the risk'
+                ],
+                expectedAttempts: estimatedAttempts
+            };
+        }
+        catch (error) {
+            console.error("Failed to calculate Maven's Orb:", error.message);
+            return null;
+        }
+    }
+    /**
+     * Calculate Influenced Exalted Orb crafting
+     */
+    async calculateInfluencedExalt(desiredMods, baseItemName, itemLevel, itemClass, league) {
+        // Determine which influence is needed
+        const influences = {
+            crusader: 'Crusader',
+            redeemer: 'Redeemer',
+            hunter: 'Hunter',
+            warlord: 'Warlord'
+        };
+        let targetInfluence = '';
+        for (const [key, value] of Object.entries(influences)) {
+            if (desiredMods.some(mod => mod.name.toLowerCase().includes(key))) {
+                targetInfluence = value;
+                break;
+            }
+        }
+        if (!targetInfluence) {
+            return null;
+        }
+        try {
+            const exaltPrice = this.currencyService.getPrice(`${targetInfluence}'s Exalted Orb`) || 30;
+            // Influenced exalts have smaller mod pools, so better odds
+            const estimatedAttempts = 7;
+            const totalCost = exaltPrice * estimatedAttempts;
+            return {
+                method: 'chaos',
+                name: `${targetInfluence}'s Exalted Orb Method`,
+                description: `Add ${targetInfluence} influenced mod to item`,
+                probability: 0.15,
+                averageCost: totalCost,
+                currencyUsed: {
+                    [`${targetInfluence}'s Exalted Orb`]: estimatedAttempts
+                },
+                steps: [
+                    `Acquire ${baseItemName} with ${targetInfluence} influence`,
+                    'Craft desired non-influenced mods first',
+                    `Use ${targetInfluence}'s Exalted Orbs to add influenced mods`,
+                    `Expected attempts: ${estimatedAttempts}`,
+                    'Has smaller mod pool than normal Exalted Orbs',
+                    'Can combine with "Cannot roll Attack/Caster Mods" for better targeting',
+                    'Use blocking techniques to improve odds'
+                ],
+                expectedAttempts: estimatedAttempts
+            };
+        }
+        catch (error) {
+            console.error('Failed to calculate influenced exalt:', error.message);
+            return null;
+        }
+    }
+    /**
+     * Calculate Recombinator crafting (advanced mod combining)
+     */
+    async calculateRecombinatorCrafting(desiredMods, baseItemName, itemLevel, itemClass, league) {
+        // Recombinators are league-specific - check if available
+        try {
+            const recombPrice = this.currencyService.getPrice('Recombinator') || 50;
+            // Recombs have ~50% success rate to create viable item
+            const estimatedAttempts = 4;
+            const baseCost = 20; // Cost of two items to combine
+            const totalCost = (recombPrice * estimatedAttempts) + (baseCost * estimatedAttempts * 2);
+            return {
+                method: 'chaos',
+                name: 'Recombinator Method',
+                description: 'Combine two items to merge their mods',
+                probability: 0.5,
+                averageCost: totalCost,
+                currencyUsed: {
+                    'Recombinator': estimatedAttempts,
+                    'Base Items': estimatedAttempts * 2
+                },
+                steps: [
+                    `Craft two ${baseItemName} with complementary desired mods`,
+                    'Use Recombinator to combine them',
+                    '~50% chance result has your desired mods',
+                    '~50% one item is destroyed with no result',
+                    `Expected attempts: ${estimatedAttempts}`,
+                    'Can create impossible mod combinations',
+                    '⚠️ High-variance method: Can be very cheap or very expensive',
+                    'Best for high-value mirror-tier crafts'
+                ],
+                expectedAttempts: estimatedAttempts
+            };
+        }
+        catch (error) {
+            console.error('Failed to calculate recombinator:', error.message);
             return null;
         }
     }
