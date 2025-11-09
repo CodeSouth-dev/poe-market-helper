@@ -11,6 +11,7 @@ import {
   BaseRecommendation
 } from '../types/crafting';
 import { poedbScraper } from '../poedbScraper';
+import { craftOfExileScraper } from '../craftOfExileScraper';
 import { PoeNinjaAPI } from './poeNinja';
 import { getCurrencyPriceService } from '../services/currencyPriceService';
 import { calculateSimpleModProbability, calculateWeightedModProbability } from '../utils/probabilityCalculator';
@@ -19,7 +20,7 @@ import { CURRENCY_COSTS, MOD_LIMITS, HARVEST_COSTS, RECOMBINATOR_COSTS } from '.
 /**
  * Core crafting calculation engine
  * Calculates probabilities and costs for different crafting methods
- * Now uses live PoEDB scraping instead of static RePoE data
+ * Now uses live PoEDB scraping and CraftOfExile simulator for accurate probabilities
  */
 export class CraftingCalculator {
   private currencyService = getCurrencyPriceService();
@@ -51,49 +52,123 @@ export class CraftingCalculator {
       item.name.toLowerCase() === baseItemName.toLowerCase()
     );
 
-    if (!baseItem) {
-      // If not found, create a minimal base item object
-      console.warn(`Base item "${baseItemName}" not found in PoEDB, using defaults`);
-    }
+    const itemLevelData = await poedbScraper.getBestIlvlForMods(itemClass, desiredMods.map(m => m.name));
+    const itemLevel = itemLevelData.recommendedIlvl;
 
-    // TODO: Refactor remaining methods to use live PoEDB data instead of RePoE
-    // For now, return simplified methods based on desired mod count
+    console.log(`\n🎲 Running CraftOfExile simulations for ${baseItemName} (ilvl ${itemLevel})...`);
+
+    // Use CraftOfExile simulator to get accurate probabilities
     const methods: CraftingMethod[] = [];
+    const modNames = desiredMods.map(m => m.name);
 
-    // Simplified method recommendations based on mod count
-    const modCount = desiredMods.length;
-    const chaosPrice = this.currencyService.getPrice('Chaos Orb');
+    try {
+      // Run simulations for different methods in parallel
+      const [chaosSimulation, altRegalSimulation, fossilSimulation, essenceSimulation] = await Promise.all([
+        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'chaos'),
+        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'alt-regal'),
+        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'fossil'),
+        craftOfExileScraper.simulateCrafting(baseItemName, itemLevel, modNames, 'essence')
+      ]);
 
-    if (modCount <= 2) {
+      // Convert CraftOfExile results to our CraftingMethod format
+      if (chaosSimulation.cheapestMethod) {
+        methods.push({
+          method: 'chaos',
+          name: chaosSimulation.cheapestMethod.name,
+          description: chaosSimulation.cheapestMethod.description || 'Spam Chaos Orbs until desired mods appear',
+          probability: chaosSimulation.cheapestMethod.successRate,
+          averageCost: chaosSimulation.cheapestMethod.averageCost,
+          currencyUsed: { 'Chaos Orb': chaosSimulation.cheapestMethod.averageAttempts },
+          steps: [
+            `Spam Chaos Orbs on ${baseItemName} (ilvl ${itemLevel})`,
+            'Stop when you hit desired mods',
+            `Expected attempts: ${chaosSimulation.cheapestMethod.averageAttempts}`,
+            `Success rate: ${(chaosSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`
+          ],
+          expectedAttempts: chaosSimulation.cheapestMethod.averageAttempts
+        });
+      }
+
+      if (altRegalSimulation.cheapestMethod) {
+        methods.push({
+          method: 'alteration',
+          name: altRegalSimulation.cheapestMethod.name,
+          description: altRegalSimulation.cheapestMethod.description || 'Alt spam for desired mods, then regal',
+          probability: altRegalSimulation.cheapestMethod.successRate,
+          averageCost: altRegalSimulation.cheapestMethod.averageCost,
+          currencyUsed: {
+            'Orb of Alteration': altRegalSimulation.cheapestMethod.averageAttempts,
+            'Regal Orb': 1
+          },
+          steps: [
+            `Spam Orbs of Alteration on ${baseItemName} (ilvl ${itemLevel})`,
+            'When you hit desired mods, use Regal Orb',
+            `Expected attempts: ${altRegalSimulation.cheapestMethod.averageAttempts}`,
+            `Success rate: ${(altRegalSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
+            'Craft remaining affixes on bench'
+          ],
+          expectedAttempts: altRegalSimulation.cheapestMethod.averageAttempts
+        });
+      }
+
+      if (fossilSimulation.cheapestMethod && fossilSimulation.cheapestMethod.averageCost > 0) {
+        methods.push({
+          method: 'fossil',
+          name: fossilSimulation.cheapestMethod.name,
+          description: fossilSimulation.cheapestMethod.description || 'Use targeted fossils to force desired mods',
+          probability: fossilSimulation.cheapestMethod.successRate,
+          averageCost: fossilSimulation.cheapestMethod.averageCost,
+          currencyUsed: { 'Fossils': fossilSimulation.cheapestMethod.averageAttempts },
+          steps: [
+            'Identify which fossils weight your desired mods',
+            `Spam fossils on ${baseItemName} (ilvl ${itemLevel})`,
+            `Expected attempts: ${fossilSimulation.cheapestMethod.averageAttempts}`,
+            `Success rate: ${(fossilSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
+            'Finish with bench crafts'
+          ],
+          expectedAttempts: fossilSimulation.cheapestMethod.averageAttempts
+        });
+      }
+
+      if (essenceSimulation.cheapestMethod && essenceSimulation.cheapestMethod.averageCost > 0) {
+        methods.push({
+          method: 'essence',
+          name: essenceSimulation.cheapestMethod.name,
+          description: essenceSimulation.cheapestMethod.description || 'Use essences to guarantee specific mods',
+          probability: essenceSimulation.cheapestMethod.successRate,
+          averageCost: essenceSimulation.cheapestMethod.averageCost,
+          currencyUsed: { 'Essence': essenceSimulation.cheapestMethod.averageAttempts },
+          steps: [
+            'Find the appropriate essence for your desired mod',
+            `Spam essences on ${baseItemName} (ilvl ${itemLevel})`,
+            `Expected attempts: ${essenceSimulation.cheapestMethod.averageAttempts}`,
+            `Success rate: ${(essenceSimulation.cheapestMethod.successRate * 100).toFixed(2)}%`,
+            'Finish with bench crafts'
+          ],
+          expectedAttempts: essenceSimulation.cheapestMethod.averageAttempts
+        });
+      }
+
+      console.log(`✅ Simulations complete. Found ${methods.length} crafting methods.`);
+    } catch (error: any) {
+      console.error(`⚠️ CraftOfExile simulation failed, using fallback estimates:`, error.message);
+
+      // Fallback to simple estimates if CraftOfExile fails
+      const chaosPrice = this.currencyService.getPrice('Chaos Orb');
       methods.push({
-        method: 'alteration',
-        name: 'Alt-Regal Method',
-        description: 'Alt spam for desired mods, then regal',
-        probability: 0.3,
-        averageCost: 50 * chaosPrice,
-        currencyUsed: { 'Orb of Alteration': 100, 'Regal Orb': 1 },
+        method: 'chaos',
+        name: 'Chaos Spam (Estimated)',
+        description: 'Spam Chaos Orbs until desired mods appear',
+        probability: 0.1,
+        averageCost: 150 * chaosPrice,
+        currencyUsed: { 'Chaos Orb': 150 },
         steps: [
-          `Spam Orbs of Alteration on ${baseItemName}`,
-          'When you hit desired mods, use Regal Orb',
-          'Craft remaining affixes on bench'
+          `Spam Chaos Orbs on ${baseItemName}`,
+          'Stop when you hit desired mods'
         ],
-        expectedAttempts: 100
+        expectedAttempts: 150
       });
     }
-
-    methods.push({
-      method: 'chaos',
-      name: 'Chaos Spam',
-      description: 'Spam Chaos Orbs until desired mods appear',
-      probability: 0.1,
-      averageCost: 150 * chaosPrice,
-      currencyUsed: { 'Chaos Orb': 150 },
-      steps: [
-        `Spam Chaos Orbs on ${baseItemName}`,
-        'Stop when you hit desired mods'
-      ],
-      expectedAttempts: 150
-    });
 
     // Sort by cost
     methods.sort((a, b) => a.averageCost - b.averageCost);
