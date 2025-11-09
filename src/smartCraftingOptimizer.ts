@@ -15,6 +15,7 @@ import { pohxCraftingScraper, CraftingGuide } from './pohxCraftingScraper';
 import { maxRollCraftingScraper, MaxRollCraftingMethod } from './maxRollCraftingScraper';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 import { getCurrencyPriceService } from './services/currencyPriceService';
+import { poedbScraper } from './poedbScraper';
 import { validateCraftingGoal, formatValidationResult } from './utils/validators';
 import {
   METHOD_SCORING_WEIGHTS,
@@ -53,6 +54,8 @@ export interface OptimizedStrategy {
   itemLevel?: number;
   itemClass?: string;
   desiredMods?: string[];
+  recommendedItemLevel?: number; // Calculated minimum ilvl for desired mods
+  itemLevelBreakdown?: Array<{mod: string, minLevel: number}>; // Show which mods need which ilvl
 
   // Advanced options
   alternativeMethods?: OptimizedStrategy[];
@@ -93,6 +96,17 @@ export class SmartCraftingOptimizer {
     // Load currency prices for cost calculation
     await this.currencyService.loadPrices(goal.league);
 
+    // Calculate minimum item level using live PoEDB data
+    const { recommendedIlvl, modDetails } = await poedbScraper.getBestIlvlForMods(
+      goal.itemClass,
+      goal.desiredMods
+    );
+
+    // Update goal with recommended ilvl if user's input is lower
+    if (recommendedIlvl > goal.itemLevel) {
+      goal.itemLevel = recommendedIlvl;
+    }
+
     // Gather all available methods
     const allMethods = await this.gatherAllMethods(goal);
 
@@ -103,11 +117,11 @@ export class SmartCraftingOptimizer {
     const bestMethod = rankedMethods[0];
 
     // Build the optimized strategy
-    const strategy = await this.buildStrategy(bestMethod, goal);
+    const strategy = await this.buildStrategy(bestMethod, goal, recommendedIlvl, modDetails);
 
     // Add alternative methods
     strategy.alternativeMethods = await Promise.all(
-      rankedMethods.slice(1, 4).map(m => this.buildStrategy(m, goal))
+      rankedMethods.slice(1, 4).map(m => this.buildStrategy(m, goal, recommendedIlvl, modDetails))
     );
 
     // Add recombinator option if risk mode is enabled
@@ -116,15 +130,6 @@ export class SmartCraftingOptimizer {
     }
 
     return strategy;
-  }
-
-  /**
-   * Load real-time currency prices
-   * Now handled by centralized currency service
-   */
-  private async loadCurrencyPrices(league: string) {
-    // Currency prices are loaded via centralized service in getOptimalStrategy
-    // This method kept for backward compatibility
   }
 
   /**
@@ -344,7 +349,12 @@ export class SmartCraftingOptimizer {
   /**
    * Build a complete strategy from a method
    */
-  private async buildStrategy(method: any, goal: CraftingGoal): Promise<OptimizedStrategy> {
+  private async buildStrategy(
+    method: any,
+    goal: CraftingGoal,
+    recommendedIlvl: number,
+    modDetails: Array<{mod: string, minLevel: number}>
+  ): Promise<OptimizedStrategy> {
     const estimatedCost = this.estimateCost(method);
     const successRate = this.estimateSuccessRate(method);
 
@@ -365,6 +375,12 @@ export class SmartCraftingOptimizer {
       }
     }
 
+    // Add tips about item level if we calculated it from mods
+    const tips = [...(method.tips || [])];
+    if (recommendedIlvl > 1 && modDetails.length > 0) {
+      tips.unshift(`Item level ${recommendedIlvl}+ required for highest tier mods (scraped live from PoEDB)`);
+    }
+
     return {
       method: method.name,
       source: method.source,
@@ -374,7 +390,7 @@ export class SmartCraftingOptimizer {
       successRate,
       timeToComplete: this.estimateTime(method),
       requirements,
-      tips: method.tips || [],
+      tips,
       warnings: method.warnings || [],
       profitPotential: this.estimateProfit(method, goal),
       riskLevel: this.assessRiskLevel(method),
@@ -382,7 +398,9 @@ export class SmartCraftingOptimizer {
       baseItem: goal.baseItem,
       itemLevel: goal.itemLevel,
       itemClass: goal.itemClass,
-      desiredMods: goal.desiredMods
+      desiredMods: goal.desiredMods,
+      recommendedItemLevel: recommendedIlvl,
+      itemLevelBreakdown: modDetails
     };
   }
 

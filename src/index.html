@@ -2510,10 +2510,22 @@
                     <div style="color: #cccccc;">
                         <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Base Item:</strong> ${strategy.baseItem} (ilvl ${strategy.itemLevel || '?'})</p>
                         <p style="margin: 5px 0;"><strong style="color: #8b5cf6;">Item Class:</strong> ${strategy.itemClass || 'Unknown'}</p>
+                        ${strategy.recommendedItemLevel && strategy.recommendedItemLevel > 1 ? `
+                        <p style="margin: 5px 0;"><strong style="color: #ffa500;">Recommended Min ilvl:</strong> ${strategy.recommendedItemLevel}+</p>
+                        ` : ''}
                         <p style="margin: 10px 0 5px 0;"><strong style="color: #8b5cf6;">Desired Mods:</strong></p>
                         <ul style="margin: 5px 0; padding-left: 25px; color: #afa;">
                             ${strategy.desiredMods.map(mod => `<li>${mod}</li>`).join('')}
                         </ul>
+                        ${strategy.itemLevelBreakdown && strategy.itemLevelBreakdown.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(255,165,0,0.1); border-left: 3px solid #ffa500; border-radius: 5px;">
+                            <p style="margin: 0 0 8px 0; color: #ffa500; font-weight: bold;">📊 Item Level Requirements by Mod:</p>
+                            <ul style="margin: 0; padding-left: 20px; color: #ddd; font-size: 13px;">
+                                ${strategy.itemLevelBreakdown.map(item => `<li><strong>${item.mod}</strong>: ilvl ${item.minLevel}+</li>`).join('')}
+                            </ul>
+                            <p style="margin: 8px 0 0 0; color: #aaa; font-size: 12px;">💡 Tip: Use ilvl ${strategy.recommendedItemLevel}+ to be able to roll all desired mods at their highest tiers</p>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 ` : ''}

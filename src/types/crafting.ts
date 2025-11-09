@@ -1,4 +1,4 @@
-// Type definitions for crafting data from RePoE
+// Type definitions for crafting data (now using live PoEDB scraping)
 
 export interface ModWeight {
   tag: string;
@@ -91,7 +91,7 @@ export interface DesiredMod {
 }
 
 export interface CraftingMethod {
-  method: 'chaos' | 'fossil' | 'essence' | 'alteration' | 'bench' | 'harvest' | 'veiled';
+  method: 'chaos' | 'fossil' | 'essence' | 'alteration' | 'bench' | 'harvest' | 'veiled' | 'beast';
   name: string;
   description: string;
   probability: number; // chance to hit desired mods
