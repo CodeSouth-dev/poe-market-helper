@@ -110,8 +110,8 @@ export class SmartCraftingOptimizer {
     // Gather all available methods
     const allMethods = await this.gatherAllMethods(goal);
 
-    // Score and rank methods
-    const rankedMethods = this.rankMethods(allMethods, goal);
+    // Score and rank methods (now async to fetch probabilities)
+    const rankedMethods = await this.rankMethods(allMethods, goal);
 
     // Select the best method
     const bestMethod = rankedMethods[0];
@@ -263,9 +263,20 @@ export class SmartCraftingOptimizer {
 
   /**
    * Rank methods based on cost, success rate, and goal alignment
+   * Now async to fetch real probabilities from CraftOfExile
    */
-  private rankMethods(methods: any[], goal: CraftingGoal): any[] {
-    return methods
+  private async rankMethods(methods: any[], goal: CraftingGoal): Promise<any[]> {
+    // Fetch probabilities for all methods in parallel
+    const methodsWithProbabilities = await Promise.all(
+      methods.map(async method => {
+        const successRate = await this.getRealSuccessRate(method, goal);
+        const estimatedCost = this.estimateCost(method);
+        return { ...method, successRate, estimatedCost };
+      })
+    );
+
+    // Score methods with real probabilities
+    return methodsWithProbabilities
       .map(method => {
         const score = this.scoreMethod(method, goal);
         return { ...method, score };
@@ -275,31 +286,52 @@ export class SmartCraftingOptimizer {
 
   /**
    * Score a method based on how well it matches the goal
+   * NOW INCLUDES SUCCESS RATE AND EXPECTED COST EFFICIENCY
    */
   private scoreMethod(method: any, goal: CraftingGoal): number {
     let score = 100;
 
-    // Budget alignment (weighted)
-    const estimatedCost = this.estimateCost(method);
+    const estimatedCost = method.estimatedCost || this.estimateCost(method);
+    const successRate = method.successRate || 0.5; // Default to 50% if not calculated
+    const expectedCostPerSuccess = successRate > 0 ? estimatedCost / successRate : estimatedCost * 100;
+
+    // 1. Budget alignment (25% weight) - Cost per attempt
     const budgetScore = estimatedCost > goal.budget
-      ? -50 // Penalize if over budget
+      ? -50 // Heavily penalize if over budget
       : estimatedCost < goal.budget * 0.3
-        ? 20 // Bonus for efficiency
+        ? 30 // Bonus for efficiency
         : 0;
     score += budgetScore * METHOD_SCORING_WEIGHTS.BUDGET_ALIGNMENT;
 
-    // Difficulty alignment (weighted)
+    // 2. Success Rate (35% weight) - CRITICAL FACTOR
+    // Higher success rate = higher score (0% to 100% maps to -40 to +40)
+    const successRateScore = (successRate - 0.5) * 80; // Center around 50%
+    score += successRateScore * METHOD_SCORING_WEIGHTS.SUCCESS_RATE;
+
+    // 3. Expected Cost Efficiency (20% weight) - Real cost per success
+    // Compare expected cost per success vs budget
+    const efficiencyRatio = expectedCostPerSuccess / goal.budget;
+    const efficiencyScore = efficiencyRatio > 1.5
+      ? -40 // Very inefficient
+      : efficiencyRatio > 1.0
+        ? -20 // Over budget for success
+        : efficiencyRatio < 0.5
+          ? 30 // Very efficient
+          : 10; // Acceptable
+    score += efficiencyScore * METHOD_SCORING_WEIGHTS.EXPECTED_COST_EFFICIENCY;
+
+    // 4. Difficulty alignment (10% weight)
     const difficultyScore = DIFFICULTY_SCORES[method.difficulty.toUpperCase()] || 0;
     if (method.difficulty === 'expert' && goal.budget < BUDGET_TIERS.LOW) {
       score -= 30; // Extra penalty for expert methods with low budget
     }
     score += difficultyScore * METHOD_SCORING_WEIGHTS.DIFFICULTY_FIT;
 
-    // Source quality (weighted)
+    // 5. Source quality (5% weight)
     const sourceScore = SOURCE_SCORES[method.source.toUpperCase()] || 0;
     score += sourceScore * METHOD_SCORING_WEIGHTS.SOURCE_CREDIBILITY;
 
-    // Mod alignment (weighted) - check if method targets desired mods
+    // 6. Mod alignment (5% weight) - check if method targets desired mods
     const methodText = (method.name + ' ' + method.description + ' ' + (method.steps?.join(' ') || '')).toLowerCase();
     let modMatchScore = 0;
     goal.desiredMods.forEach(mod => {
@@ -309,12 +341,119 @@ export class SmartCraftingOptimizer {
     });
     score += modMatchScore * METHOD_SCORING_WEIGHTS.MOD_TARGETING;
 
-    // Risk mode bonus
+    // Risk mode bonus - slight boost for high-risk methods
     if (goal.riskMode && method.source === 'recombinator') {
-      score += 30;
+      score += 15;
     }
 
     return score;
+  }
+
+  /**
+   * Get real success rate from CraftOfExile simulator or probability calculator
+   * This integrates live data into the ranking system
+   */
+  private async getRealSuccessRate(method: any, goal: CraftingGoal): Promise<number> {
+    // If method already has a calculated success rate, use it
+    if (method.successRate && method.successRate > 0) {
+      return method.successRate;
+    }
+
+    try {
+      // Map method names to crafting types for CraftOfExile
+      const methodToCraftingType: Record<string, 'chaos' | 'alt-regal' | 'fossil' | 'essence' | 'harvest'> = {
+        'Chaos Spam': 'chaos',
+        'Alt-Regal': 'alt-regal',
+        'Fossil': 'fossil',
+        'Fossil Crafting': 'fossil',
+        'Essence': 'essence',
+        'Essence Spam': 'essence',
+        'Harvest': 'harvest',
+        'Harvest Reforge': 'harvest',
+      };
+
+      const craftingType = methodToCraftingType[method.name] || 'chaos';
+
+      // Try to get probability from CraftOfExile simulator
+      if (goal.desiredMods.length > 0 && goal.baseItem && goal.baseItem !== 'Any') {
+        const { craftOfExileScraper } = await import('./craftOfExileScraper');
+
+        const simulation = await craftOfExileScraper.simulateCrafting(
+          goal.baseItem,
+          goal.itemLevel,
+          goal.desiredMods,
+          craftingType
+        );
+
+        if (simulation.cheapestMethod && simulation.cheapestMethod.successRate > 0) {
+          console.log(`   ✅ Got real success rate for ${method.name}: ${(simulation.cheapestMethod.successRate * 100).toFixed(2)}%`);
+          return simulation.cheapestMethod.successRate;
+        }
+      }
+    } catch (error) {
+      console.log(`   ⚠️  CraftOfExile unavailable for ${method.name}, using fallback calculation`);
+    }
+
+    // Fallback: Use probability calculator for estimation
+    try {
+      if (goal.desiredMods.length > 0) {
+        const { calculateSimpleModProbability } = await import('./utils/probabilityCalculator');
+        const { poedbScraper } = await import('./poedbScraper');
+
+        // Fetch available mods for the item class
+        const modifierData = await poedbScraper.scrapeModifiers(goal.itemClass);
+
+        if (modifierData && modifierData.length > 0) {
+          // Convert ModifierData to Mod format expected by probability calculator
+          const availableMods = modifierData.map(mod => ({
+            name: mod.name,
+            domain: mod.domain || 'item',
+            generation_type: mod.generationType || 'prefix',
+            required_level: mod.level || 1,
+            type: mod.type,
+            spawn_weights: mod.tiers.map(tier => ({
+              tag: goal.itemClass,
+              weight: tier.weight
+            })),
+            adds_tags: mod.tags || [],
+            stats: [],
+            is_essence_only: false
+          }));
+
+          // Convert desired mods to the format expected by probability calculator
+          const desiredModsForCalc = goal.desiredMods.map(mod => ({
+            name: mod,
+            type: 'prefix' as const, // We'll try both prefix and suffix
+          }));
+
+          const result = calculateSimpleModProbability(
+            desiredModsForCalc,
+            availableMods,
+            [goal.itemClass]
+          );
+
+          if (result.successRate > 0) {
+            console.log(`   ✅ Calculated success rate for ${method.name}: ${(result.successRate * 100).toFixed(2)}%`);
+            return result.successRate;
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`   ⚠️  Probability calculator failed for ${method.name}`);
+    }
+
+    // Ultimate fallback: Use difficulty-based estimates
+    const fallbackRates: Record<string, number> = {
+      'beginner': 0.70,    // 70% - Easy methods have good success
+      'intermediate': 0.45, // 45% - Moderate success
+      'advanced': 0.25,     // 25% - Harder but possible
+      'expert': 0.15,       // 15% - Very difficult
+    };
+
+    const fallbackRate = fallbackRates[method.difficulty?.toLowerCase()] || 0.40;
+    console.log(`   ℹ️  Using difficulty-based estimate for ${method.name}: ${(fallbackRate * 100).toFixed(0)}%`);
+
+    return fallbackRate;
   }
 
   /**
@@ -348,15 +487,17 @@ export class SmartCraftingOptimizer {
 
   /**
    * Build a complete strategy from a method
+   * Now uses real calculated success rates from CraftOfExile/probability calculator
    */
   private async buildStrategy(
     method: any,
     goal: CraftingGoal,
-    recommendedIlvl: number,
-    modDetails: Array<{mod: string, minLevel: number}>
+    recommendedIlvl?: number,
+    modDetails?: Array<{mod: string, minLevel: number}>
   ): Promise<OptimizedStrategy> {
-    const estimatedCost = this.estimateCost(method);
-    const successRate = this.estimateSuccessRate(method);
+    const estimatedCost = method.estimatedCost || this.estimateCost(method);
+    const successRate = method.successRate || await this.getRealSuccessRate(method, goal);
+    const expectedCostPerSuccess = successRate > 0 ? estimatedCost / successRate : estimatedCost * 100;
 
     // Add item level requirement if specified
     const requirements = [...(method.requirements || [])];
@@ -377,8 +518,15 @@ export class SmartCraftingOptimizer {
 
     // Add tips about item level if we calculated it from mods
     const tips = [...(method.tips || [])];
-    if (recommendedIlvl > 1 && modDetails.length > 0) {
+    if (recommendedIlvl && recommendedIlvl > 1 && modDetails && modDetails.length > 0) {
       tips.unshift(`Item level ${recommendedIlvl}+ required for highest tier mods (scraped live from PoEDB)`);
+    }
+
+    // Add success rate and expected cost information
+    if (successRate < 1.0) {
+      const expectedAttempts = Math.ceil(1 / successRate);
+      tips.unshift(`💰 Expected cost per success: ~${Math.round(expectedCostPerSuccess)}c (${expectedAttempts} attempts on average)`);
+      tips.unshift(`🎯 Success rate: ${(successRate * 100).toFixed(1)}% per attempt${successRate < 0.5 ? ' - Consider alternatives if budget is tight' : ''}`);
     }
 
     return {
@@ -406,13 +554,15 @@ export class SmartCraftingOptimizer {
 
   /**
    * Estimate success rate for a method
+   * @deprecated Use getRealSuccessRate() instead for accurate probabilities
+   * This method is kept for backward compatibility only
    */
   private estimateSuccessRate(method: any): number {
-    if (method.difficulty === 'beginner') return 0.8;
-    if (method.difficulty === 'intermediate') return 0.6;
-    if (method.difficulty === 'advanced') return 0.4;
-    if (method.difficulty === 'expert') return 0.2;
-    return 0.5;
+    if (method.difficulty === 'beginner') return 0.7;
+    if (method.difficulty === 'intermediate') return 0.45;
+    if (method.difficulty === 'advanced') return 0.25;
+    if (method.difficulty === 'expert') return 0.15;
+    return 0.4;
   }
 
   /**
@@ -562,7 +712,7 @@ export class SmartCraftingOptimizer {
     };
 
     const allMethods = await this.gatherAllMethods(goal);
-    const rankedMethods = this.rankMethods(allMethods, goal);
+    const rankedMethods = await this.rankMethods(allMethods, goal);
 
     return Promise.all(
       rankedMethods.slice(0, 5).map(m => this.buildStrategy(m, goal))
