@@ -140,12 +140,15 @@ export const ILVL_CONSTRAINTS = {
 
 /**
  * Crafting method scoring weights
+ * Rebalanced to prioritize both cost efficiency AND success probability
  */
 export const METHOD_SCORING_WEIGHTS = {
-  BUDGET_ALIGNMENT: 0.4,
-  DIFFICULTY_FIT: 0.2,
-  SOURCE_CREDIBILITY: 0.15,
-  MOD_TARGETING: 0.25,
+  BUDGET_ALIGNMENT: 0.25,        // 25% - Cost per attempt matters
+  SUCCESS_RATE: 0.35,            // 35% - High success rate is CRITICAL
+  EXPECTED_COST_EFFICIENCY: 0.2, // 20% - Real cost = cost / successRate
+  DIFFICULTY_FIT: 0.1,           // 10% - User skill level consideration
+  SOURCE_CREDIBILITY: 0.05,      // 5%  - Trust in data source
+  MOD_TARGETING: 0.05,           // 5%  - Method targets desired mods
 } as const;
 
 /**
