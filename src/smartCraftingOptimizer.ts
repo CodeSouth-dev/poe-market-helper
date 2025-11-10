@@ -17,6 +17,7 @@ import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 import { getCurrencyPriceService } from './services/currencyPriceService';
 import { poedbScraper } from './poedbScraper';
 import { validateCraftingGoal, formatValidationResult } from './utils/validators';
+import { craftOfExileSimulatorEnhanced } from './craftOfExileSimulatorEnhanced';
 import {
   METHOD_SCORING_WEIGHTS,
   DIFFICULTY_SCORES,
@@ -778,6 +779,133 @@ export class SmartCraftingOptimizer {
     );
 
     return { baseName, itemLevel, itemClass, desiredMods };
+  }
+
+  /**
+   * Get complete crafting strategy using enhanced Craft of Exiles simulator
+   * This returns PRACTICES (step-by-step) not just probabilities
+   */
+  async getDetailedCraftingStrategy(
+    goal: CraftingGoal,
+    blockedMods: string[] = []
+  ): Promise<any> {
+    console.log(`\n🎯 Getting detailed crafting strategy from Craft of Exiles simulator...`);
+
+    // Validate input
+    const validation = validateCraftingGoal(goal);
+    if (!validation.isValid) {
+      throw new Error(`Invalid crafting goal:\n${formatValidationResult(validation)}`);
+    }
+
+    // Load currency prices
+    await this.currencyService.loadPrices(goal.league);
+
+    // Get full strategy from enhanced simulator
+    const strategy = await craftOfExileSimulatorEnhanced.getCraftingStrategy(
+      goal.baseItem,
+      goal.itemLevel,
+      goal.desiredMods,
+      blockedMods,
+      {
+        budget: goal.budget,
+        allowMetacrafting: goal.budget > 200
+      }
+    );
+
+    return strategy;
+  }
+
+  /**
+   * Optimize crafting for a specific budget using Craft of Exiles simulator
+   * Returns what's achievable within budget constraints
+   */
+  async optimizeCraftingForBudget(
+    baseItem: string,
+    itemLevel: number,
+    desiredMods: string[],
+    budget: number
+  ): Promise<any> {
+    console.log(`\n💰 Optimizing crafting for ${budget}c budget...`);
+
+    const optimization = await craftOfExileSimulatorEnhanced.optimizeForBudget(
+      baseItem,
+      itemLevel,
+      desiredMods,
+      budget
+    );
+
+    return optimization;
+  }
+
+  /**
+   * Get fossil combinations for mod blocking
+   */
+  async getFossilRecommendations(
+    desiredMods: string[],
+    blockedTags: string[]
+  ): Promise<any> {
+    console.log(`\n🔬 Finding optimal fossil combinations...`);
+
+    const combinations = await craftOfExileSimulatorEnhanced.getFossilCombinations(
+      desiredMods,
+      blockedTags
+    );
+
+    return combinations;
+  }
+
+  /**
+   * Complete crafting workflow: analyze goal, get strategy, optimize for budget
+   */
+  async getCompleteCraftingPlan(goal: CraftingGoal): Promise<{
+    strategy: any;
+    budgetOptimization: any;
+    fossilRecommendations: any;
+    warnings: string[];
+    tips: string[];
+  }> {
+    console.log(`\n📋 Creating complete crafting plan...`);
+
+    // Get detailed strategy
+    const strategy = await this.getDetailedCraftingStrategy(goal);
+
+    // Check if it fits budget
+    const budgetOptimization = await this.optimizeCraftingForBudget(
+      goal.baseItem,
+      goal.itemLevel,
+      goal.desiredMods,
+      goal.budget
+    );
+
+    // Get fossil recommendations if using fossil method
+    let fossilRecommendations: any[] = [];
+    if (strategy.methodType === 'fossil') {
+      fossilRecommendations = await this.getFossilRecommendations(
+        goal.desiredMods,
+        ['life', 'mana'] // Common tags to block
+      );
+    }
+
+    // Compile warnings and tips
+    const warnings: string[] = [...strategy.warnings];
+    const tips: string[] = [...strategy.tips];
+
+    if (budgetOptimization.unreachableMods.length > 0) {
+      warnings.push(
+        `⚠️ The following mods are too expensive for your budget: ${budgetOptimization.unreachableMods.join(', ')}`
+      );
+      tips.push(
+        `💡 Consider targeting only: ${budgetOptimization.achievableMods.join(', ')}`
+      );
+    }
+
+    return {
+      strategy,
+      budgetOptimization,
+      fossilRecommendations,
+      warnings,
+      tips
+    };
   }
 }
 
