@@ -659,6 +659,69 @@ electron_1.ipcMain.handle('craft-get-mods-for-class', async (event, itemClass, i
         return { success: false, error: error.message };
     }
 });
+// ========================================
+// ENHANCED CRAFT OF EXILE SIMULATOR
+// ========================================
+// Get complete crafting strategy with step-by-step instructions
+electron_1.ipcMain.handle('craft-get-strategy-enhanced', async (event, baseItem, itemLevel, desiredMods, blockedMods = [], options = {}) => {
+    try {
+        const { craftOfExileSimulatorEnhanced } = await Promise.resolve().then(() => __importStar(require('./craftOfExileSimulatorEnhanced')));
+        const strategy = await craftOfExileSimulatorEnhanced.getCraftingStrategy(baseItem, itemLevel, desiredMods, blockedMods, options);
+        return { success: true, data: strategy };
+    }
+    catch (error) {
+        console.error('Get enhanced strategy error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Optimize crafting for specific budget
+electron_1.ipcMain.handle('craft-optimize-budget', async (event, baseItem, itemLevel, desiredMods, budget) => {
+    try {
+        const { craftOfExileSimulatorEnhanced } = await Promise.resolve().then(() => __importStar(require('./craftOfExileSimulatorEnhanced')));
+        const optimization = await craftOfExileSimulatorEnhanced.optimizeForBudget(baseItem, itemLevel, desiredMods, budget);
+        return { success: true, data: optimization };
+    }
+    catch (error) {
+        console.error('Budget optimization error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get fossil combinations for mod blocking
+electron_1.ipcMain.handle('craft-get-fossils', async (event, desiredMods, blockedTags) => {
+    try {
+        const { craftOfExileSimulatorEnhanced } = await Promise.resolve().then(() => __importStar(require('./craftOfExileSimulatorEnhanced')));
+        const fossils = await craftOfExileSimulatorEnhanced.getFossilCombinations(desiredMods, blockedTags);
+        return { success: true, data: fossils };
+    }
+    catch (error) {
+        console.error('Get fossils error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Get complete crafting plan (strategy + budget optimization + fossils)
+electron_1.ipcMain.handle('craft-get-complete-plan', async (event, goal) => {
+    try {
+        const { smartCraftingOptimizer } = await Promise.resolve().then(() => __importStar(require('./smartCraftingOptimizer')));
+        const plan = await smartCraftingOptimizer.getCompleteCraftingPlan(goal);
+        return { success: true, data: plan };
+    }
+    catch (error) {
+        console.error('Get complete plan error:', error);
+        return { success: false, error: error.message };
+    }
+});
+// Clear enhanced strategy cache
+electron_1.ipcMain.handle('craft-clear-strategy-cache', async () => {
+    try {
+        const { craftOfExileSimulatorEnhanced } = await Promise.resolve().then(() => __importStar(require('./craftOfExileSimulatorEnhanced')));
+        await craftOfExileSimulatorEnhanced.clearCache();
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Clear strategy cache error:', error);
+        return { success: false, error: error.message };
+    }
+});
 // Open trade site for base item
 electron_1.ipcMain.handle('open-trade-site', async (event, baseName, league) => {
     try {
