@@ -17,6 +17,8 @@ import { automatedBaseAnalyzer } from './automatedBaseAnalyzer';
 import { currencyMaterialsScraper } from './currencyMaterialsScraper';
 import { pohxCraftingScraper } from './pohxCraftingScraper';
 import { maxRollCraftingScraper } from './maxRollCraftingScraper';
+import { createTradeSniper, SniperConfig } from './tradeSniper';
+import type { TradeSniper } from './tradeSniper';
 
 // Initialize API and utilities
 const poeAPI = new PoeNinjaAPI();
@@ -25,6 +27,7 @@ const favorites = new FavoritesManager();
 const craftingCalculator = new CraftingCalculator();
 
 let mainWindow: BrowserWindow;
+let tradeSniper: TradeSniper | null = null;
 
 function createWindow(): void {
   // Create the browser window
@@ -51,7 +54,10 @@ function createWindow(): void {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', async () => {
-  // Cleanup browser sessions and live searches before quitting
+  // Cleanup browser sessions, live searches, and sniper before quitting
+  if (tradeSniper) {
+    await tradeSniper.stop();
+  }
   await browserManager.shutdown();
   liveSearchManager.shutdown();
   if (process.platform !== 'darwin') {
@@ -936,6 +942,148 @@ ipcMain.handle('live-search-stats', async () => {
     return { success: true, data: stats };
   } catch (error: any) {
     console.error('Get search stats error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Trade Sniper ====================
+
+// Login to PoE trade site
+ipcMain.handle('sniper-login', async () => {
+  try {
+    // Create a temporary sniper just for login
+    const tempConfig: SniperConfig = {
+      enabled: false,
+      league: 'Standard',
+      maxPriceChaos: 0,
+      pollingIntervalMs: 5000,
+      autoWhisper: false,
+      autoInvite: false,
+      soundNotification: false
+    };
+
+    const loginSniper = createTradeSniper(browserManager, tempConfig);
+
+    // Forward login events to renderer
+    loginSniper.on('login-popup-opened', () => {
+      mainWindow?.webContents.send('sniper-login-popup-opened');
+    });
+
+    loginSniper.on('login-success', () => {
+      mainWindow?.webContents.send('sniper-login-success');
+    });
+
+    loginSniper.on('login-timeout', () => {
+      mainWindow?.webContents.send('sniper-login-timeout');
+    });
+
+    loginSniper.on('login-error', (error) => {
+      mainWindow?.webContents.send('sniper-login-error', error);
+    });
+
+    const success = await loginSniper.login();
+    return { success };
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Initialize/start trade sniper
+ipcMain.handle('sniper-start', async (event: any, config: SniperConfig) => {
+  try {
+    // Create sniper if it doesn't exist or recreate with new config
+    if (tradeSniper) {
+      await tradeSniper.stop();
+    }
+
+    tradeSniper = createTradeSniper(browserManager, config);
+
+    // Forward sniper events to renderer
+    tradeSniper.on('snipe', (listing) => {
+      mainWindow?.webContents.send('sniper-snipe', listing);
+    });
+
+    tradeSniper.on('polled', (data) => {
+      mainWindow?.webContents.send('sniper-polled', data);
+    });
+
+    tradeSniper.on('whispered', (listing) => {
+      mainWindow?.webContents.send('sniper-whispered', listing);
+    });
+
+    tradeSniper.on('error', (error) => {
+      mainWindow?.webContents.send('sniper-error', error);
+    });
+
+    tradeSniper.on('started', () => {
+      mainWindow?.webContents.send('sniper-started');
+    });
+
+    tradeSniper.on('stopped', () => {
+      mainWindow?.webContents.send('sniper-stopped');
+    });
+
+    await tradeSniper.start();
+    return { success: true };
+  } catch (error: any) {
+    console.error('Start sniper error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Stop trade sniper
+ipcMain.handle('sniper-stop', async () => {
+  try {
+    if (!tradeSniper) {
+      return { success: false, error: 'Sniper not initialized' };
+    }
+    await tradeSniper.stop();
+    return { success: true };
+  } catch (error: any) {
+    console.error('Stop sniper error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Update sniper configuration
+ipcMain.handle('sniper-update-config', async (event: any, newConfig: Partial<SniperConfig>) => {
+  try {
+    if (!tradeSniper) {
+      return { success: false, error: 'Sniper not initialized' };
+    }
+    tradeSniper.updateConfig(newConfig);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Update sniper config error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Get sniper status and stats
+ipcMain.handle('sniper-get-stats', async () => {
+  try {
+    if (!tradeSniper) {
+      return { success: true, data: { isRunning: false, seenListings: 0 } };
+    }
+    const stats = tradeSniper.getStats();
+    return { success: true, data: stats };
+  } catch (error: any) {
+    console.error('Get sniper stats error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Clear seen listings cache
+ipcMain.handle('sniper-clear-cache', async () => {
+  try {
+    if (!tradeSniper) {
+      return { success: false, error: 'Sniper not initialized' };
+    }
+    tradeSniper.clearSeenListings();
+    return { success: true };
+  } catch (error: any) {
+    console.error('Clear sniper cache error:', error);
     return { success: false, error: error.message };
   }
 });
