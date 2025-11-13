@@ -178,3 +178,56 @@ export const BUDGET_TIERS = {
   MEDIUM: 2000,
   HIGH: 10000,
 } as const;
+
+/**
+ * Eldritch currency costs (in chaos)
+ * Used for crafting on influenced items
+ */
+export const ELDRITCH_CURRENCY_COSTS = {
+  LESSER_ELDRITCH_EMBER: 1,
+  GREATER_ELDRITCH_EMBER: 3,
+  GRAND_ELDRITCH_EMBER: 8,
+  EXCEPTIONAL_ELDRITCH_EMBER: 20,
+  LESSER_ELDRITCH_ICHOR: 1,
+  GREATER_ELDRITCH_ICHOR: 3,
+  GRAND_ELDRITCH_ICHOR: 8,
+  EXCEPTIONAL_ELDRITCH_ICHOR: 20,
+  ORB_OF_CONFLICT: 10,
+  ELDRITCH_CHAOS_ORB: 5,
+  ELDRITCH_EXALTED_ORB: 15,
+  ELDRITCH_ORB_OF_ANNULMENT: 12,
+} as const;
+
+/**
+ * Conqueror/Influence currency costs (in chaos)
+ */
+export const INFLUENCE_CURRENCY_COSTS = {
+  AWAKENERS_ORB: 250,
+  MAVENS_ORB: 100,
+  CRUSADERS_EXALTED_ORB: 30,
+  REDEEMERS_EXALTED_ORB: 30,
+  HUNTERS_EXALTED_ORB: 30,
+  WARLORDS_EXALTED_ORB: 30,
+  ELDERSLAYERS_EXALTED_ORB: 30,
+} as const;
+
+/**
+ * Essence tier costs (in chaos)
+ * Based on typical market prices
+ */
+export const ESSENCE_TIER_COSTS = {
+  SHRIEKING: 2,
+  DEAFENING: 5,
+  CORRUPTED_DEAFENING: 15,
+} as const;
+
+/**
+ * Advanced crafting method success rates
+ */
+export const ADVANCED_METHOD_SUCCESS_RATES = {
+  AWAKENERS_ORB: 0.3, // 30% chance to get desired combination
+  MAVENS_ORB: 0.2, // 20% chance to elevate desired mod
+  INFLUENCE_EXALT: 0.15, // 15% chance to hit desired influenced mod
+  ELDRITCH_CHAOS: 0.08, // 8% chance with implicit targeting
+  RECOMBINATOR: 0.5, // 50% base success for mod transfer
+} as const;

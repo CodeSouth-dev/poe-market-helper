@@ -65,24 +65,10 @@ export class FossilOptimizer {
    * Initialize fossil and resonator data
    */
   private initializeFossilData(): void {
-    // Common fossils with their effects
+    // Comprehensive fossil database with all major fossils
+    // Costs will be updated from poe.ninja in real-time
     this.fossils = [
-      {
-        name: 'Pristine Fossil',
-        cost: 3,
-        more: ['life', 'defense'],
-        adds: [],
-        blocks: [],
-        less: []
-      },
-      {
-        name: 'Jagged Fossil',
-        cost: 2,
-        more: ['physical'],
-        adds: ['bleed', 'physical'],
-        blocks: [],
-        less: []
-      },
+      // Elemental fossils
       {
         name: 'Scorched Fossil',
         cost: 2,
@@ -108,27 +94,29 @@ export class FossilOptimizer {
         less: []
       },
       {
-        name: 'Dense Fossil',
-        cost: 5,
-        more: ['defense'],
-        adds: [],
-        blocks: ['life'],
-        less: []
-      },
-      {
-        name: 'Sanctified Fossil',
-        cost: 8,
-        more: ['defense'],
-        adds: [],
-        blocks: [],
-        less: ['attack', 'caster']
-      },
-      {
         name: 'Aberrant Fossil',
         cost: 3,
         more: ['chaos'],
         adds: ['chaos'],
         blocks: ['lightning'],
+        less: []
+      },
+
+      // Physical/Bleed fossils
+      {
+        name: 'Jagged Fossil',
+        cost: 2,
+        more: ['physical'],
+        adds: ['bleed', 'physical'],
+        blocks: [],
+        less: []
+      },
+      {
+        name: 'Bloodstained Fossil',
+        cost: 3,
+        more: ['bleed'],
+        adds: ['bleed'],
+        blocks: [],
         less: []
       },
       {
@@ -139,6 +127,34 @@ export class FossilOptimizer {
         blocks: ['elemental'],
         less: []
       },
+
+      // Defense fossils
+      {
+        name: 'Dense Fossil',
+        cost: 5,
+        more: ['defense'],
+        adds: [],
+        blocks: ['life'],
+        less: []
+      },
+      {
+        name: 'Pristine Fossil',
+        cost: 3,
+        more: ['life', 'defense'],
+        adds: [],
+        blocks: [],
+        less: []
+      },
+      {
+        name: 'Sanctified Fossil',
+        cost: 8,
+        more: ['defense'],
+        adds: [],
+        blocks: [],
+        less: ['attack', 'caster']
+      },
+
+      // Attack/Caster fossils
       {
         name: 'Serrated Fossil',
         cost: 4,
@@ -156,14 +172,6 @@ export class FossilOptimizer {
         less: []
       },
       {
-        name: 'Lucent Fossil',
-        cost: 5,
-        more: ['mana', 'energy_shield'],
-        adds: ['mana'],
-        blocks: [],
-        less: []
-      },
-      {
         name: 'Aetheric Fossil',
         cost: 6,
         more: ['caster', 'spell'],
@@ -171,6 +179,18 @@ export class FossilOptimizer {
         blocks: ['attack'],
         less: []
       },
+
+      // Mana/Energy Shield fossils
+      {
+        name: 'Lucent Fossil',
+        cost: 5,
+        more: ['mana', 'energy_shield'],
+        adds: ['mana'],
+        blocks: [],
+        less: []
+      },
+
+      // Specialized fossils
       {
         name: 'Bound Fossil',
         cost: 3,
@@ -193,6 +213,78 @@ export class FossilOptimizer {
         more: ['gem'],
         adds: ['gem'],
         blocks: [],
+        less: []
+      },
+      {
+        name: 'Glyphic Fossil',
+        cost: 8,
+        more: ['corrupted'],
+        adds: ['corrupted'],
+        blocks: [],
+        less: []
+      },
+      {
+        name: 'Tangled Fossil',
+        cost: 5,
+        more: ['chaos'],
+        adds: ['chaos'],
+        blocks: [],
+        less: []
+      },
+
+      // Critical/Accuracy fossils
+      {
+        name: 'Deft Fossil',
+        cost: 4,
+        more: ['critical', 'attack'],
+        adds: ['critical'],
+        blocks: [],
+        less: []
+      },
+
+      // Speed fossils
+      {
+        name: 'Shuddering Fossil',
+        cost: 4,
+        more: ['speed', 'attack'],
+        adds: ['speed'],
+        blocks: ['caster'],
+        less: []
+      },
+
+      // Unique modifiers
+      {
+        name: 'Hollow Fossil',
+        cost: 12,
+        more: ['abyssal_socket'],
+        adds: ['abyssal_socket'],
+        blocks: [],
+        less: []
+      },
+      {
+        name: 'Sanctified Fossil',
+        cost: 20,
+        more: ['numeric_defense'],
+        adds: [],
+        blocks: [],
+        less: ['attack', 'caster']
+      },
+      {
+        name: 'Fundamental Fossil',
+        cost: 5,
+        more: ['attribute'],
+        adds: ['attribute'],
+        blocks: [],
+        less: []
+      },
+
+      // Block mods
+      {
+        name: 'Shuddering Fossil',
+        cost: 3,
+        more: ['attack'],
+        adds: ['attack'],
+        blocks: ['caster'],
         less: []
       }
     ];
@@ -504,16 +596,66 @@ export class FossilOptimizer {
    */
   private async updateFossilPrices(league: string): Promise<void> {
     try {
-      // Try to get fossil prices from poe.ninja
-      // Note: This is simplified - real implementation would query actual API
-      console.log(`   📊 Updating fossil prices for ${league}...`);
+      console.log(`   📊 Updating fossil and resonator prices for ${league}...`);
 
-      // Keep default prices for now
-      // In production, you'd fetch real prices here
+      // Load prices from poe.ninja via currency service
+      await this.currencyService.loadPrices(league);
 
-    } catch (error) {
-      console.log('   ⚠️  Using default fossil prices');
+      // Update fossil costs from real prices
+      let updatedCount = 0;
+      for (const fossil of this.fossils) {
+        const priceData = this.currencyService.getPriceData(fossil.name);
+        if (priceData && priceData.chaosValue > 0) {
+          fossil.cost = priceData.chaosValue;
+          updatedCount++;
+        }
+      }
+
+      // Update resonator costs
+      for (const resonator of this.resonators) {
+        const priceData = this.currencyService.getPriceData(resonator.name);
+        if (priceData && priceData.chaosValue > 0) {
+          resonator.cost = priceData.chaosValue;
+        }
+      }
+
+      console.log(`   ✅ Updated ${updatedCount}/${this.fossils.length} fossil prices from poe.ninja`);
+
+    } catch (error: any) {
+      console.log(`   ⚠️  Using fallback fossil prices: ${error.message}`);
     }
+  }
+
+  /**
+   * Get detailed fossil information including current prices
+   */
+  async getFossilInfo(fossilName: string, league: string = 'Standard'): Promise<{
+    name: string;
+    currentPrice: number;
+    effects: {
+      more: string[];
+      adds: string[];
+      blocks: string[];
+      less: string[];
+    };
+    bestUsedFor: string[];
+  } | null> {
+    await this.updateFossilPrices(league);
+
+    const fossil = this.fossils.find(f => f.name === fossilName);
+    if (!fossil) return null;
+
+    return {
+      name: fossil.name,
+      currentPrice: fossil.cost,
+      effects: {
+        more: fossil.more,
+        adds: fossil.adds,
+        blocks: fossil.blocks,
+        less: fossil.less
+      },
+      bestUsedFor: [...fossil.more, ...fossil.adds]
+    };
   }
 }
 
