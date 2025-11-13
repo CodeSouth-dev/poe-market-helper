@@ -796,6 +796,41 @@ electron_1.ipcMain.handle('live-search-stats', async () => {
     }
 });
 // ==================== Trade Sniper ====================
+// Login to PoE trade site
+electron_1.ipcMain.handle('sniper-login', async () => {
+    try {
+        // Create a temporary sniper just for login
+        const tempConfig = {
+            enabled: false,
+            league: 'Standard',
+            maxPriceChaos: 0,
+            pollingIntervalMs: 5000,
+            autoWhisper: false,
+            autoInvite: false,
+            soundNotification: false
+        };
+        const loginSniper = (0, tradeSniper_1.createTradeSniper)(browserManager_1.browserManager, tempConfig);
+        // Forward login events to renderer
+        loginSniper.on('login-popup-opened', () => {
+            mainWindow?.webContents.send('sniper-login-popup-opened');
+        });
+        loginSniper.on('login-success', () => {
+            mainWindow?.webContents.send('sniper-login-success');
+        });
+        loginSniper.on('login-timeout', () => {
+            mainWindow?.webContents.send('sniper-login-timeout');
+        });
+        loginSniper.on('login-error', (error) => {
+            mainWindow?.webContents.send('sniper-login-error', error);
+        });
+        const success = await loginSniper.login();
+        return { success };
+    }
+    catch (error) {
+        console.error('Login error:', error);
+        return { success: false, error: error.message };
+    }
+});
 // Initialize/start trade sniper
 electron_1.ipcMain.handle('sniper-start', async (event, config) => {
     try {
