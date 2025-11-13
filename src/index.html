@@ -564,6 +564,7 @@
             <button class="tab" data-tab="insights">Market Insights</button>
             <button class="tab" data-tab="crafting">Crafting Helper</button>
             <button class="tab" data-tab="livesearch">Live Search</button>
+            <button class="tab" data-tab="sniper">Trade Sniper</button>
             <button class="tab" data-tab="fossil">Fossil Optimizer</button>
             <button class="tab" data-tab="guide">Learn to Craft</button>
         </div>
@@ -960,6 +961,108 @@
                 </section>
             </section>
         </div> <!-- End Live Search Tab -->
+
+        <!-- Trade Sniper Tab -->
+        <div id="sniperTab" class="tab-content">
+            <section class="search-section">
+                <h2 style="color: #ffd700; margin-bottom: 20px;">🎯 Trade Sniper - Auto-Whisper Deals</h2>
+                <p style="color: #cccccc; margin-bottom: 20px;">Automatically monitor and snipe good deals with aggressive polling and auto-whisper!</p>
+
+                <div style="background: rgba(220,53,69,0.1); border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                    <strong style="color: #dc3545;">🔴 Important Notice:</strong>
+                    <p style="color: #cccccc; margin-top: 5px;">Trade sniping uses aggressive polling (3-5 seconds). Use responsibly to avoid IP bans. Ensure you're logged in to pathofexile.com before starting.</p>
+                </div>
+
+                <!-- Sniper Configuration -->
+                <div style="background: rgba(30,30,40,0.8); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Sniper Configuration</h3>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="sniperLeague" style="display: block; color: #ffd700; margin-bottom: 5px;">League:</label>
+                        <select id="sniperLeague" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                            <option value="Standard">Standard</option>
+                            <option value="Hardcore">Hardcore</option>
+                            <option value="Settlers" selected>Settlers (Current League)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="sniperSearchUrl" style="display: block; color: #ffd700; margin-bottom: 5px;">Trade Search URL or ID:</label>
+                        <input type="text" id="sniperSearchUrl" placeholder="Paste trade search URL or search ID" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                        <small style="color: #999; display: block; margin-top: 5px;">Create a search on pathofexile.com/trade, then paste the URL or search ID here</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="sniperMaxPrice" style="display: block; color: #ffd700; margin-bottom: 5px;">Max Price (Chaos):</label>
+                        <input type="number" id="sniperMaxPrice" value="50" min="1" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                        <small style="color: #999; display: block; margin-top: 5px;">Only snipe items priced at or below this amount (in chaos)</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="sniperPollInterval" style="display: block; color: #ffd700; margin-bottom: 5px;">Polling Interval (milliseconds):</label>
+                        <input type="number" id="sniperPollInterval" value="5000" min="3000" max="30000" step="1000" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                        <small style="color: #999; display: block; margin-top: 5px;">How often to check for new listings. Faster = better snipes but higher ban risk. Recommended: 5000ms (5 seconds)</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; color: #ffd700; cursor: pointer;">
+                            <input type="checkbox" id="sniperAutoWhisper" checked style="margin-right: 10px; width: 20px; height: 20px;">
+                            <span>Auto-Whisper Sellers (automatically click whisper button)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; color: #ffd700; cursor: pointer;">
+                            <input type="checkbox" id="sniperSound" checked style="margin-right: 10px; width: 20px; height: 20px;">
+                            <span>Sound Notification on Snipe</span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button id="startSniperBtn" class="btn btn-primary" style="flex: 1; padding: 12px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #28a745, #20c997); border: none; border-radius: 5px; color: white; cursor: pointer;">
+                            ▶️ Start Sniper
+                        </button>
+                        <button id="stopSniperBtn" class="btn btn-danger" disabled style="flex: 1; padding: 12px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #dc3545, #c82333); border: none; border-radius: 5px; color: white; cursor: pointer;">
+                            ⏹️ Stop Sniper
+                        </button>
+                        <button id="clearSniperCacheBtn" class="btn btn-secondary" style="padding: 12px 20px; font-size: 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 5px; color: white; cursor: pointer;">
+                            🗑️ Clear Cache
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sniper Status -->
+                <div id="sniperStatus" style="background: rgba(30,30,40,0.8); padding: 20px; border-radius: 10px; margin-bottom: 20px; display: none;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Sniper Status</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(40,167,69,0.1); padding: 15px; border-radius: 5px;">
+                            <div style="color: #999; font-size: 14px;">Status</div>
+                            <div id="sniperStatusText" style="color: #28a745; font-size: 20px; font-weight: bold;">Running</div>
+                        </div>
+                        <div style="background: rgba(139,92,246,0.1); padding: 15px; border-radius: 5px;">
+                            <div style="color: #999; font-size: 14px;">Listings Checked</div>
+                            <div id="sniperListingsCount" style="color: #8b5cf6; font-size: 20px; font-weight: bold;">0</div>
+                        </div>
+                        <div style="background: rgba(255,193,7,0.1); padding: 15px; border-radius: 5px;">
+                            <div style="color: #999; font-size: 14px;">Snipes Found</div>
+                            <div id="sniperSnipesCount" style="color: #ffc107; font-size: 20px; font-weight: bold;">0</div>
+                        </div>
+                        <div style="background: rgba(23,162,184,0.1); padding: 15px; border-radius: 5px;">
+                            <div style="color: #999; font-size: 14px;">Last Poll</div>
+                            <div id="sniperLastPoll" style="color: #17a2b8; font-size: 16px; font-weight: bold;">Never</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Snipe Results -->
+                <div id="sniperResults" style="background: rgba(30,30,40,0.8); padding: 20px; border-radius: 10px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">🎯 Snipe Log (Latest First)</h3>
+                    <div id="sniperResultsList" style="max-height: 400px; overflow-y: auto;">
+                        <p style="color: #999; text-align: center; padding: 40px;">No snipes yet. Start the sniper to begin monitoring!</p>
+                    </div>
+                </div>
+            </section>
+        </div> <!-- End Trade Sniper Tab -->
 
         <!-- Fossil Optimizer Tab -->
         <div id="fossilTab" class="tab-content">
@@ -3923,6 +4026,201 @@
             loadActiveSearches();
             updateSearchStats();
         });
+
+        // ==================== Trade Sniper ====================
+        const startSniperBtn = document.getElementById('startSniperBtn');
+        const stopSniperBtn = document.getElementById('stopSniperBtn');
+        const clearSniperCacheBtn = document.getElementById('clearSniperCacheBtn');
+        const sniperStatus = document.getElementById('sniperStatus');
+        const sniperStatusText = document.getElementById('sniperStatusText');
+        const sniperListingsCount = document.getElementById('sniperListingsCount');
+        const sniperSnipesCount = document.getElementById('sniperSnipesCount');
+        const sniperLastPoll = document.getElementById('sniperLastPoll');
+        const sniperResultsList = document.getElementById('sniperResultsList');
+
+        let snipesFound = 0;
+        let listingsChecked = 0;
+
+        startSniperBtn.addEventListener('click', async () => {
+            const searchUrl = document.getElementById('sniperSearchUrl').value.trim();
+            if (!searchUrl) {
+                alert('Please enter a trade search URL or ID');
+                return;
+            }
+
+            // Extract search ID from URL if needed
+            let searchQuery = searchUrl;
+            if (searchUrl.includes('pathofexile.com/trade/search/')) {
+                const match = searchUrl.match(/\/search\/[^/]+\/([a-zA-Z0-9]+)/);
+                if (match) {
+                    searchQuery = match[1];
+                }
+            }
+
+            const config = {
+                enabled: true,
+                league: document.getElementById('sniperLeague').value,
+                searchQuery: searchQuery,
+                maxPriceChaos: parseInt(document.getElementById('sniperMaxPrice').value) || 50,
+                pollingIntervalMs: parseInt(document.getElementById('sniperPollInterval').value) || 5000,
+                autoWhisper: document.getElementById('sniperAutoWhisper').checked,
+                autoInvite: false,
+                soundNotification: document.getElementById('sniperSound').checked
+            };
+
+            try {
+                const result = await ipcRenderer.invoke('sniper-start', config);
+
+                if (result.success) {
+                    startSniperBtn.disabled = true;
+                    stopSniperBtn.disabled = false;
+                    sniperStatus.style.display = 'block';
+                    snipesFound = 0;
+                    listingsChecked = 0;
+                    sniperSnipesCount.textContent = '0';
+                    sniperListingsCount.textContent = '0';
+                    sniperResultsList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Waiting for snipes...</p>';
+                } else {
+                    alert('❌ ' + (result.error || 'Failed to start sniper'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        stopSniperBtn.addEventListener('click', async () => {
+            try {
+                const result = await ipcRenderer.invoke('sniper-stop');
+
+                if (result.success) {
+                    startSniperBtn.disabled = false;
+                    stopSniperBtn.disabled = true;
+                    sniperStatusText.textContent = 'Stopped';
+                    sniperStatusText.style.color = '#dc3545';
+                } else {
+                    alert('❌ ' + (result.error || 'Failed to stop sniper'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        clearSniperCacheBtn.addEventListener('click', async () => {
+            try {
+                const result = await ipcRenderer.invoke('sniper-clear-cache');
+
+                if (result.success) {
+                    alert('✅ Cache cleared! Sniper will see all listings as new.');
+                } else {
+                    alert('❌ ' + (result.error || 'Failed to clear cache'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Listen for sniper events
+        ipcRenderer.on('sniper-snipe', (event, listing) => {
+            snipesFound++;
+            sniperSnipesCount.textContent = snipesFound.toString();
+
+            const priceInChaos = convertToChaosUI(listing.price, listing.currency);
+            const snipeHtml = `
+                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(40,167,69,0.2)); border: 3px solid #ffd700; border-radius: 10px; padding: 20px; margin-bottom: 15px; animation: pulse 2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="color: #ffd700; font-weight: bold; font-size: 18px; margin-bottom: 10px;">🎯 SNIPE FOUND!</div>
+                            <div style="color: #ffffff; font-size: 16px; margin-bottom: 8px;">${listing.itemName}</div>
+                            <div style="color: #28a745; font-size: 20px; font-weight: bold; margin-bottom: 8px;">${listing.price} ${listing.currency} (~${priceInChaos}c)</div>
+                            <div style="color: #cccccc; font-size: 14px; margin-bottom: 5px;">👤 ${listing.seller}</div>
+                            <div style="color: #888; font-size: 12px;">${listing.indexed || 'Just listed'}</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="background: rgba(40,167,69,0.3); padding: 8px 12px; border-radius: 5px; text-align: center;">
+                                <div style="color: #28a745; font-size: 12px; font-weight: bold;">✅ WHISPERED</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-family: monospace; font-size: 12px; color: #aaa; word-break: break-all;">
+                        ${listing.whisperMessage}
+                    </div>
+                </div>
+            `;
+
+            if (sniperResultsList.innerHTML.includes('No snipes yet') || sniperResultsList.innerHTML.includes('Waiting for snipes')) {
+                sniperResultsList.innerHTML = '';
+            }
+            sniperResultsList.insertAdjacentHTML('afterbegin', snipeHtml);
+
+            // Desktop notification
+            new Notification('🎯 Snipe Found!', {
+                body: `${listing.itemName} for ${listing.price} ${listing.currency} from ${listing.seller}`
+            });
+
+            // Flash the window title
+            let flashCount = 0;
+            const originalTitle = document.title;
+            const flashInterval = setInterval(() => {
+                document.title = flashCount % 2 === 0 ? '🎯 SNIPE! 🎯' : originalTitle;
+                flashCount++;
+                if (flashCount >= 10) {
+                    clearInterval(flashInterval);
+                    document.title = originalTitle;
+                }
+            }, 500);
+        });
+
+        ipcRenderer.on('sniper-polled', (event, data) => {
+            listingsChecked += data.totalListings;
+            sniperListingsCount.textContent = listingsChecked.toString();
+
+            const now = new Date();
+            sniperLastPoll.textContent = now.toLocaleTimeString();
+        });
+
+        ipcRenderer.on('sniper-whispered', (event, listing) => {
+            console.log('Whispered:', listing.seller);
+        });
+
+        ipcRenderer.on('sniper-error', (event, error) => {
+            console.error('Sniper error:', error);
+            alert('⚠️ Sniper error: ' + error.message);
+        });
+
+        ipcRenderer.on('sniper-started', () => {
+            sniperStatusText.textContent = 'Running';
+            sniperStatusText.style.color = '#28a745';
+        });
+
+        ipcRenderer.on('sniper-stopped', () => {
+            sniperStatusText.textContent = 'Stopped';
+            sniperStatusText.style.color = '#dc3545';
+            startSniperBtn.disabled = false;
+            stopSniperBtn.disabled = true;
+        });
+
+        function convertToChaosUI(price, currency) {
+            const rates = {
+                'chaos': 1,
+                'divine': 200,
+                'exalted': 1,
+                'mirror': 150000,
+                'orb of alteration': 0.1,
+                'orb of alchemy': 0.3,
+                'chromatic orb': 0.05,
+                'jeweller\'s orb': 0.1,
+                'orb of fusing': 0.5,
+                'vaal orb': 0.3,
+                'gemcutter\'s prism': 1,
+                'cartographer\'s chisel': 0.2,
+                'orb of scouring': 0.5,
+                'blessed orb': 0.3,
+                'orb of regret': 0.8
+            };
+
+            const rate = rates[currency.toLowerCase()] || 1;
+            return Math.round(price * rate * 10) / 10;
+        }
 
         // ==================== Fossil Optimizer ====================
         const fossilOptimizeForm = document.getElementById('fossilOptimizeForm');
