@@ -973,9 +973,21 @@
                     <p style="color: #cccccc; margin-top: 5px;">Trade sniping uses aggressive polling (3-5 seconds). Use responsibly to avoid IP bans. Ensure you're logged in to pathofexile.com before starting.</p>
                 </div>
 
+                <!-- Login Section -->
+                <div style="background: rgba(30,30,40,0.8); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Step 1: Login to PoE</h3>
+                    <p style="color: #cccccc; margin-bottom: 15px;">Before sniping, you need to log in to pathofexile.com. Click the button below to open a login window.</p>
+                    <button id="sniperLoginBtn" style="padding: 12px 24px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; border-radius: 5px; color: white; cursor: pointer;">
+                        🔐 Login to PoE Trade
+                    </button>
+                    <div id="loginStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;">
+                        <span id="loginStatusText"></span>
+                    </div>
+                </div>
+
                 <!-- Sniper Configuration -->
                 <div style="background: rgba(30,30,40,0.8); padding: 25px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #ffd700; margin-bottom: 15px;">Sniper Configuration</h3>
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">Step 2: Sniper Configuration</h3>
 
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="sniperLeague" style="display: block; color: #ffd700; margin-bottom: 5px;">League:</label>
@@ -986,10 +998,53 @@
                         </select>
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="sniperSearchUrl" style="display: block; color: #ffd700; margin-bottom: 5px;">Trade Search URL or ID:</label>
-                        <input type="text" id="sniperSearchUrl" placeholder="Paste trade search URL or search ID" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
-                        <small style="color: #999; display: block; margin-top: 5px;">Create a search on pathofexile.com/trade, then paste the URL or search ID here</small>
+                    <div style="background: rgba(139,92,246,0.1); padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        <h4 style="color: #ffd700; margin-bottom: 10px;">Choose Sniper Mode:</h4>
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; color: #cccccc; cursor: pointer;">
+                                <input type="radio" name="sniperMode" value="searchUrl" checked style="margin-right: 8px;">
+                                <span>Use Trade Search URL</span>
+                            </label>
+                            <label style="display: flex; align-items: center; color: #cccccc; cursor: pointer;">
+                                <input type="radio" name="sniperMode" value="manualItems" style="margin-right: 8px;">
+                                <span>Manual Item List</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Search URL Mode -->
+                    <div id="searchUrlMode" style="margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label for="sniperSearchUrl" style="display: block; color: #ffd700; margin-bottom: 5px;">Trade Search URL or ID:</label>
+                            <input type="text" id="sniperSearchUrl" placeholder="Paste trade search URL or search ID" style="width: 100%; padding: 10px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                            <small style="color: #999; display: block; margin-top: 5px;">Create a search on pathofexile.com/trade, then paste the URL or search ID here</small>
+                        </div>
+                    </div>
+
+                    <!-- Manual Items Mode -->
+                    <div id="manualItemsMode" style="display: none; margin-bottom: 15px;">
+                        <h4 style="color: #ffd700; margin-bottom: 10px;">Manual Item List</h4>
+                        <p style="color: #cccccc; font-size: 14px; margin-bottom: 10px;">Add items to snipe. The sniper will cycle through all items automatically.</p>
+
+                        <div style="background: rgba(40,40,50,0.5); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="manualItemName" placeholder="Item name (e.g., Headhunter)" style="padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                                <input type="number" id="manualItemPrice" placeholder="Max price" min="1" value="50" style="padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                                <select id="manualItemLinks" style="padding: 8px; background: rgba(30,30,40,0.95); color: #fff; border: 2px solid #8b5cf6; border-radius: 5px;">
+                                    <option value="0">Any Links</option>
+                                    <option value="4">4-Link+</option>
+                                    <option value="5">5-Link+</option>
+                                    <option value="6">6-Link</option>
+                                </select>
+                                <button id="addManualItemBtn" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                                    ➕ Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="manualItemsList" style="max-height: 200px; overflow-y: auto;">
+                            <p style="color: #999; text-align: center; padding: 20px;">No items added yet. Add items above.</p>
+                        </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
@@ -4028,6 +4083,9 @@
         });
 
         // ==================== Trade Sniper ====================
+        const sniperLoginBtn = document.getElementById('sniperLoginBtn');
+        const loginStatus = document.getElementById('loginStatus');
+        const loginStatusText = document.getElementById('loginStatusText');
         const startSniperBtn = document.getElementById('startSniperBtn');
         const stopSniperBtn = document.getElementById('stopSniperBtn');
         const clearSniperCacheBtn = document.getElementById('clearSniperCacheBtn');
@@ -4037,36 +4095,182 @@
         const sniperSnipesCount = document.getElementById('sniperSnipesCount');
         const sniperLastPoll = document.getElementById('sniperLastPoll');
         const sniperResultsList = document.getElementById('sniperResultsList');
+        const addManualItemBtn = document.getElementById('addManualItemBtn');
+        const manualItemsList = document.getElementById('manualItemsList');
 
         let snipesFound = 0;
         let listingsChecked = 0;
+        let manualItems = [];
 
-        startSniperBtn.addEventListener('click', async () => {
-            const searchUrl = document.getElementById('sniperSearchUrl').value.trim();
-            if (!searchUrl) {
-                alert('Please enter a trade search URL or ID');
+        // Mode switching
+        const modeRadios = document.querySelectorAll('input[name="sniperMode"]');
+        const searchUrlMode = document.getElementById('searchUrlMode');
+        const manualItemsMode = document.getElementById('manualItemsMode');
+
+        modeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'searchUrl') {
+                    searchUrlMode.style.display = 'block';
+                    manualItemsMode.style.display = 'none';
+                } else {
+                    searchUrlMode.style.display = 'none';
+                    manualItemsMode.style.display = 'block';
+                }
+            });
+        });
+
+        // Login handler
+        sniperLoginBtn.addEventListener('click', async () => {
+            sniperLoginBtn.disabled = true;
+            sniperLoginBtn.textContent = '⏳ Opening login window...';
+
+            try {
+                const result = await ipcRenderer.invoke('sniper-login');
+
+                if (result.success) {
+                    showLoginStatus('✅ Login successful! You can now start the sniper.', 'success');
+                } else {
+                    showLoginStatus('❌ Login failed or timed out. Please try again.', 'error');
+                }
+            } catch (error) {
+                showLoginStatus('❌ Error: ' + error.message, 'error');
+            } finally {
+                sniperLoginBtn.disabled = false;
+                sniperLoginBtn.textContent = '🔐 Login to PoE Trade';
+            }
+        });
+
+        function showLoginStatus(message, type) {
+            loginStatus.style.display = 'block';
+            loginStatusText.textContent = message;
+
+            if (type === 'success') {
+                loginStatus.style.background = 'rgba(40,167,69,0.2)';
+                loginStatus.style.borderLeft = '4px solid #28a745';
+            } else if (type === 'error') {
+                loginStatus.style.background = 'rgba(220,53,69,0.2)';
+                loginStatus.style.borderLeft = '4px solid #dc3545';
+            } else {
+                loginStatus.style.background = 'rgba(255,193,7,0.2)';
+                loginStatus.style.borderLeft = '4px solid #ffc107';
+            }
+        }
+
+        // Listen for login events
+        ipcRenderer.on('sniper-login-popup-opened', () => {
+            showLoginStatus('🔓 Login window opened. Please log in...', 'info');
+        });
+
+        ipcRenderer.on('sniper-login-success', () => {
+            showLoginStatus('✅ Login detected! Window will close shortly...', 'success');
+        });
+
+        ipcRenderer.on('sniper-login-timeout', () => {
+            showLoginStatus('⏱️ Login timeout. Please try again.', 'error');
+        });
+
+        ipcRenderer.on('sniper-login-error', (event, error) => {
+            showLoginStatus('❌ Login error: ' + error.message, 'error');
+        });
+
+        // Manual items handler
+        addManualItemBtn.addEventListener('click', () => {
+            const itemName = document.getElementById('manualItemName').value.trim();
+            const maxPrice = parseInt(document.getElementById('manualItemPrice').value) || 50;
+            const minLinks = parseInt(document.getElementById('manualItemLinks').value) || 0;
+
+            if (!itemName) {
+                alert('Please enter an item name');
                 return;
             }
 
-            // Extract search ID from URL if needed
-            let searchQuery = searchUrl;
-            if (searchUrl.includes('pathofexile.com/trade/search/')) {
-                const match = searchUrl.match(/\/search\/[^/]+\/([a-zA-Z0-9]+)/);
-                if (match) {
-                    searchQuery = match[1];
-                }
+            const item = {
+                itemName,
+                maxPrice,
+                minLinks: minLinks > 0 ? minLinks : undefined
+            };
+
+            manualItems.push(item);
+            renderManualItems();
+
+            // Clear inputs
+            document.getElementById('manualItemName').value = '';
+            document.getElementById('manualItemPrice').value = '50';
+            document.getElementById('manualItemLinks').value = '0';
+        });
+
+        function renderManualItems() {
+            if (manualItems.length === 0) {
+                manualItemsList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No items added yet. Add items above.</p>';
+                return;
             }
+
+            let html = '<div style="display: grid; gap: 10px;">';
+            manualItems.forEach((item, index) => {
+                html += `
+                    <div style="background: rgba(139,92,246,0.1); border: 2px solid #8b5cf6; border-radius: 5px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: #ffd700; font-weight: bold;">${item.itemName}</div>
+                            <div style="color: #cccccc; font-size: 13px;">
+                                Max: ${item.maxPrice}c${item.minLinks ? ` | ${item.minLinks}-Link+` : ''}
+                            </div>
+                        </div>
+                        <button onclick="removeManualItem(${index})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            🗑️ Remove
+                        </button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            manualItemsList.innerHTML = html;
+        }
+
+        window.removeManualItem = function(index) {
+            manualItems.splice(index, 1);
+            renderManualItems();
+        };
+
+        startSniperBtn.addEventListener('click', async () => {
+            // Check which mode is selected
+            const selectedMode = document.querySelector('input[name="sniperMode"]:checked').value;
 
             const config = {
                 enabled: true,
                 league: document.getElementById('sniperLeague').value,
-                searchQuery: searchQuery,
                 maxPriceChaos: parseInt(document.getElementById('sniperMaxPrice').value) || 50,
                 pollingIntervalMs: parseInt(document.getElementById('sniperPollInterval').value) || 5000,
                 autoWhisper: document.getElementById('sniperAutoWhisper').checked,
                 autoInvite: false,
                 soundNotification: document.getElementById('sniperSound').checked
             };
+
+            if (selectedMode === 'searchUrl') {
+                // Use search URL mode
+                const searchUrl = document.getElementById('sniperSearchUrl').value.trim();
+                if (!searchUrl) {
+                    alert('Please enter a trade search URL or ID');
+                    return;
+                }
+
+                // Extract search ID from URL if needed
+                let searchQuery = searchUrl;
+                if (searchUrl.includes('pathofexile.com/trade/search/')) {
+                    const match = searchUrl.match(/\/search\/[^/]+\/([a-zA-Z0-9]+)/);
+                    if (match) {
+                        searchQuery = match[1];
+                    }
+                }
+
+                config.searchQuery = searchQuery;
+            } else {
+                // Use manual items mode
+                if (manualItems.length === 0) {
+                    alert('Please add at least one item to snipe');
+                    return;
+                }
+
+                config.manualItems = manualItems;
+            }
 
             try {
                 const result = await ipcRenderer.invoke('sniper-start', config);

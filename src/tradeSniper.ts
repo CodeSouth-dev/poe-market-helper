@@ -4,10 +4,17 @@ import { EventEmitter } from 'events';
 import { clipboard } from 'electron';
 import type { Page } from 'puppeteer';
 
+export interface ManualItem {
+  itemName: string;
+  maxPrice: number;
+  minLinks?: number;
+}
+
 export interface SniperConfig {
   enabled: boolean;
   league: string;
-  searchQuery: string;
+  searchQuery?: string; // Optional now - can use manual items instead
+  manualItems?: ManualItem[]; // List of items to snipe manually
   maxPriceChaos: number;
   pollingIntervalMs: number;
   autoWhisper: boolean;
@@ -39,6 +46,8 @@ export class TradeSniper extends EventEmitter {
   private page?: Page;
   private rateLimiter: RateLimiter;
   private baseUrl = 'https://www.pathofexile.com/trade';
+  private currentItemIndex: number = 0; // For cycling through manual items
+  private manualSearchUrls: string[] = []; // Store created search URLs
 
   constructor(browserManager: BrowserManager, config: SniperConfig) {
     super();
@@ -51,6 +60,70 @@ export class TradeSniper extends EventEmitter {
       minDelayBetweenRequests: 2000, // 2 seconds minimum between requests
       maxConcurrent: 1
     });
+  }
+
+  async login(): Promise<boolean> {
+    try {
+      console.log('Opening browser for login...');
+
+      // Create a visible browser session for login
+      const loginPage = await this.browserManager.getOrCreateSession('trade-sniper-login', {
+        headless: false,
+        defaultViewport: { width: 1200, height: 900 }
+      });
+
+      // Navigate to login page
+      await loginPage.goto('https://www.pathofexile.com/login', {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      this.emit('login-popup-opened');
+
+      // Wait for user to login (check every 2 seconds for up to 5 minutes)
+      let attempts = 0;
+      const maxAttempts = 150; // 5 minutes
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        try {
+          const isLoggedIn = await loginPage.evaluate(() => {
+            // Check if logged in by looking for account elements
+            const loginLink = document.querySelector('a[href*="login"]');
+            const accountDropdown = document.querySelector('.profile-link, .user-name, a[href*="/account"]');
+            return !loginLink && !!accountDropdown;
+          });
+
+          if (isLoggedIn) {
+            console.log('✅ Login detected! Session saved.');
+            this.emit('login-success');
+
+            // Give it a moment to fully save session
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Close the login browser window
+            await this.browserManager.closeSession('trade-sniper-login');
+
+            return true;
+          }
+        } catch (err) {
+          console.error('Error checking login status:', err);
+        }
+
+        attempts++;
+      }
+
+      // Timeout
+      this.emit('login-timeout');
+      await this.browserManager.closeSession('trade-sniper-login');
+      return false;
+
+    } catch (error) {
+      console.error('Login error:', error);
+      this.emit('login-error', error);
+      return false;
+    }
   }
 
   async start(): Promise<void> {
@@ -128,24 +201,111 @@ export class TradeSniper extends EventEmitter {
     }, this.config.pollingIntervalMs);
   }
 
+  private async createSearchForItem(item: ManualItem): Promise<string> {
+    if (!this.page) throw new Error('Browser page not initialized');
+
+    console.log(`Creating search for: ${item.itemName}`);
+
+    // Build the search query JSON
+    const searchQuery: any = {
+      query: {
+        status: { option: 'online' },
+        name: item.itemName,
+        type: '',
+        stats: [{ type: 'and', filters: [] }],
+        filters: {
+          trade_filters: {
+            filters: {
+              price: {
+                max: item.maxPrice
+              }
+            }
+          }
+        }
+      },
+      sort: { price: 'asc' }
+    };
+
+    // Add links filter if specified
+    if (item.minLinks) {
+      searchQuery.query.filters.socket_filters = {
+        filters: {
+          links: { min: item.minLinks }
+        }
+      };
+    }
+
+    // Post the search to get a search ID
+    try {
+      const response = await this.page.evaluate(async (baseUrl, league, query) => {
+        const res = await fetch(`${baseUrl}/search/${league}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(query)
+        });
+        return await res.json();
+      }, this.baseUrl, this.config.league, searchQuery);
+
+      if (response.id) {
+        const searchUrl = `${this.baseUrl}/search/${this.config.league}/${response.id}`;
+        console.log(`Created search: ${searchUrl}`);
+        return searchUrl;
+      } else {
+        throw new Error('Failed to create search - no ID returned');
+      }
+    } catch (error) {
+      console.error(`Error creating search for ${item.itemName}:`, error);
+      throw error;
+    }
+  }
+
   private async performSearch(): Promise<void> {
     if (!this.page) return;
 
     console.log('Performing initial search...');
 
-    // The search query should be a pre-built URL from the trade site
-    // For now, we'll navigate to the search URL provided
-    if (this.config.searchQuery.startsWith('http')) {
-      await this.page.goto(this.config.searchQuery, {
+    // Check if using manual items or a search query
+    if (this.config.manualItems && this.config.manualItems.length > 0) {
+      // Create searches for all manual items
+      console.log(`Creating searches for ${this.config.manualItems.length} manual items...`);
+      this.manualSearchUrls = [];
+
+      for (const item of this.config.manualItems) {
+        try {
+          const searchUrl = await this.createSearchForItem(item);
+          this.manualSearchUrls.push(searchUrl);
+        } catch (error) {
+          console.error(`Failed to create search for ${item.itemName}:`, error);
+        }
+      }
+
+      if (this.manualSearchUrls.length === 0) {
+        throw new Error('Failed to create any searches from manual items');
+      }
+
+      // Navigate to the first search
+      await this.page.goto(this.manualSearchUrls[0], {
         waitUntil: 'networkidle2',
         timeout: 30000
       });
+    } else if (this.config.searchQuery) {
+      // Use the provided search query
+      if (this.config.searchQuery.startsWith('http')) {
+        await this.page.goto(this.config.searchQuery, {
+          waitUntil: 'networkidle2',
+          timeout: 30000
+        });
+      } else {
+        // If it's a search ID, navigate to it
+        await this.page.goto(`${this.baseUrl}/search/${this.config.league}/${this.config.searchQuery}`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000
+        });
+      }
     } else {
-      // If it's a search ID, navigate to it
-      await this.page.goto(`${this.baseUrl}/search/${this.config.league}/${this.config.searchQuery}`, {
-        waitUntil: 'networkidle2',
-        timeout: 30000
-      });
+      throw new Error('No search query or manual items provided');
     }
 
     // Wait for results to load
@@ -158,8 +318,17 @@ export class TradeSniper extends EventEmitter {
     if (!this.page || !this.isRunning) return;
 
     try {
-      // Refresh the search results
-      await this.page.reload({ waitUntil: 'networkidle2', timeout: 15000 });
+      // If we have multiple manual searches, cycle through them
+      if (this.manualSearchUrls.length > 1) {
+        this.currentItemIndex = (this.currentItemIndex + 1) % this.manualSearchUrls.length;
+        const nextUrl = this.manualSearchUrls[this.currentItemIndex];
+        console.log(`Checking search ${this.currentItemIndex + 1}/${this.manualSearchUrls.length}`);
+
+        await this.page.goto(nextUrl, { waitUntil: 'networkidle2', timeout: 15000 });
+      } else {
+        // Just refresh the current page
+        await this.page.reload({ waitUntil: 'networkidle2', timeout: 15000 });
+      }
 
       // Extract listings from the page
       const listings = await this.extractListings();
@@ -180,7 +349,10 @@ export class TradeSniper extends EventEmitter {
       this.emit('polled', {
         totalListings: listings.length,
         newListings: newListings.length,
-        timestamp: new Date()
+        timestamp: new Date(),
+        currentSearch: this.manualSearchUrls.length > 0
+          ? `${this.currentItemIndex + 1}/${this.manualSearchUrls.length}`
+          : '1/1'
       });
 
     } catch (error) {
