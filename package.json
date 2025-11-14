@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "npm run build && electron dist/main.js",
+    "start:quick": "electron dist/main.js",
     "dev": "tsc && electron dist/main.js",
     "dev-watch": "tsc -w"
   },
