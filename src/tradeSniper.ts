@@ -55,10 +55,12 @@ export class TradeSniper extends EventEmitter {
     this.config = config;
     // Aggressive rate limiting for sniping - we want to be fast but not get banned
     this.rateLimiter = new RateLimiter({
-      tokensPerInterval: 20,
-      interval: 60000, // 20 requests per minute
-      minDelayBetweenRequests: 2000, // 2 seconds minimum between requests
-      maxConcurrent: 1
+      maxRequests: 20,
+      windowMs: 60000, // 20 requests per minute
+      minDelay: 2000, // 2 seconds minimum between requests
+      maxConcurrent: 1,
+      retryAttempts: 3,
+      retryDelayMs: 1000
     });
   }
 
@@ -67,10 +69,7 @@ export class TradeSniper extends EventEmitter {
       console.log('Opening browser for login...');
 
       // Create a visible browser session for login
-      const loginPage = await this.browserManager.getOrCreateSession('trade-sniper-login', {
-        headless: false,
-        defaultViewport: { width: 1200, height: 900 }
-      });
+      const loginPage = await this.browserManager.createPage('trade-sniper-login', false);
 
       // Navigate to login page
       await loginPage.goto('https://www.pathofexile.com/login', {
@@ -137,11 +136,8 @@ export class TradeSniper extends EventEmitter {
     this.seenListings.clear();
 
     try {
-      // Initialize browser session
-      this.page = await this.browserManager.getOrCreateSession('trade-sniper', {
-        headless: false, // Visible so user can see what's happening
-        defaultViewport: { width: 1920, height: 1080 }
-      });
+      // Initialize browser session (visible so user can see what's happening)
+      this.page = await this.browserManager.createPage('trade-sniper', false);
 
       // Navigate to trade site
       await this.page.goto(`${this.baseUrl}/search/${this.config.league}`, {
@@ -188,7 +184,7 @@ export class TradeSniper extends EventEmitter {
 
     this.pollingTimer = setTimeout(async () => {
       try {
-        await this.rateLimiter.executeWithRateLimit(async () => {
+        await this.rateLimiter.execute('pathofexile.com', async () => {
           await this.checkForNewListings();
         });
       } catch (error) {
@@ -246,7 +242,7 @@ export class TradeSniper extends EventEmitter {
           body: JSON.stringify(query)
         });
         return await res.json();
-      }, this.baseUrl, this.config.league, searchQuery);
+      }, this.baseUrl, this.config.league, searchQuery) as { id?: string };
 
       if (response.id) {
         const searchUrl = `${this.baseUrl}/search/${this.config.league}/${response.id}`;
