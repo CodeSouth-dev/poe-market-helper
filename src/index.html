@@ -755,6 +755,13 @@
                 <p style="color: #888; font-size: 12px; margin-top: 5px;">Item data will auto-fill the fields below</p>
             </div>
 
+            <!-- Current Mods Display -->
+            <div id="currentModsDisplay" style="display: none; background: rgba(60, 120, 255, 0.1); border: 2px solid #4080ff; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                <div style="color: #4080ff; font-weight: bold; margin-bottom: 10px;">📊 Current Mods on Item:</div>
+                <div id="currentModsList" style="font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;"></div>
+                <div id="modsSlotsSummary" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(64, 128, 255, 0.3); color: #ffd700; font-size: 12px;"></div>
+            </div>
+
             <form id="craftingForm">
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="craftBaseItem">Base Item:</label>
@@ -2191,15 +2198,35 @@
                     }
 
                     // Show current mods if any
+                    const currentModsDisplay = document.getElementById('currentModsDisplay');
+                    const currentModsList = document.getElementById('currentModsList');
+                    const modsSlotsSummary = document.getElementById('modsSlotsSummary');
+
                     if (parsedData.currentMods && parsedData.currentMods.length > 0) {
                         console.log('Current mods on item:', parsedData.currentMods);
                         console.log('Available mod slots - Prefixes:', 3 - currentItemMods.count.prefixes, ', Suffixes:', 3 - currentItemMods.count.suffixes);
 
-                        // Show visual feedback about available slots
-                        this.style.borderColor = '#00ff00';
-                        setTimeout(() => {
-                            this.style.borderColor = '#ffd700';
-                        }, 1000);
+                        // Display mods in the UI
+                        currentModsList.innerHTML = parsedData.currentMods.map(mod => {
+                            // Check if this is a prefix or suffix based on our classification
+                            const isPrefix = currentItemMods.prefixes.includes(mod);
+                            const modType = isPrefix ? 'Prefix' : 'Suffix';
+                            const color = isPrefix ? '#88ff88' : '#ff88ff';
+                            return `<div style="color: ${color}; margin-bottom: 3px;">• ${mod} <span style="color: #888; font-size: 11px;">(${modType})</span></div>`;
+                        }).join('');
+
+                        // Show available slots
+                        const prefixesAvailable = 3 - currentItemMods.count.prefixes;
+                        const suffixesAvailable = 3 - currentItemMods.count.suffixes;
+                        modsSlotsSummary.innerHTML = `
+                            Available Slots:
+                            <span style="color: #88ff88; font-weight: bold;">${prefixesAvailable} Prefix${prefixesAvailable !== 1 ? 'es' : ''}</span>,
+                            <span style="color: #ff88ff; font-weight: bold;">${suffixesAvailable} Suffix${suffixesAvailable !== 1 ? 'es' : ''}</span>
+                        `;
+
+                        currentModsDisplay.style.display = 'block';
+                    } else {
+                        currentModsDisplay.style.display = 'none';
                     }
 
                     // Visual feedback
@@ -2279,13 +2306,15 @@
             let inModSection = false;
             let pastRequirements = false;
             let foundBaseName = false;
+            let rarityLineIndex = -1;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
 
-                // Parse rarity (first line usually)
+                // Parse rarity and track its position
                 if (line.startsWith('Rarity:')) {
                     result.rarity = line.replace('Rarity:', '').trim();
+                    rarityLineIndex = i;
                 }
 
                 // Parse item level
@@ -2296,17 +2325,27 @@
                     }
                 }
 
-                // For rare/magic items: base name is typically line 3 (after Rarity and item name)
-                // For normal items: base name is line 2 (after Rarity)
-                if (result.rarity && !foundBaseName) {
-                    if (result.rarity.toLowerCase() === 'normal' && i === 1) {
+                // Parse item class from explicit "Item Class:" line (takes priority)
+                if (line.match(/^Item Class:/i)) {
+                    const classMatch = line.match(/Item Class:\s*(.+)/i);
+                    if (classMatch) {
+                        result.itemClass = classMatch[1].trim();
+                    }
+                }
+
+                // Extract base name based on position RELATIVE to rarity line
+                // This handles cases where "Item Class:" appears before "Rarity:"
+                if (result.rarity && !foundBaseName && rarityLineIndex >= 0) {
+                    const relativeIndex = i - rarityLineIndex;
+
+                    if (result.rarity.toLowerCase() === 'normal' && relativeIndex === 1) {
                         result.baseName = line;
                         foundBaseName = true;
-                    } else if (result.rarity.toLowerCase() === 'rare' && i === 2) {
-                        // For rare items, line 3 is the base type (line 2 is the rare name)
+                    } else if (result.rarity.toLowerCase() === 'rare' && relativeIndex === 2) {
+                        // For rare items: line after rarity is name, next line is base
                         result.baseName = line;
                         foundBaseName = true;
-                    } else if (result.rarity.toLowerCase() === 'magic' && i === 1) {
+                    } else if (result.rarity.toLowerCase() === 'magic' && relativeIndex === 1) {
                         // For magic items, the name includes the mod prefix/suffix with the base
                         // Examples: "Plague Jade Amulet", "Jade Amulet of the Pupil"
                         // We need to extract just the base type
