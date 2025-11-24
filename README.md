@@ -35,6 +35,7 @@ See [`backend/README.md`](backend/README.md) for detailed backend documentation.
 ✅ **Multiple Methods**: Compare Chaos spam, Fossils, Essences, Alterations, Harvest, Recombinators, and more
 ✅ **Comprehensive Mod Database**: 1000+ mods from poedb.tw via Python backend
 ✅ **Build-Based Crafting**: Analyze popular builds to find profitable crafting targets
+✅ **Web Search Fallback**: 🆕 Automatically searches Reddit, forums, and community guides when other sources fail
 
 ### UI/UX
 ✅ **Professional UI**: Clean, game-themed interface with tab-based navigation

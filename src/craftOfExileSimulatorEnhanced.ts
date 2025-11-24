@@ -13,6 +13,7 @@
 
 import { browserManager } from './browserManager';
 import { RateLimiter } from './rateLimiter';
+import { webSearchCraftingFallback } from './webSearchCraftingFallback';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -332,7 +333,7 @@ export class CraftOfExileSimulatorEnhanced {
 
         if (!strategyData.success) {
           console.log(`   ⚠️ Simulator interaction failed, using fallback logic`);
-          return this.generateFallbackStrategy(baseItem, itemLevel, desiredMods, blockedMods, options);
+          return await this.generateFallbackStrategy(baseItem, itemLevel, desiredMods, blockedMods, options);
         }
 
         // Build the complete strategy from extracted data
@@ -356,7 +357,7 @@ export class CraftOfExileSimulatorEnhanced {
 
       } catch (error: any) {
         console.error(`   ❌ Failed to generate strategy:`, error.message);
-        return this.generateFallbackStrategy(baseItem, itemLevel, desiredMods, blockedMods, options);
+        return await this.generateFallbackStrategy(baseItem, itemLevel, desiredMods, blockedMods, options);
       } finally {
         await page.close();
       }
@@ -745,16 +746,34 @@ export class CraftOfExileSimulatorEnhanced {
   /**
    * Fallback strategy generator when simulator fails
    */
-  private generateFallbackStrategy(
+  private async generateFallbackStrategy(
     baseItem: string,
     itemLevel: number,
     desiredMods: string[],
     blockedMods: string[],
     options: any
-  ): CraftingStrategy {
+  ): Promise<CraftingStrategy> {
     console.log(`   🔄 Generating fallback strategy...`);
 
-    // Use simplified logic
+    // FIRST: Try web search for community guides
+    try {
+      console.log(`   🌐 Trying web search for community crafting guides...`);
+      const webSearchStrategy = await webSearchCraftingFallback.searchForCraftingGuide(
+        baseItem,
+        itemLevel,
+        desiredMods
+      );
+
+      if (webSearchStrategy) {
+        console.log(`   ✓ Found crafting strategy from web search!`);
+        return webSearchStrategy;
+      }
+    } catch (error: any) {
+      console.log(`   ⚠️ Web search failed: ${error.message}`);
+    }
+
+    // FALLBACK: Use simplified math-based logic
+    console.log(`   📐 Using mathematical estimates as last resort...`);
     const method = desiredMods.length <= 2 ? 'Chaos Spam' : 'Fossil Crafting';
     const successRate = Math.pow(0.1, desiredMods.length); // Rough estimate
     const averageAttempts = Math.ceil(1 / successRate);
